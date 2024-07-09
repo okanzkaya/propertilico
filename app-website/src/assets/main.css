@@ -1,0 +1,44 @@
+body {
+    font-family: Arial, sans-serif;
+  }
+  
+  header {
+    background-color: #333;
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  main {
+    display: flex;
+  }
+  
+  .sidebar {
+    width: 200px;
+    background-color: #f4f4f4;
+    padding: 1rem;
+  }
+  
+  .sidebar nav ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .sidebar nav ul li {
+    margin: 1rem 0;
+  }
+  
+  .sidebar nav ul li a {
+    text-decoration: none;
+    color: #333;
+  }
+  
+  .sidebar nav ul li a.active {
+    font-weight: bold;
+  }
+  
+  .main-content {
+    flex: 1;
+    padding: 1rem;
+  }
+  
