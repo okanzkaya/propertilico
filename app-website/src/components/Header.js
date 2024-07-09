@@ -1,10 +1,20 @@
 import React from 'react';
+import { AppBar, Toolbar, Typography } from '@mui/material';
+import { styled } from '@mui/system';
+
+const HeaderWrapper = styled(AppBar)({
+  zIndex: 1201, // Make sure it appears above the sidebar
+});
 
 const Header = () => {
   return (
-    <header>
-      <h1>Propertilico App</h1>
-    </header>
+    <HeaderWrapper position="fixed">
+      <Toolbar>
+        <Typography variant="h6" noWrap>
+          Propertilico Dashboard
+        </Typography>
+      </Toolbar>
+    </HeaderWrapper>
   );
 };
 

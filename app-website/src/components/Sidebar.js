@@ -1,46 +1,62 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import styled from 'styled-components';
+import { Drawer, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { styled } from '@mui/system';
+import {
+  AccountBalance as FinancesIcon,
+  Home as PropertiesIcon,
+  ConfirmationNumber as TicketsIcon,
+  Contacts as ContactsIcon,
+  Receipt as TaxesIcon,
+  Description as DocumentsIcon,
+  BarChart as ReportsIcon,
+  Settings as SettingsIcon
+} from '@mui/icons-material';
 
-const SidebarWrapper = styled.div`
-  width: 200px;
-  background-color: #f4f4f4;
-  padding: 1rem;
-`;
-
-const NavList = styled.ul`
-  list-style-type: none;
-  padding: 0;
-`;
-
-const NavItem = styled.li`
-  margin: 1rem 0;
-`;
-
-const NavLinkStyled = styled(NavLink)`
-  text-decoration: none;
-  color: #333;
-
-  &.active {
-    font-weight: bold;
-  }
-`;
+const SidebarWrapper = styled('div')({
+  width: 240,
+  flexShrink: 0,
+});
 
 const Sidebar = () => {
   return (
     <SidebarWrapper>
-      <nav>
-        <NavList>
-          <NavItem><NavLinkStyled to="/dashboard/finances" activeClassName="active">Finances</NavLinkStyled></NavItem>
-          <NavItem><NavLinkStyled to="/dashboard/properties" activeClassName="active">Properties</NavLinkStyled></NavItem>
-          <NavItem><NavLinkStyled to="/dashboard/tickets" activeClassName="active">Tickets</NavLinkStyled></NavItem>
-          <NavItem><NavLinkStyled to="/dashboard/contacts" activeClassName="active">Contacts</NavLinkStyled></NavItem>
-          <NavItem><NavLinkStyled to="/dashboard/taxes" activeClassName="active">Taxes</NavLinkStyled></NavItem>
-          <NavItem><NavLinkStyled to="/dashboard/documents" activeClassName="active">Documents</NavLinkStyled></NavItem>
-          <NavItem><NavLinkStyled to="/dashboard/reports" activeClassName="active">Reports</NavLinkStyled></NavItem>
-          <NavItem><NavLinkStyled to="/dashboard/settings" activeClassName="active">Settings</NavLinkStyled></NavItem>
-        </NavList>
-      </nav>
+      <Drawer variant="permanent" anchor="left">
+        <List>
+          <ListItem button component={NavLink} to="/dashboard/finances">
+            <ListItemIcon><FinancesIcon /></ListItemIcon>
+            <ListItemText primary="Finances" />
+          </ListItem>
+          <ListItem button component={NavLink} to="/dashboard/properties">
+            <ListItemIcon><PropertiesIcon /></ListItemIcon>
+            <ListItemText primary="Properties" />
+          </ListItem>
+          <ListItem button component={NavLink} to="/dashboard/tickets">
+            <ListItemIcon><TicketsIcon /></ListItemIcon>
+            <ListItemText primary="Tickets" />
+          </ListItem>
+          <ListItem button component={NavLink} to="/dashboard/contacts">
+            <ListItemIcon><ContactsIcon /></ListItemIcon>
+            <ListItemText primary="Contacts" />
+          </ListItem>
+          <ListItem button component={NavLink} to="/dashboard/taxes">
+            <ListItemIcon><TaxesIcon /></ListItemIcon>
+            <ListItemText primary="Taxes" />
+          </ListItem>
+          <ListItem button component={NavLink} to="/dashboard/documents">
+            <ListItemIcon><DocumentsIcon /></ListItemIcon>
+            <ListItemText primary="Documents" />
+          </ListItem>
+          <ListItem button component={NavLink} to="/dashboard/reports">
+            <ListItemIcon><ReportsIcon /></ListItemIcon>
+            <ListItemText primary="Reports" />
+          </ListItem>
+          <ListItem button component={NavLink} to="/dashboard/settings">
+            <ListItemIcon><SettingsIcon /></ListItemIcon>
+            <ListItemText primary="Settings" />
+          </ListItem>
+        </List>
+      </Drawer>
     </SidebarWrapper>
   );
 };
