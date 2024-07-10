@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Drawer, List, ListItem, ListItemIcon, ListItemText, Avatar, Typography, Box } from '@mui/material';
 import { styled } from '@mui/system';
 import {
   AccountBalance as FinancesIcon,
@@ -18,10 +18,29 @@ const SidebarWrapper = styled('div')({
   flexShrink: 0,
 });
 
+const UserBox = styled(Box)({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  padding: '1rem 0',
+});
+
 const Sidebar = () => {
+  // Example user object
+  const user = {
+    avatar: 'https://via.placeholder.com/150', // Replace with actual avatar URL
+    fullName: 'John Doe',
+  };
+
   return (
     <SidebarWrapper>
       <Drawer variant="permanent" anchor="left">
+        <UserBox>
+          <Avatar src={user.avatar} alt={user.fullName} sx={{ width: 80, height: 80 }} />
+          <Typography variant="h6" gutterBottom>
+            {user.fullName}
+          </Typography>
+        </UserBox>
         <List>
           <ListItem button component={NavLink} to="/dashboard/finances">
             <ListItemIcon><FinancesIcon /></ListItemIcon>
