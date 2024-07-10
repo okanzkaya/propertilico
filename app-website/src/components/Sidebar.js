@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, Avatar, Typography, Box } from '@mui/material';
-import { styled, useTheme } from '@mui/system';
-import { useMediaQuery } from '@mui/material';
+import { styled } from '@mui/system';
 import {
   Dashboard as DashboardIcon,
   AccountBalance as FinancesIcon,
@@ -40,16 +39,19 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
 const StyledNavLink = styled(NavLink)(({ theme }) => ({
   textDecoration: 'none',
   color: 'inherit',
-  '&.active > div': {
+  '&.active': {
     backgroundColor: theme.palette.action.selected,
+    color: theme.palette.primary.main,
+    '& .MuiListItemText-root': {
+      fontWeight: theme.typography.fontWeightBold,
+    },
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.primary.main,
+    },
   },
 }));
 
 const Sidebar = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  // Example user object
   const user = {
     avatar: 'https://via.placeholder.com/150', // Replace with actual avatar URL
     fullName: 'John Doe',
@@ -57,60 +59,63 @@ const Sidebar = () => {
 
   return (
     <SidebarWrapper>
-      <StyledDrawer variant={isMobile ? "temporary" : "permanent"} anchor="left">
+      <StyledDrawer variant="permanent" anchor="left">
         <UserBox>
-          <Typography variant="h5" gutterBottom>
-            Dashboard
-          </Typography>
           <Avatar src={user.avatar} alt={user.fullName} sx={{ width: 80, height: 80 }} />
           <Typography variant="h6" gutterBottom>
             {user.fullName}
           </Typography>
         </UserBox>
         <List>
-          <StyledNavLink to="/dashboard/finances" activeClassName="active">
+          <StyledNavLink exact to="/dashboard">
+            <ListItem button>
+              <ListItemIcon><DashboardIcon /></ListItemIcon>
+              <ListItemText primary="Dashboard" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/finances">
             <ListItem button>
               <ListItemIcon><FinancesIcon /></ListItemIcon>
               <ListItemText primary="Finances" />
             </ListItem>
           </StyledNavLink>
-          <StyledNavLink to="/dashboard/properties" activeClassName="active">
+          <StyledNavLink to="/properties">
             <ListItem button>
               <ListItemIcon><PropertiesIcon /></ListItemIcon>
               <ListItemText primary="Properties" />
             </ListItem>
           </StyledNavLink>
-          <StyledNavLink to="/dashboard/tickets" activeClassName="active">
+          <StyledNavLink to="/tickets">
             <ListItem button>
               <ListItemIcon><TicketsIcon /></ListItemIcon>
               <ListItemText primary="Tickets" />
             </ListItem>
           </StyledNavLink>
-          <StyledNavLink to="/dashboard/contacts" activeClassName="active">
+          <StyledNavLink to="/contacts">
             <ListItem button>
               <ListItemIcon><ContactsIcon /></ListItemIcon>
               <ListItemText primary="Contacts" />
             </ListItem>
           </StyledNavLink>
-          <StyledNavLink to="/dashboard/taxes" activeClassName="active">
+          <StyledNavLink to="/taxes">
             <ListItem button>
               <ListItemIcon><TaxesIcon /></ListItemIcon>
               <ListItemText primary="Taxes" />
             </ListItem>
           </StyledNavLink>
-          <StyledNavLink to="/dashboard/documents" activeClassName="active">
+          <StyledNavLink to="/documents">
             <ListItem button>
               <ListItemIcon><DocumentsIcon /></ListItemIcon>
               <ListItemText primary="Documents" />
             </ListItem>
           </StyledNavLink>
-          <StyledNavLink to="/dashboard/reports" activeClassName="active">
+          <StyledNavLink to="/reports">
             <ListItem button>
               <ListItemIcon><ReportsIcon /></ListItemIcon>
               <ListItemText primary="Reports" />
             </ListItem>
           </StyledNavLink>
-          <StyledNavLink to="/dashboard/settings" activeClassName="active">
+          <StyledNavLink to="/settings">
             <ListItem button>
               <ListItemIcon><SettingsIcon /></ListItemIcon>
               <ListItemText primary="Settings" />

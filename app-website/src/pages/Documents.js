@@ -1,11 +1,22 @@
 import React from 'react';
+import { Typography, Paper } from '@mui/material';
+import { styled } from '@mui/system';
+
+const PageWrapper = styled(Paper)({
+  padding: '1rem',
+  marginBottom: '1rem',
+});
 
 const Documents = () => {
   return (
-    <div>
-      <h2>Documents</h2>
-      <p>Manage your documents here.</p>
-    </div>
+    <PageWrapper>
+      <Typography variant="h4" gutterBottom>
+        Documents
+      </Typography>
+      <Typography>
+        Manage your documents here.
+      </Typography>
+    </PageWrapper>
   );
 };
 
