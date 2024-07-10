@@ -3,7 +3,7 @@ import { AppBar, Toolbar, Typography } from '@mui/material';
 import { styled } from '@mui/system';
 
 const HeaderWrapper = styled(AppBar)({
-  zIndex: 1201, // Make sure it appears above the sidebar
+  zIndex: 1201, // Ensure the header is above the sidebar
 });
 
 const Header = () => {
