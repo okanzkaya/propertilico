@@ -1,8 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, Avatar, Typography, Box } from '@mui/material';
-import { styled } from '@mui/system';
+import { styled, useTheme } from '@mui/system';
+import { useMediaQuery } from '@mui/material';
 import {
+  Dashboard as DashboardIcon,
   AccountBalance as FinancesIcon,
   Home as PropertiesIcon,
   ConfirmationNumber as TicketsIcon,
@@ -13,10 +15,13 @@ import {
   Settings as SettingsIcon
 } from '@mui/icons-material';
 
-const SidebarWrapper = styled('div')({
+const SidebarWrapper = styled('div')(({ theme }) => ({
   width: 240,
   flexShrink: 0,
-});
+  [theme.breakpoints.down('sm')]: {
+    width: 200,
+  },
+}));
 
 const UserBox = styled(Box)({
   display: 'flex',
@@ -25,7 +30,25 @@ const UserBox = styled(Box)({
   padding: '1rem 0',
 });
 
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
+  '& .MuiDrawer-paper': {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+  },
+}));
+
+const StyledNavLink = styled(NavLink)(({ theme }) => ({
+  textDecoration: 'none',
+  color: 'inherit',
+  '&.active > div': {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
+
 const Sidebar = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   // Example user object
   const user = {
     avatar: 'https://via.placeholder.com/150', // Replace with actual avatar URL
@@ -34,48 +57,67 @@ const Sidebar = () => {
 
   return (
     <SidebarWrapper>
-      <Drawer variant="permanent" anchor="left">
+      <StyledDrawer variant={isMobile ? "temporary" : "permanent"} anchor="left">
         <UserBox>
+          <Typography variant="h5" gutterBottom>
+            Dashboard
+          </Typography>
           <Avatar src={user.avatar} alt={user.fullName} sx={{ width: 80, height: 80 }} />
           <Typography variant="h6" gutterBottom>
             {user.fullName}
           </Typography>
         </UserBox>
         <List>
-          <ListItem button component={NavLink} to="/dashboard/finances">
-            <ListItemIcon><FinancesIcon /></ListItemIcon>
-            <ListItemText primary="Finances" />
-          </ListItem>
-          <ListItem button component={NavLink} to="/dashboard/properties">
-            <ListItemIcon><PropertiesIcon /></ListItemIcon>
-            <ListItemText primary="Properties" />
-          </ListItem>
-          <ListItem button component={NavLink} to="/dashboard/tickets">
-            <ListItemIcon><TicketsIcon /></ListItemIcon>
-            <ListItemText primary="Tickets" />
-          </ListItem>
-          <ListItem button component={NavLink} to="/dashboard/contacts">
-            <ListItemIcon><ContactsIcon /></ListItemIcon>
-            <ListItemText primary="Contacts" />
-          </ListItem>
-          <ListItem button component={NavLink} to="/dashboard/taxes">
-            <ListItemIcon><TaxesIcon /></ListItemIcon>
-            <ListItemText primary="Taxes" />
-          </ListItem>
-          <ListItem button component={NavLink} to="/dashboard/documents">
-            <ListItemIcon><DocumentsIcon /></ListItemIcon>
-            <ListItemText primary="Documents" />
-          </ListItem>
-          <ListItem button component={NavLink} to="/dashboard/reports">
-            <ListItemIcon><ReportsIcon /></ListItemIcon>
-            <ListItemText primary="Reports" />
-          </ListItem>
-          <ListItem button component={NavLink} to="/dashboard/settings">
-            <ListItemIcon><SettingsIcon /></ListItemIcon>
-            <ListItemText primary="Settings" />
-          </ListItem>
+          <StyledNavLink to="/dashboard/finances" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><FinancesIcon /></ListItemIcon>
+              <ListItemText primary="Finances" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/dashboard/properties" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><PropertiesIcon /></ListItemIcon>
+              <ListItemText primary="Properties" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/dashboard/tickets" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><TicketsIcon /></ListItemIcon>
+              <ListItemText primary="Tickets" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/dashboard/contacts" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><ContactsIcon /></ListItemIcon>
+              <ListItemText primary="Contacts" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/dashboard/taxes" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><TaxesIcon /></ListItemIcon>
+              <ListItemText primary="Taxes" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/dashboard/documents" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><DocumentsIcon /></ListItemIcon>
+              <ListItemText primary="Documents" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/dashboard/reports" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><ReportsIcon /></ListItemIcon>
+              <ListItemText primary="Reports" />
+            </ListItem>
+          </StyledNavLink>
+          <StyledNavLink to="/dashboard/settings" activeClassName="active">
+            <ListItem button>
+              <ListItemIcon><SettingsIcon /></ListItemIcon>
+              <ListItemText primary="Settings" />
+            </ListItem>
+          </StyledNavLink>
         </List>
-      </Drawer>
+      </StyledDrawer>
     </SidebarWrapper>
   );
 };
