@@ -15,7 +15,6 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EventIcon from '@mui/icons-material/Event';
 import PaymentIcon from '@mui/icons-material/Payment';
-import ApartmentIcon from '@mui/icons-material/Apartment';
 
 const PageWrapper = styled(Box)(({ theme }) => ({
   padding: '2rem',
@@ -168,12 +167,6 @@ const upcomingTaxes = [
   { id: 2, description: 'Property Tax for Apt 3C', daysLeft: 90 },
 ];
 
-const propertyOccupancy = [
-  { id: 1, property: 'Apt 2A', occupancyRate: '95%' },
-  { id: 2, property: 'Apt 5B', occupancyRate: '80%' },
-  { id: 3, property: 'Apt 3C', occupancyRate: '100%' },
-];
-
 const randomLocations = [
   { id: 1, position: [51.505, -0.09], popup: 'Property 1' },
   { id: 2, position: [51.515, -0.1], popup: 'Property 2' },
@@ -187,7 +180,6 @@ const randomLocations = [
   { id: 10, position: [41.0082, 28.9784], popup: 'Property 11, Istanbul' },
   { id: 11, position: [39.9334, 32.8597], popup: 'Property 12, Ankara' }
 ];
-
 const Dashboard = () => {
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
@@ -205,14 +197,8 @@ const Dashboard = () => {
   ]);
   const [newTask, setNewTask] = useState('');
 
-  const handleRevenueClick = () => setRevenueDialogOpen(true);
-  const handleExpenseClick = () => setExpenseDialogOpen(true);
-  const handleOccupancyClick = () => setOccupancyDialogOpen(true);
-  const handleTicketsClick = () => setTicketsOpen(true);
-  const handleTaxesClick = () => setTaxesDialogOpen(true);
-  const handleOverdueClick = () => setOverdueDialogOpen(true);
-  const handleTasksClick = () => setTasksDialogOpen(true);
-  const handleClose = () => {
+  const handleDialogOpen = (setDialogOpen) => () => setDialogOpen(true);
+  const handleDialogClose = () => {
     setRevenueDialogOpen(false);
     setExpenseDialogOpen(false);
     setOccupancyDialogOpen(false);
@@ -244,7 +230,7 @@ const Dashboard = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Overview</Typography>
         <Tooltip title="Open Tickets">
-          <IconButton color="inherit" onClick={handleTicketsClick}>
+          <IconButton color="inherit" onClick={handleDialogOpen(setTicketsOpen)}>
             <Badge badgeContent={openTickets.length} color="secondary">
               <AssignmentIcon />
             </Badge>
@@ -317,25 +303,25 @@ const Dashboard = () => {
           </MapContainerStyled>
         </Grid>
         <Grid item xs={12} md={4}>
-          <GraphContainer onClick={handleRevenueClick}>
+          <GraphContainer onClick={handleDialogOpen(setRevenueDialogOpen)}>
             <Typography variant="h6">Revenues</Typography>
             <Chart options={commonChartOptions} series={revenueSeries} type="line" height={300} />
           </GraphContainer>
         </Grid>
         <Grid item xs={12} md={4}>
-          <GraphContainer onClick={handleExpenseClick}>
+          <GraphContainer onClick={handleDialogOpen(setExpenseDialogOpen)}>
             <Typography variant="h6">Expenses</Typography>
             <Chart options={commonChartOptions} series={expensesSeries} type="line" height={300} />
           </GraphContainer>
         </Grid>
         <Grid item xs={12} md={4}>
-          <GraphContainer onClick={handleOccupancyClick}>
+          <GraphContainer onClick={handleDialogOpen(setOccupancyDialogOpen)}>
             <Typography variant="h6">Occupancy Rate</Typography>
             <Chart options={commonChartOptions} series={occupancyRateSeries} type="line" height={300} />
           </GraphContainer>
         </Grid>
         <Grid item xs={12} md={6}>
-          <StatsCard onClick={handleTaxesClick}>
+          <StatsCard onClick={handleDialogOpen(setTaxesDialogOpen)}>
             <Avatar style={{ backgroundColor: '#ff9800' }}>
               <EventIcon />
             </Avatar>
@@ -346,7 +332,7 @@ const Dashboard = () => {
           </StatsCard>
         </Grid>
         <Grid item xs={12} md={6}>
-          <StatsCard onClick={handleOverdueClick}>
+          <StatsCard onClick={handleDialogOpen(setOverdueDialogOpen)}>
             <Avatar style={{ backgroundColor: '#4caf50' }}>
               <PaymentIcon />
             </Avatar>
@@ -451,29 +437,18 @@ const Dashboard = () => {
                 </ListItem>
               ))}
               {tasks.length > 3 && (
-                <ListItem button onClick={handleTasksClick}>
+                <ListItem button onClick={handleDialogOpen(setTasksDialogOpen)}>
                   <ListItemText primary="See more tasks" />
                 </ListItem>
               )}
             </List>
           </StatsCard>
         </Grid>
-        <Grid item xs={12}>
-          <StatsCard onClick={handleOccupancyClick}>
-            <Avatar style={{ backgroundColor: '#3f51b5' }}>
-              <ApartmentIcon />
-            </Avatar>
-            <Box mt={1}>
-              <Typography variant="h6">Property Occupancy</Typography>
-              <Typography variant="body1">Click to see occupancy details</Typography>
-            </Box>
-          </StatsCard>
-        </Grid>
       </Grid>
 
-      <Dialog open={revenueDialogOpen} onClose={handleClose} maxWidth="md" fullWidth>
+      <Dialog open={revenueDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
         <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
+          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleDialogClose}>
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" gutterBottom>
@@ -488,9 +463,9 @@ const Dashboard = () => {
         </DialogContentStyled>
       </Dialog>
 
-      <Dialog open={expenseDialogOpen} onClose={handleClose} maxWidth="md" fullWidth>
+      <Dialog open={expenseDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
         <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
+          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleDialogClose}>
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" gutterBottom>
@@ -505,9 +480,9 @@ const Dashboard = () => {
         </DialogContentStyled>
       </Dialog>
 
-      <Dialog open={occupancyDialogOpen} onClose={handleClose} maxWidth="md" fullWidth>
+      <Dialog open={occupancyDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
         <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
+          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleDialogClose}>
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" gutterBottom>
@@ -522,9 +497,9 @@ const Dashboard = () => {
         </DialogContentStyled>
       </Dialog>
 
-      <Dialog open={ticketsOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={ticketsOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
         <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
+          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleDialogClose}>
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" gutterBottom>
@@ -546,9 +521,9 @@ const Dashboard = () => {
         </DialogContentStyled>
       </Dialog>
 
-      <Dialog open={taxesDialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={taxesDialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
         <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
+          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleDialogClose}>
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" gutterBottom>
@@ -564,9 +539,9 @@ const Dashboard = () => {
         </DialogContentStyled>
       </Dialog>
 
-      <Dialog open={overdueDialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={overdueDialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
         <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
+          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleDialogClose}>
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" gutterBottom>
@@ -582,9 +557,9 @@ const Dashboard = () => {
         </DialogContentStyled>
       </Dialog>
 
-      <Dialog open={tasksDialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={tasksDialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
         <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
+          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleDialogClose}>
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" gutterBottom>
@@ -601,24 +576,6 @@ const Dashboard = () => {
                 <IconButton edge="end" color="secondary" onClick={() => handleDeleteTask(task.id)}>
                   <DeleteIcon />
                 </IconButton>
-              </ListItem>
-            ))}
-          </List>
-        </DialogContentStyled>
-      </Dialog>
-
-      <Dialog open={occupancyDialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogContentStyled>
-          <IconButton style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
-            <CloseIcon />
-          </IconButton>
-          <Typography variant="h6" gutterBottom>
-            Property Occupancy
-          </Typography>
-          <List>
-            {propertyOccupancy.map((occupancy) => (
-              <ListItem key={occupancy.id}>
-                <ListItemText primary={occupancy.property} secondary={`Occupancy Rate: ${occupancy.occupancyRate}`} />
               </ListItem>
             ))}
           </List>

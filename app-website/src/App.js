@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
-import { Box, CssBaseline, Typography, IconButton, Badge, List, ListItem, ListItemText, Popover, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, Avatar, ListItemAvatar } from '@mui/material';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Box, CssBaseline, Popover, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, Avatar, List, ListItem, ListItemText, ListItemAvatar } from '@mui/material';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Overview';
 import Finances from './pages/Finances';
@@ -12,8 +12,6 @@ import Documents from './pages/Documents';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Feedback from './pages/Feedback';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 
 const App = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -25,14 +23,9 @@ const App = () => {
     setNotificationsOpen(true);
   };
 
-  const handleNotificationsClose = () => {
-    setNotificationsAnchorEl(null);
-    setNotificationsOpen(false);
-  };
+  const handleNotificationsClose = () => setNotificationsOpen(false);
 
-  const handleLogout = () => {
-    setLogoutDialogOpen(true);
-  };
+  const handleLogout = () => setLogoutDialogOpen(true);
 
   const confirmLogout = () => {
     setLogoutDialogOpen(false);
@@ -50,8 +43,7 @@ const App = () => {
       <CssBaseline />
       <Box sx={{ display: 'flex' }}>
         <Sidebar handleNotificationsOpen={handleNotificationsOpen} handleLogout={handleLogout} />
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-          <PageHeader handleNotificationsOpen={handleNotificationsOpen} handleLogout={handleLogout} />
+        <Box component="main" sx={{ flexGrow: 1, p: 0, mt: 8 }}>
           <Routes>
             <Route path="/" exact element={<Dashboard />} />
             <Route path="/finances" element={<Finances />} />
@@ -70,14 +62,8 @@ const App = () => {
         open={notificationsOpen}
         anchorEl={notificationsAnchorEl}
         onClose={handleNotificationsClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <List sx={{ width: 300 }}>
           {notifications.map((notification, index) => (
@@ -90,62 +76,17 @@ const App = () => {
           ))}
         </List>
       </Popover>
-      <Dialog
-        open={logoutDialogOpen}
-        onClose={() => setLogoutDialogOpen(false)}
-        aria-labelledby="logout-dialog-title"
-        aria-describedby="logout-dialog-description"
-      >
-        <DialogTitle id="logout-dialog-title">{'Log Out'}</DialogTitle>
+      <Dialog open={logoutDialogOpen} onClose={() => setLogoutDialogOpen(false)}>
+        <DialogTitle>{'Log Out'}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="logout-dialog-description">
-            Are you sure you want to log out?
-          </DialogContentText>
+          <DialogContentText>Are you sure you want to log out?</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setLogoutDialogOpen(false)} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={confirmLogout} color="primary" autoFocus>
-            Log Out
-          </Button>
+          <Button onClick={() => setLogoutDialogOpen(false)} color="primary">Cancel</Button>
+          <Button onClick={confirmLogout} color="primary" autoFocus>Log Out</Button>
         </DialogActions>
       </Dialog>
     </Router>
-  );
-};
-
-const PageHeader = ({ handleNotificationsOpen, handleLogout }) => {
-  const location = useLocation();
-  const pageTitles = {
-    '/': 'Dashboard',
-    '/finances': 'Finances',
-    '/properties': 'Properties',
-    '/tickets': 'Tickets',
-    '/contacts': 'Contacts',
-    '/taxes': 'Taxes',
-    '/documents': 'Documents',
-    '/reports': 'Reports',
-    '/settings': 'Settings',
-    '/feedback': 'Send Feedback',
-  };
-
-  return (
-    <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-      <Typography variant="h4" component="h1">
-        Propertilico Dashboard - {pageTitles[location.pathname] || 'Dashboard'}
-      </Typography>
-      <Box>
-        <IconButton color="inherit" onClick={handleNotificationsOpen}>
-          <Badge badgeContent={3} color="error">
-            <NotificationsIcon />
-          </Badge>
-        </IconButton>
-        <IconButton color="inherit" onClick={handleLogout}>
-          <ExitToAppIcon />
-        </IconButton>
-      </Box>
-    </Box>
   );
 };
 

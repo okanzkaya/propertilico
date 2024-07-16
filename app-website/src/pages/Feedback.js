@@ -52,6 +52,17 @@ const InputLabelStyled = styled(InputLabel)({
 
 const CustomButton = styled(Button)({
   marginTop: '1rem',
+  width: '200px', // Set the width for the button
+});
+
+const CustomAttachButton = styled(Button)({
+  marginTop: '1rem',
+  width: '200px', // Set the width for the button to match Submit Feedback button
+  whiteSpace: 'nowrap',
+});
+
+const CustomRating = styled(Rating)({
+  fontSize: '2rem', // Increase the star size
 });
 
 const SendFeedbackPage = () => {
@@ -102,7 +113,7 @@ const SendFeedbackPage = () => {
                   <FeedbackIcon />
                 </Avatar>
               </Tooltip>
-              Send Feedback
+              Share Your Insights
             </SectionTitle>
             <CustomFormControl fullWidth>
               <InputLabelStyled shrink>Type of Feedback</InputLabelStyled>
@@ -128,8 +139,7 @@ const SendFeedbackPage = () => {
               />
             </CustomFormControl>
             <CustomFormControl fullWidth>
-              <InputLabelStyled shrink>Rating</InputLabelStyled>
-              <Rating
+              <CustomRating
                 name="rating"
                 value={feedback.rating}
                 onChange={(event, newValue) => {
@@ -138,7 +148,7 @@ const SendFeedbackPage = () => {
               />
             </CustomFormControl>
             <CustomFormControl fullWidth>
-              <Button
+              <CustomAttachButton
                 variant="contained"
                 component="label"
                 startIcon={<AttachFileIcon />}
@@ -149,7 +159,7 @@ const SendFeedbackPage = () => {
                   hidden
                   onChange={handleFileChange}
                 />
-              </Button>
+              </CustomAttachButton>
               {feedback.attachment && (
                 <Typography variant="body2" mt={2}>
                   {feedback.attachment.name}

@@ -1,19 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Avatar,
-  Typography,
-  Box,
-  Divider,
-  Toolbar,
-  AppBar,
-  IconButton,
-  Badge,
+  Drawer, List, ListItem, ListItemIcon, ListItemText, Avatar, Typography, Box, Divider, Toolbar, AppBar, IconButton, Badge, Popover, ListSubheader,
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -21,16 +9,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import {
-  Dashboard as DashboardIcon,
-  AccountBalance as FinancesIcon,
-  Home as PropertiesIcon,
-  ConfirmationNumber as TicketsIcon,
-  Contacts as ContactsIcon,
-  Receipt as TaxesIcon,
-  Description as DocumentsIcon,
-  BarChart as ReportsIcon,
-  Settings as SettingsIcon,
-  Feedback as FeedbackIcon,
+  Dashboard as DashboardIcon, AccountBalance as FinancesIcon, Home as PropertiesIcon, ConfirmationNumber as TicketsIcon, Contacts as ContactsIcon, Receipt as TaxesIcon, Description as DocumentsIcon, BarChart as ReportsIcon, Settings as SettingsIcon, Feedback as FeedbackIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -43,6 +22,7 @@ const SidebarWrapper = styled('div')(({ theme }) => ({
     boxSizing: 'border-box',
     backgroundColor: theme.palette.background.default,
     borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+    paddingTop: theme.spacing(8),
   },
 }));
 
@@ -67,17 +47,14 @@ const StyledNavLink = styled(NavLink)(({ theme }) => ({
   '&.active': {
     backgroundColor: theme.palette.action.selected,
     color: theme.palette.primary.main,
-    '& .MuiListItemText-root': {
-      fontWeight: theme.typography.fontWeightBold,
-    },
-    '& .MuiListItemIcon-root': {
-      color: theme.palette.primary.main,
-    },
+    '& .MuiListItemText-root': { fontWeight: theme.typography.fontWeightBold },
+    '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
   },
 }));
 
 const Sidebar = ({ handleNotificationsOpen, handleLogout }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const notificationsCount = 7; // Replace with actual notifications count
@@ -87,161 +64,91 @@ const Sidebar = ({ handleNotificationsOpen, handleLogout }) => {
     fullName: 'John Doe',
   };
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  const notifications = Array(7).fill('').map((_, i) => `Notification ${i + 1}`); // Replace with actual notifications
+
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+
+  const handleNotificationsClick = (event) => setAnchorEl(event.currentTarget);
+
+  const handleNotificationsClose = () => setAnchorEl(null);
 
   const drawer = (
     <div>
       <LogoBox>
-        <img
-          src={require('../assets/logo.svg').default}
-          alt="Logo"
-          style={{ width: '80%', height: 'auto' }}
-        />{' '}
-        {/* Replace with your logo path */}
+        <img src={require('../assets/logo.svg').default} alt="Logo" style={{ width: '80%', height: 'auto' }} />
       </LogoBox>
       <UserBox>
-        <Avatar
-          src={user.avatar}
-          alt={user.fullName}
-          sx={{ width: 80, height: 80, mb: 1 }}
-        />
-        <Typography variant="h6" gutterBottom>
-          {user.fullName}
-        </Typography>
+        <Avatar src={user.avatar} alt={user.fullName} sx={{ width: 80, height: 80, mb: 1 }} />
+        <Typography variant="h6" gutterBottom>{user.fullName}</Typography>
       </UserBox>
       <List>
-        <StyledNavLink to="/" exact>
-          <ListItem button>
-            <ListItemIcon>
-              <DashboardIcon />
-            </ListItemIcon>
-            <ListItemText primary="Overview" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/finances">
-          <ListItem button>
-            <ListItemIcon>
-              <FinancesIcon />
-            </ListItemIcon>
-            <ListItemText primary="Finances" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/properties">
-          <ListItem button>
-            <ListItemIcon>
-              <PropertiesIcon />
-            </ListItemIcon>
-            <ListItemText primary="Properties" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/tickets">
-          <ListItem button>
-            <ListItemIcon>
-              <TicketsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Tickets" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/contacts">
-          <ListItem button>
-            <ListItemIcon>
-              <ContactsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Contacts" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/taxes">
-          <ListItem button>
-            <ListItemIcon>
-              <TaxesIcon />
-            </ListItemIcon>
-            <ListItemText primary="Taxes" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/documents">
-          <ListItem button>
-            <ListItemIcon>
-              <DocumentsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Documents" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/reports">
-          <ListItem button>
-            <ListItemIcon>
-              <ReportsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Reports" />
-          </ListItem>
-        </StyledNavLink>
+        {[
+          { to: '/', icon: <DashboardIcon />, text: 'Overview' },
+          { to: '/finances', icon: <FinancesIcon />, text: 'Finances' },
+          { to: '/properties', icon: <PropertiesIcon />, text: 'Properties' },
+          { to: '/tickets', icon: <TicketsIcon />, text: 'Tickets' },
+          { to: '/contacts', icon: <ContactsIcon />, text: 'Contacts' },
+          { to: '/taxes', icon: <TaxesIcon />, text: 'Taxes' },
+          { to: '/documents', icon: <DocumentsIcon />, text: 'Documents' },
+          { to: '/reports', icon: <ReportsIcon />, text: 'Reports' },
+          { to: '/settings', icon: <SettingsIcon />, text: 'Settings' },
+          { to: '/feedback', icon: <FeedbackIcon />, text: 'Send Feedback' },
+        ].map((item, index) => (
+          <StyledNavLink key={index} to={item.to}>
+            <ListItem button>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItem>
+          </StyledNavLink>
+        ))}
         <Divider />
-        <StyledNavLink to="/settings">
-          <ListItem button>
-            <ListItemIcon>
-              <SettingsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Settings" />
-          </ListItem>
-        </StyledNavLink>
-        <StyledNavLink to="/feedback">
-          <ListItem button>
-            <ListItemIcon>
-              <FeedbackIcon />
-            </ListItemIcon>
-            <ListItemText primary="Send Feedback" />
-          </ListItem>
-        </StyledNavLink>
       </List>
     </div>
   );
 
   return (
     <SidebarWrapper>
-      <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
-        <Toolbar>
+      <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1, height: '56px' }}>
+        <Toolbar sx={{ minHeight: '56px' }}>
           {isMobile && (
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2 }}
-            >
+            <IconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
               <MenuIcon />
             </IconButton>
           )}
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Propertilico Dashboard
           </Typography>
-          <IconButton color="inherit" onClick={handleNotificationsOpen}>
+          <IconButton color="inherit" onClick={handleNotificationsClick}>
             <Badge badgeContent={notificationsCount > 9 ? '9+' : notificationsCount} color="error">
               <NotificationsIcon />
             </Badge>
           </IconButton>
+          <Popover
+            open={Boolean(anchorEl)}
+            anchorEl={anchorEl}
+            onClose={handleNotificationsClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <List subheader={<ListSubheader>Notifications</ListSubheader>} sx={{ width: '300px' }}>
+              {notifications.map((notification, index) => (
+                <ListItem key={index}>
+                  <ListItemText primary={`${index + 1}. ${notification}`} />
+                </ListItem>
+              ))}
+            </List>
+          </Popover>
           <IconButton color="inherit" onClick={handleLogout}>
             <ExitToAppIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
       {isMobile ? (
-        <Drawer
-          variant="temporary"
-          anchor="left"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-        >
+        <Drawer variant="temporary" anchor="left" open={mobileOpen} onClose={handleDrawerToggle} ModalProps={{ keepMounted: true }}>
           {drawer}
         </Drawer>
       ) : (
-        <Drawer
-          variant="permanent"
-          open
-        >
+        <Drawer variant="permanent" open>
           {drawer}
         </Drawer>
       )}
