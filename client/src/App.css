@@ -1,0 +1,18 @@
+/* src/App.css */
+.content {
+  min-height: calc(100vh - 130px); /* Adjusted based on header and footer height */
+  padding: 20px;
+  padding-top: 30px; /* Add padding to separate from header */
+  padding-bottom: 30px; /* Add padding to separate from footer */
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
