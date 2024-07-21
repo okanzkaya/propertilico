@@ -1,6 +1,7 @@
 // src/pages/Pricing.js
 import React from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 
 const PricingContainer = styled.div`
   padding: 40px 20px;
@@ -115,16 +116,18 @@ const DiscountLabel = styled.span`
   display: inline-block;
 `;
 
-const CTAButton = styled.a`
+const CTAButton = styled.button`
   background-color: #007BFF;
   color: white;
   padding: 15px 30px;
   border-radius: 5px;
+  border: none;
   text-decoration: none;
   font-size: 1.2em;
   margin-top: 20px;
   display: inline-block;
   transition: background-color 0.3s, transform 0.3s;
+  cursor: pointer;
 
   &:hover {
     background-color: #0056b3;
@@ -133,6 +136,12 @@ const CTAButton = styled.a`
 `;
 
 function Pricing() {
+  const navigate = useNavigate();
+
+  const handleStartFreeTrial = () => {
+    navigate('/payment'); // Redirect to payment page
+  };
+
   return (
     <PricingContainer>
       <Header>Pricing</Header>
@@ -155,7 +164,7 @@ function Pricing() {
             <PlanFeature>Regular Updates</PlanFeature>
             <PlanFeature>Customizable Dashboards</PlanFeature>
           </PlanFeatureList>
-          <CTAButton href="/get-started">Start Free Trial</CTAButton>
+          <CTAButton onClick={handleStartFreeTrial}>Start Free Trial</CTAButton>
         </PlanCard>
       </PlanWrapper>
     </PricingContainer>

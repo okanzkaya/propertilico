@@ -1,37 +1,34 @@
+// src/components/public/Header.js
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaCaretDown, FaBars, FaTimes } from 'react-icons/fa';
-import LogoImage from '../../assets/public/logo.svg'; // Import the logo SVG
+import { FaCaretDown, FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+import LogoImage from '../../assets/public/logo.svg';
 
 const HeaderContainer = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 100px;
+  padding: 10px 50px;
   background-color: white;
   color: black;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  height: 70px;
+  height: 60px;
   border-bottom: 1px solid #e0e0e0;
-
   @media (max-width: 768px) {
-    padding: 15px 20px;
+    padding: 10px 20px;
   }
 `;
 
 const Logo = styled.div`
   display: flex;
   align-items: center;
-
   img {
-    height: 40px;
+    height: 35px;
     transition: transform 0.3s;
-
     @media (max-width: 768px) {
-      height: 30px;
+      height: 25px;
     }
-
     &:hover {
       transform: scale(1.05);
     }
@@ -41,24 +38,21 @@ const Logo = styled.div`
 const NavLinks = styled.nav`
   display: flex;
   align-items: center;
-
   @media (max-width: 768px) {
     display: none;
   }
 `;
 
 const NavLink = styled(Link)`
-  margin-left: 30px;
+  margin-left: 20px;
   text-decoration: none;
   color: black;
-  font-size: 1.1em;
+  font-size: 1em;
   transition: color 0.3s, transform 0.3s;
-
   &:hover {
     color: blue;
     transform: scale(1.05);
   }
-
   &.active {
     font-weight: bold;
     color: blue;
@@ -69,100 +63,42 @@ const Separator = styled.div`
   height: 20px;
   width: 1px;
   background-color: black;
-  margin: 0 20px;
-
+  margin: 0 15px;
   @media (max-width: 768px) {
     display: none;
   }
 `;
 
-const GetStartedButton = styled(Link)`
+const Button = styled.button`
   background-color: blue;
   color: white;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 5px;
-  text-decoration: none;
-  margin-left: 20px;
-  font-size: 1.1em;
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
   transition: background-color 0.3s, transform 0.3s;
-
+  margin-left: 10px;
   &:hover {
     background-color: darkblue;
     transform: scale(1.05);
   }
+  @media (max-width: 768px) {
+    padding: 7px 14px;
+    font-size: 0.9em;
+  }
+`;
 
+const GetStartedButton = styled(Button)`
+  margin-left: 15px;
   @media (max-width: 768px) {
     display: none;
-  }
-`;
-
-const DropdownContainer = styled.div`
-  position: relative;
-  display: inline-block;
-
-  &:hover .dropdown-content {
-    display: block;
-    animation: fadeIn 0.3s;
-  }
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-`;
-
-const DropdownButton = styled.button`
-  margin-left: 30px;
-  text-decoration: none;
-  color: black;
-  font-size: 1.1em;
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: color 0.3s, transform 0.3s;
-
-  &:hover {
-    color: blue;
-    transform: scale(1.05);
-  }
-`;
-
-const DropdownContent = styled.div`
-  display: none;
-  position: absolute;
-  background-color: white;
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-  z-index: 1;
-  min-width: 200px;
-  border: 1px solid #e0e0e0;
-  border-radius: 5px;
-  overflow: hidden;
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-`;
-
-const DropdownItem = styled(Link)`
-  color: black;
-  padding: 12px 16px;
-  font-size: 1em;
-  text-decoration: none;
-  display: block;
-  transition: background-color 0.3s, transform 0.3s;
-
-  &:hover {
-    background-color: #f1f1f1;
-    transform: translateX(10px);
   }
 `;
 
 const MobileMenuIcon = styled.div`
   display: none;
   cursor: pointer;
-
   @media (max-width: 768px) {
     display: block;
   }
@@ -193,7 +129,6 @@ const MobileMenu = styled.div`
   z-index: 999;
   transform: ${({ $isOpen }) => ($isOpen ? 'translateX(0)' : 'translateX(-100%)')};
   transition: transform 0.3s ease-in-out;
-
   @media (max-width: 768px) {
     display: flex;
   }
@@ -210,44 +145,111 @@ const MobileNavLink = styled(Link)`
   color: black;
   font-size: 1em;
   transition: color 0.3s, transform 0.3s;
-
   &:hover {
     color: blue;
     transform: scale(1.05);
   }
 `;
 
-const MobileGetStartedButton = styled(Link)`
-  background-color: blue;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  text-decoration: none;
+const MobileGetStartedButton = styled(Button)`
   margin-top: 10px;
-  transition: background-color 0.3s, transform 0.3s;
+`;
 
+const DropdownContainer = styled.div`
+  position: relative;
+  display: inline-block;
+  &:hover .dropdown-content {
+    display: block;
+    animation: fadeIn 0.3s;
+  }
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const DropdownButton = styled.button`
+  margin-left: 20px;
+  text-decoration: none;
+  color: black;
+  font-size: 1em;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.3s, transform 0.3s;
   &:hover {
-    background-color: darkblue;
+    color: blue;
     transform: scale(1.05);
   }
 `;
 
-function Header() {
+const DropdownContent = styled.div`
+  display: none;
+  position: absolute;
+  background-color: white;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  min-width: 200px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  overflow: hidden;
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+const DropdownItem = styled(Link)`
+  color: black;
+  padding: 12px 16px;
+  font-size: 1em;
+  text-decoration: none;
+  display: block;
+  transition: background-color 0.3s, transform 0.3s;
+  &:hover {
+    background-color: #f1f1f1;
+    transform: translateX(10px);
+  }
+`;
+
+const LogoutLink = styled.div`
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+  cursor: pointer;
+  color: black;
+  font-size: 1em;
+  transition: color 0.3s, transform 0.3s;
+  &:hover {
+    color: blue;
+    transform: scale(1.05);
+  }
+`;
+
+const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const menuRef = useRef(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token') || !!sessionStorage.getItem('token'));
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setMobileMenuOpen(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) setMobileMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [menuRef]);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    setIsLoggedIn(false);
+    navigate('/');
+  };
 
   return (
     <HeaderContainer>
@@ -272,8 +274,20 @@ function Header() {
         </DropdownContainer>
         <NavLink to="/pricing" className={location.pathname === '/pricing' ? 'active' : ''}>Pricing</NavLink>
         <Separator />
-        <NavLink to="/signin" className={location.pathname === '/signin' ? 'active' : ''}>Sign In</NavLink>
-        <GetStartedButton to="/get-started">Get Started - Free</GetStartedButton>
+        {isLoggedIn ? (
+          <>
+            <Button as={Link} to="/app/dashboard">Dashboard</Button>
+            <LogoutLink onClick={handleLogout}>
+              <FaSignOutAlt style={{ marginRight: '5px' }} />
+              Logout
+            </LogoutLink>
+          </>
+        ) : (
+          <>
+            <NavLink to="/signin" className={location.pathname === '/signin' ? 'active' : ''}>Sign In</NavLink>
+            <GetStartedButton as={Link} to="/get-started">Get Started - Free</GetStartedButton>
+          </>
+        )}
       </NavLinks>
       <MobileMenuIcon onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
         <FaBars />
@@ -290,11 +304,20 @@ function Header() {
         <MobileNavLink to="/tos" onClick={() => setMobileMenuOpen(false)}>Terms of Service</MobileNavLink>
         <MobileNavLink to="/privacy-policy" onClick={() => setMobileMenuOpen(false)}>Privacy Policy</MobileNavLink>
         <MobileNavLink to="/pricing" className={location.pathname === '/pricing' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Pricing</MobileNavLink>
-        <MobileNavLink to="/signin" className={location.pathname === '/signin' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Sign In</MobileNavLink>
-        <MobileGetStartedButton to="/get-started" onClick={() => setMobileMenuOpen(false)}>Get Started - Free</MobileGetStartedButton>
+        {isLoggedIn ? (
+          <>
+            <MobileNavLink to="/app/dashboard" className={location.pathname === '/app/dashboard' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Dashboard</MobileNavLink>
+            <MobileNavLink as="button" onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>Logout</MobileNavLink>
+          </>
+        ) : (
+          <>
+            <MobileNavLink to="/signin" className={location.pathname === '/signin' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Sign In</MobileNavLink>
+            <MobileGetStartedButton as={Link} to="/get-started">Get Started - Free</MobileGetStartedButton>
+          </>
+        )}
       </MobileMenu>
     </HeaderContainer>
   );
-}
+};
 
 export default Header;

@@ -1,6 +1,8 @@
+// src/pages/public/SignUp.js
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FaGoogle } from 'react-icons/fa';
+import { registerUser } from '../../api';
 import { useNavigate } from 'react-router-dom';
 
 const SignUpContainer = styled.div`
@@ -21,7 +23,6 @@ const SignUpBox = styled.div`
   width: 100%;
   max-width: 400px;
   text-align: center;
-
   @media (max-width: 768px) {
     padding: 20px;
   }
@@ -31,7 +32,6 @@ const Header = styled.h1`
   font-size: 2.5em;
   margin-bottom: 10px;
   color: #007BFF;
-
   @media (max-width: 768px) {
     font-size: 2em;
   }
@@ -50,7 +50,6 @@ const Input = styled.input`
   border: 1px solid #ccc;
   border-radius: 5px;
   font-size: 1em;
-
   @media (max-width: 768px) {
     padding: 10px;
   }
@@ -66,12 +65,10 @@ const Button = styled.button`
   font-size: 1.2em;
   cursor: pointer;
   transition: background-color 0.3s, transform 0.3s;
-
   &:hover {
     background-color: #0056b3;
     transform: scale(1.05);
   }
-
   @media (max-width: 768px) {
     padding: 10px;
   }
@@ -89,7 +86,6 @@ const SignInLink = styled.a`
   font-weight: bold;
   margin-left: 5px;
   transition: color 0.3s;
-
   &:hover {
     color: #0056b3;
   }
@@ -100,7 +96,6 @@ const Divider = styled.div`
   text-align: center;
   font-size: 1em;
   color: #999;
-
   @media (max-width: 768px) {
     margin: 15px 0;
   }
@@ -114,17 +109,15 @@ const GoogleButton = styled(Button)`
   align-items: center;
   justify-content: center;
   margin-top: 10px;
-
   &:hover {
     background-color: #f1f1f1;
   }
-
   svg {
     margin-right: 10px;
   }
 `;
 
-function SignUp() {
+const SignUp = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -134,15 +127,17 @@ function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-        return alert('Passwords do not match');
+      return alert('Passwords do not match');
     }
-    // Placeholder for registration logic
-    alert('User registered (this is a placeholder)');
-    navigate('/signin'); // Redirect to login page after successful registration
+    try {
+      await registerUser({ name, email, password });
+      navigate('/signin'); // Redirect to sign in page after successful registration
+    } catch (error) {
+      console.error('Error registering user:', error);
+    }
   };
 
   const handleGoogleSignIn = () => {
-    // Placeholder for Google sign-in logic
     alert('Google sign-in (this is a placeholder)');
   };
 
@@ -163,12 +158,11 @@ function SignUp() {
           <FaGoogle /> Sign up with Google
         </GoogleButton>
         <SignInPrompt>
-          Already have an account?
-          <SignInLink href="/signin">Sign in</SignInLink>
+          Already have an account? <SignInLink href="/signin">Sign in</SignInLink>
         </SignInPrompt>
       </SignUpBox>
     </SignUpContainer>
   );
-}
+};
 
 export default SignUp;

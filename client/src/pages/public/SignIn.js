@@ -1,13 +1,11 @@
-// src/pages/public/SignIn.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaGoogle } from 'react-icons/fa';
 import { loginUser } from '../../api';
 import { useNavigate } from 'react-router-dom';
 
-const SignInContainer = styled.div`
+const Container = styled.div`
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 100vh;
@@ -15,9 +13,9 @@ const SignInContainer = styled.div`
   padding: 20px;
 `;
 
-const SignInBox = styled.div`
+const Box = styled.div`
   background-color: white;
-  padding: 40px;
+  padding: 30px;
   border-radius: 15px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -30,42 +28,34 @@ const SignInBox = styled.div`
 `;
 
 const Header = styled.h1`
-  font-size: 2.5em;
+  font-size: 2em;
   margin-bottom: 10px;
   color: #007BFF;
-
-  @media (max-width: 768px) {
-    font-size: 2em;
-  }
 `;
 
 const Description = styled.p`
-  font-size: 1.1em;
+  font-size: 1em;
   margin-bottom: 20px;
   color: #666;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 12px;
-  margin-bottom: 20px;
+  padding: 10px;
+  margin-bottom: 15px;
   border: 1px solid #ccc;
   border-radius: 5px;
   font-size: 1em;
-
-  @media (max-width: 768px) {
-    padding: 10px;
-  }
 `;
 
 const Button = styled.button`
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   background-color: #007BFF;
   color: white;
   border: none;
   border-radius: 5px;
-  font-size: 1.2em;
+  font-size: 1.1em;
   cursor: pointer;
   transition: background-color 0.3s, transform 0.3s;
 
@@ -73,20 +63,16 @@ const Button = styled.button`
     background-color: #0056b3;
     transform: scale(1.05);
   }
-
-  @media (max-width: 768px) {
-    padding: 10px;
-  }
 `;
 
 const RememberMeContainer = styled.div`
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  align-items: center;
+  margin-bottom: 15px;
 `;
 
-const RememberMeLabel = styled.label`
+const Label = styled.label`
   display: flex;
   align-items: center;
   font-size: 0.9em;
@@ -97,7 +83,7 @@ const Checkbox = styled.input`
   margin-right: 10px;
 `;
 
-const ForgotPasswordLink = styled.a`
+const Link = styled.a`
   font-size: 0.9em;
   color: #007BFF;
   text-decoration: none;
@@ -113,10 +99,6 @@ const Divider = styled.div`
   text-align: center;
   font-size: 1em;
   color: #999;
-
-  @media (max-width: 768px) {
-    margin: 15px 0;
-  }
 `;
 
 const GoogleButton = styled(Button)`
@@ -137,54 +119,52 @@ const GoogleButton = styled(Button)`
   }
 `;
 
-const SignUpPrompt = styled.div`
+const Prompt = styled.div`
   margin-top: 20px;
   font-size: 0.9em;
   color: #666;
 `;
 
-const SignUpLink = styled.a`
-  color: #007BFF;
-  text-decoration: none;
-  font-weight: bold;
-  margin-left: 5px;
-  transition: color 0.3s;
-
-  &:hover {
-    color: #0056b3;
-  }
-`;
-
-function SignIn() {
+const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) navigate('/');
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Sign In button clicked'); // Debug log
     try {
       const response = await loginUser({ email, password });
-      console.log('User logged in:', response);
-      localStorage.setItem('token', response.token); // Store token in localStorage
-      navigate('/app/dashboard'); // Redirect to app-website dashboard
+      console.log('API response:', response); // Debug log
+      if (rememberMe) localStorage.setItem('token', response.token);
+      else sessionStorage.setItem('token', response.token);
+
+      navigate('/');
+      window.location.reload();
     } catch (error) {
       console.error('Error logging in:', error);
     }
   };
 
   return (
-    <SignInContainer>
-      <SignInBox>
+    <Container>
+      <Box>
         <Header>Sign In</Header>
         <Description>Sign in to your Propertilico account.</Description>
         <form onSubmit={handleSubmit}>
           <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <RememberMeContainer>
-            <RememberMeLabel>
-              <Checkbox type="checkbox" /> Remember Me
-            </RememberMeLabel>
-            <ForgotPasswordLink href="/forgot-password">Forgot Password?</ForgotPasswordLink>
+            <Label>
+              <Checkbox type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} /> Remember Me
+            </Label>
+            <Link href="/forgot-password">Forgot Password?</Link>
           </RememberMeContainer>
           <Button type="submit">Sign In</Button>
         </form>
@@ -192,13 +172,12 @@ function SignIn() {
         <GoogleButton>
           <FaGoogle /> Sign in with Google
         </GoogleButton>
-        <SignUpPrompt>
-          Don't have an account?
-          <SignUpLink href="/get-started">Sign up</SignUpLink>
-        </SignUpPrompt>
-      </SignInBox>
-    </SignInContainer>
+        <Prompt>
+          Don't have an account? <Link href="/get-started">Sign up</Link>
+        </Prompt>
+      </Box>
+    </Container>
   );
-}
+};
 
 export default SignIn;

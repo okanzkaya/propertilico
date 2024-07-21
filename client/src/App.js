@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
-import { Box, CssBaseline, Popover, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, Avatar, List, ListItem, ListItemText, ListItemAvatar } from '@mui/material';
-import Sidebar from './components/app/Sidebar';  // Ensure the path is correct
-import Dashboard from './pages/app/Overview';
-import Finances from './pages/app/Finances';
-import Properties from './pages/app/Properties';
-import Tickets from './pages/app/Tickets';
-import Contacts from './pages/app/Contacts';
-import Taxes from './pages/app/Taxes';
-import Documents from './pages/app/Documents';
-import Reports from './pages/app/Reports';
-import Settings from './pages/app/Settings';
-import Feedback from './pages/app/Feedback';
+// src/App.js
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { CssBaseline, Popover, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, Avatar, List, ListItem, ListItemText, ListItemAvatar, Box } from '@mui/material';
+import Sidebar from './components/app/Sidebar';
+import GlobalStyle from './GlobalStyles';
+import PublicHeader from './components/public/Header';
+import PublicFooter from './components/public/Footer';
 
 import Home from './pages/public/Home';
 import Features from './pages/public/Features';
@@ -26,9 +20,18 @@ import ContactUs from './pages/public/ContactUs';
 import CompanyInfo from './pages/public/CompanyInfo';
 import SignIn from './pages/public/SignIn';
 import SignUp from './pages/public/SignUp';
-import PublicHeader from './components/public/Header';
-import PublicFooter from './components/public/Footer';
-import GlobalStyle from './GlobalStyles';
+import Payment from './pages/public/Payment';
+
+import Dashboard from './pages/app/Overview';
+import Finances from './pages/app/Finances';
+import Properties from './pages/app/Properties';
+import Tickets from './pages/app/Tickets';
+import Contacts from './pages/app/Contacts';
+import Taxes from './pages/app/Taxes';
+import Documents from './pages/app/Documents';
+import Reports from './pages/app/Reports';
+import Settings from './pages/app/Settings';
+import Feedback from './pages/app/Feedback';
 
 const App = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -41,12 +44,12 @@ const App = () => {
   };
 
   const handleNotificationsClose = () => setNotificationsOpen(false);
-
   const handleLogout = () => setLogoutDialogOpen(true);
-
   const confirmLogout = () => {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     setLogoutDialogOpen(false);
-    console.log('Logged Out');
+    window.location.reload();
   };
 
   const notifications = [
@@ -60,7 +63,6 @@ const App = () => {
       <GlobalStyle />
       <CssBaseline />
       <Routes>
-        {/* Public Routes */}
         <Route path="/" element={<PublicLayout />}>
           <Route index element={<Home />} />
           <Route path="features" element={<Features />} />
@@ -73,18 +75,16 @@ const App = () => {
           <Route path="help-center" element={<HelpCenter />} />
           <Route path="contact" element={<ContactUs />} />
           <Route path="about" element={<CompanyInfo />} />
-          <Route path="signin" element={<SignIn />} />
-          <Route path="get-started" element={<SignUp />} />
+          <Route path="signin" element={<AuthenticatedRoute><SignIn /></AuthenticatedRoute>} />
+          <Route path="get-started" element={<AuthenticatedRoute><SignUp /></AuthenticatedRoute>} />
+          <Route path="payment" element={<Payment />} />
         </Route>
-
-        {/* App Routes */}
         <Route
           path="/app"
           element={
-            <AppLayout 
-              handleNotificationsOpen={handleNotificationsOpen} 
-              handleLogout={handleLogout} 
-            />
+            <ProtectedRoute>
+              <AppLayout handleNotificationsOpen={handleNotificationsOpen} handleLogout={handleLogout} />
+            </ProtectedRoute>
           }
         >
           <Route path="dashboard" element={<Dashboard />} />
@@ -118,7 +118,7 @@ const App = () => {
         </List>
       </Popover>
       <Dialog open={logoutDialogOpen} onClose={() => setLogoutDialogOpen(false)}>
-        <DialogTitle>{'Log Out'}</DialogTitle>
+        <DialogTitle>Log Out</DialogTitle>
         <DialogContent>
           <DialogContentText>Are you sure you want to log out?</DialogContentText>
         </DialogContent>
@@ -141,13 +141,62 @@ const PublicLayout = () => (
   </>
 );
 
-const AppLayout = ({ handleNotificationsOpen, handleLogout }) => (
-  <Box sx={{ display: 'flex' }}>
-    <Sidebar handleNotificationsOpen={handleNotificationsOpen} handleLogout={handleLogout} />
-    <Box component="main" sx={{ flexGrow: 1, p: 0, mt: 8 }}>
-      <Outlet />
+const AppLayout = ({ handleNotificationsOpen, handleLogout }) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuthAndSubscription = async () => {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token) {
+        navigate('/signin');
+        return;
+      }
+
+      const response = await fetch('/api/protected/check-subscription', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!data.isActive) {
+        navigate('/pricing');
+      }
+    };
+
+    checkAuthAndSubscription();
+  }, [navigate]);
+
+  return (
+    <Box sx={{ display: 'flex' }}>
+      <Sidebar handleNotificationsOpen={handleNotificationsOpen} handleLogout={handleLogout} />
+      <Box component="main" sx={{ flexGrow: 1, p: 0, mt: 8 }}>
+        <Outlet />
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
+
+const AuthenticatedRoute = ({ children }) => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  if (token) {
+    return <Navigate to="/" />;
+  }
+  return children;
+};
+
+const ProtectedRoute = ({ children }) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) {
+      navigate('/signin');
+      return;
+    }
+  }, [navigate]);
+
+  return children;
+};
 
 export default App;

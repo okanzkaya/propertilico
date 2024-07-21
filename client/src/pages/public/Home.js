@@ -1,17 +1,18 @@
 // src/pages/Home.js
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaHome, FaChartBar, FaShieldAlt } from 'react-icons/fa'; // Import icons from react-icons
-import exampleImage from '../../assets/public/homepage.jpg'; // Ensure you have an example image in the same folder
+import { FaHome, FaChartBar, FaShieldAlt } from 'react-icons/fa';
+import exampleImage from '../../assets/public/homepage.jpg';
 
 const HomeContainer = styled.div`
   text-align: center;
   padding: 50px;
-  margin-bottom: 100px; /* Add margin-bottom for spacing */
+  margin-bottom: 100px;
 
   @media (max-width: 768px) {
     padding: 20px;
-    margin-bottom: 50px; /* Adjust for smaller screens */
+    margin-bottom: 50px;
   }
 `;
 
@@ -66,7 +67,7 @@ const ImageContent = styled.div`
 `;
 
 const Header = styled.h2`
-  font-size: 3.5em;
+  font-size: 2.5em;
   margin-bottom: 10px;
 
   @media (max-width: 768px) {
@@ -75,23 +76,23 @@ const Header = styled.h2`
 `;
 
 const SubText = styled.p`
-  font-size: 1.2em;
-  margin-bottom: 15px;
+  font-size: 1em;
+  margin-bottom: 25px;
 
   @media (max-width: 768px) {
-    font-size: 1em;
+    font-size: 0.9em;
   }
 `;
 
 const GetStartedButton = styled.button`
   background-color: blue;
   color: white;
-  padding: 15px 30px;
+  padding: 12px 25px;
   border: none;
   border-radius: 5px;
   font-size: 1em;
   cursor: pointer;
-  margin-bottom: 5px;
+  margin-top: 10px;
   display: block;
   margin-left: auto;
   margin-right: auto;
@@ -109,23 +110,13 @@ const GetStartedButton = styled.button`
 `;
 
 const TrialText = styled.p`
-  font-size: 0.9em;
+  font-size: 0.8em;
   color: #888;
   text-align: center;
-  margin-top: 5px;
+  margin-top: 10px;
 
   @media (max-width: 768px) {
-    font-size: 0.8em;
-  }
-`;
-
-const Divider = styled.hr`
-  border: 0;
-  border-top: 1px solid #e0e0e0;
-  margin: 40px 0;
-
-  @media (max-width: 768px) {
-    margin: 20px 0;
+    font-size: 0.7em;
   }
 `;
 
@@ -181,7 +172,7 @@ const Feature = styled.div`
 `;
 
 const FeatureIcon = styled.div`
-  font-size: 4.5em; /* Increased size */
+  font-size: 3em;
   margin-bottom: 10px;
   color: #007BFF;
   transition: transform 0.3s, color 0.3s;
@@ -192,44 +183,50 @@ const FeatureIcon = styled.div`
   }
 
   @media (max-width: 768px) {
-    font-size: 3em;
+    font-size: 2.5em;
   }
 `;
 
 const FeatureHeader = styled.h3`
-  font-size: 1.8em;
+  font-size: 1.5em;
   margin-bottom: 10px;
 
   @media (max-width: 768px) {
-    font-size: 1.5em;
+    font-size: 1.2em;
   }
 `;
 
 const FeatureText = styled.p`
-  font-size: 1em;
+  font-size: 0.9em;
   color: #666;
 
   @media (max-width: 768px) {
-    font-size: 0.9em;
+    font-size: 0.8em;
   }
 `;
 
 const Home = () => {
+  const navigate = useNavigate();
+
+  const handleGetStartedClick = () => {
+    navigate('/get-started');
+  };
+
   return (
     <HomeContainer>
       <Section>
         <TextContent>
           <Header>Your Ultimate Property Management Solution</Header>
-          <SubText>Managing properties has never been easier! Propertilico is a cutting-edge property management designed to streamline and optimize your property management tasks, making your job effortless and efficient.</SubText>
-          <GetStartedButton>Start your free trial</GetStartedButton>
+          <SubText>
+            Managing properties has never been easier! Propertilico is a cutting-edge property management designed to streamline and optimize your property management tasks, making your job effortless and efficient.
+          </SubText>
+          <GetStartedButton onClick={handleGetStartedClick}>Start your free trial</GetStartedButton>
           <TrialText>Cancel anytime during 30 days trial.</TrialText>
         </TextContent>
         <ImageContent>
           <img src={exampleImage} alt="Property Management" />
         </ImageContent>
       </Section>
-
-      <Divider />
 
       <FeaturesSection>
         <Feature>

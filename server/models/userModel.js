@@ -15,6 +15,23 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    subscription: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UserSubscription',
+        default: null,
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now,
+    },
 });
 
 userSchema.pre('save', async function(next) {
@@ -23,6 +40,11 @@ userSchema.pre('save', async function(next) {
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    next();
+});
+
+userSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
     next();
 });
 
