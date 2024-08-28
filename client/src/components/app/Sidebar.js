@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  Drawer, List, ListItem, ListItemIcon, ListItemText, Avatar, Typography, Box, Divider, Toolbar, AppBar, IconButton, Badge, Popover, ListSubheader,
+  Drawer, List, ListItem, ListItemIcon, ListItemText, Avatar, Typography, Box, Divider, Toolbar, AppBar, IconButton, Badge, Popover, Button, ListSubheader,
 } from '@mui/material';
 import { styled, useTheme, useMediaQuery } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import {
   Dashboard as DashboardIcon, AccountBalance as FinancesIcon, Home as PropertiesIcon, ConfirmationNumber as TicketsIcon, Contacts as ContactsIcon, Receipt as TaxesIcon, Description as DocumentsIcon, BarChart as ReportsIcon, Settings as SettingsIcon, Feedback as FeedbackIcon,
 } from '@mui/icons-material';
@@ -16,14 +18,9 @@ import logo from '../../assets/app/logo.svg';
 const drawerWidth = 240;
 
 const SidebarWrapper = styled('div')(({ theme }) => ({
-  width: drawerWidth,
-  flexShrink: 0,
-  '& .MuiDrawer-paper': {
+  [theme.breakpoints.up('sm')]: {
     width: drawerWidth,
-    boxSizing: 'border-box',
-    backgroundColor: theme.palette.background.default,
-    borderRight: '1px solid rgba(0, 0, 0, 0.12)',
-    paddingTop: theme.spacing(8),
+    flexShrink: 0,
   },
 }));
 
@@ -53,12 +50,14 @@ const StyledNavLink = styled(NavLink)(({ theme }) => ({
   },
 }));
 
-const Sidebar = ({ handleNotificationsOpen, handleLogout }) => {
+const Sidebar = ({ handleNotificationsOpen, themeMode, toggleTheme }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [logoutAnchorEl, setLogoutAnchorEl] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const notificationsCount = 7; // Replace with actual notifications count
+  const navigate = useNavigate();
 
   const user = {
     avatar: 'https://via.placeholder.com/150', // Replace with actual avatar URL
@@ -72,6 +71,20 @@ const Sidebar = ({ handleNotificationsOpen, handleLogout }) => {
   const handleNotificationsClick = (event) => setAnchorEl(event.currentTarget);
 
   const handleNotificationsClose = () => setAnchorEl(null);
+
+  const handleLogoutClick = (event) => setLogoutAnchorEl(event.currentTarget);
+
+  const handleLogoutClose = () => setLogoutAnchorEl(null);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    navigate('/signin');
+  };
+
+  const handleReturnToHomepage = () => {
+    navigate('/');
+  };
 
   const drawer = (
     <div>
@@ -119,6 +132,9 @@ const Sidebar = ({ handleNotificationsOpen, handleLogout }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Propertilico Dashboard
           </Typography>
+          <IconButton color="inherit" onClick={() => toggleTheme(themeMode === 'light' ? 'dark' : 'light')}>
+            {themeMode === 'light' ? <Brightness4Icon /> : <Brightness7Icon />}
+          </IconButton>
           <IconButton color="inherit" onClick={handleNotificationsClick}>
             <Badge badgeContent={notificationsCount > 9 ? '9+' : notificationsCount} color="error">
               <NotificationsIcon />
@@ -139,20 +155,44 @@ const Sidebar = ({ handleNotificationsOpen, handleLogout }) => {
               ))}
             </List>
           </Popover>
-          <IconButton color="inherit" onClick={handleLogout}>
+          <IconButton color="inherit" onClick={handleLogoutClick}>
             <ExitToAppIcon />
           </IconButton>
+          <Popover
+            open={Boolean(logoutAnchorEl)}
+            anchorEl={logoutAnchorEl}
+            onClose={handleLogoutClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <Box sx={{ p: 2 }}>
+              <Button fullWidth variant="contained" color="primary" onClick={handleReturnToHomepage}>
+                Return to Homepage
+              </Button>
+              <Divider sx={{ my: 1 }} />
+              <Button fullWidth variant="outlined" color="secondary" onClick={handleLogout}>
+                Log Out
+              </Button>
+            </Box>
+          </Popover>
         </Toolbar>
       </AppBar>
-      {isMobile ? (
-        <Drawer variant="temporary" anchor="left" open={mobileOpen} onClose={handleDrawerToggle} ModalProps={{ keepMounted: true }}>
-          {drawer}
-        </Drawer>
-      ) : (
-        <Drawer variant="permanent" open>
-          {drawer}
-        </Drawer>
-      )}
+      <Drawer
+        variant={isMobile ? "temporary" : "permanent"}
+        anchor="left"
+        open={mobileOpen || !isMobile}
+        onClose={handleDrawerToggle}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: mobileOpen ? 'block' : 'none', sm: 'block' },
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
+            width: drawerWidth,
+          },
+        }}
+      >
+        {drawer}
+      </Drawer>
     </SidebarWrapper>
   );
 };

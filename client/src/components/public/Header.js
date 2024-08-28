@@ -1,8 +1,7 @@
-// src/components/public/Header.js
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaCaretDown, FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+import { FaBars, FaTimes, FaSignOutAlt, FaHome, FaInfoCircle, FaDollarSign, FaBlog, FaQuestionCircle, FaFileAlt, FaShieldAlt } from 'react-icons/fa';
 import LogoImage from '../../assets/public/logo.svg';
 
 const HeaderContainer = styled.header`
@@ -11,26 +10,26 @@ const HeaderContainer = styled.header`
   align-items: center;
   padding: 10px 50px;
   background-color: white;
-  color: black;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   height: 60px;
   border-bottom: 1px solid #e0e0e0;
+
   @media (max-width: 768px) {
     padding: 10px 20px;
   }
 `;
 
-const Logo = styled.div`
-  display: flex;
-  align-items: center;
+const Logo = styled(Link)`
   img {
     height: 35px;
     transition: transform 0.3s;
-    @media (max-width: 768px) {
-      height: 25px;
-    }
+
     &:hover {
       transform: scale(1.05);
+    }
+
+    @media (max-width: 768px) {
+      height: 25px;
     }
   }
 `;
@@ -38,21 +37,24 @@ const Logo = styled.div`
 const NavLinks = styled.nav`
   display: flex;
   align-items: center;
+
   @media (max-width: 768px) {
     display: none;
   }
 `;
 
 const NavLink = styled(Link)`
-  margin-left: 20px;
-  text-decoration: none;
+  margin-left: 15px;
   color: black;
   font-size: 1em;
   transition: color 0.3s, transform 0.3s;
+  text-decoration: none;
+
   &:hover {
     color: blue;
     transform: scale(1.05);
   }
+
   &.active {
     font-weight: bold;
     color: blue;
@@ -63,168 +65,132 @@ const Separator = styled.div`
   height: 20px;
   width: 1px;
   background-color: black;
-  margin: 0 15px;
+  margin: 0 10px;
+
   @media (max-width: 768px) {
     display: none;
   }
 `;
 
-const Button = styled.button`
+const Button = styled(Link)`
   background-color: blue;
   color: white;
-  padding: 8px 16px;
+  padding: 6px 12px;
   border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  font-size: 1em;
+  margin-left: 7.5px;
   transition: background-color 0.3s, transform 0.3s;
-  margin-left: 10px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;  /* Changed width to min-width */
+  height: 30px;
+
   &:hover {
     background-color: darkblue;
     transform: scale(1.05);
   }
+
   @media (max-width: 768px) {
-    padding: 7px 14px;
-    font-size: 0.9em;
+    padding: 8px 16px;
+    font-size: 1em;
+    width: 100%;
   }
 `;
 
-const GetStartedButton = styled(Button)`
-  margin-left: 15px;
+const LogoutButton = styled.button`
+  background-color: white;
+  color: black;
+  padding: 6px 12px;
+  border-radius: 5px;
+  margin-left: 7.5px;
+  border: 2px solid black;
+  transition: background-color 0.3s, transform 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 97.5px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 1em;
+
+  &:hover {
+    background-color: #f1f1f1;
+    color: black;
+  }
+
   @media (max-width: 768px) {
-    display: none;
+    padding: 8px 16px;
+    font-size: 1em;
+    width: 100%;
+    justify-content: center;
+    margin: 5px 0;
   }
 `;
 
 const MobileMenuIcon = styled.div`
   display: none;
   cursor: pointer;
+
   @media (max-width: 768px) {
     display: block;
+    font-size: 1.5em;
+    margin-left: 15px;
   }
-`;
-
-const MobileMenuOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 998;
 `;
 
 const MobileMenu = styled.div`
   display: none;
   flex-direction: column;
-  align-items: flex-start;
   background-color: white;
   position: fixed;
   top: 0;
-  left: 0;
+  right: 0;
   width: 250px;
   height: 100%;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  box-shadow: -4px 0 6px rgba(0, 0, 0, 0.1);
   z-index: 999;
-  transform: ${({ $isOpen }) => ($isOpen ? 'translateX(0)' : 'translateX(-100%)')};
+  transform: ${({ $isOpen }) => ($isOpen ? 'translateX(0)' : 'translateX(100%)')};
   transition: transform 0.3s ease-in-out;
+
   @media (max-width: 768px) {
     display: flex;
+    align-items: center;
+    justify-content: center;
   }
 `;
 
-const MobileMenuCloseIcon = styled.div`
-  align-self: flex-end;
-  cursor: pointer;
-`;
-
 const MobileNavLink = styled(Link)`
-  margin: 10px 0;
-  text-decoration: none;
+  margin: 5px 0;
   color: black;
-  font-size: 1em;
+  font-size: 1.2em;
   transition: color 0.3s, transform 0.3s;
+  text-decoration: none;
+  padding: 8px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   &:hover {
     color: blue;
     transform: scale(1.05);
   }
-`;
 
-const MobileGetStartedButton = styled(Button)`
-  margin-top: 10px;
-`;
-
-const DropdownContainer = styled.div`
-  position: relative;
-  display: inline-block;
-  &:hover .dropdown-content {
-    display: block;
-    animation: fadeIn 0.3s;
+  & > svg {
+    margin-right: 8px;
   }
-  @media (max-width: 768px) {
+
+  @media (min-width: 769px) {
     display: none;
   }
 `;
 
-const DropdownButton = styled.button`
-  margin-left: 20px;
-  text-decoration: none;
-  color: black;
-  font-size: 1em;
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: color 0.3s, transform 0.3s;
-  &:hover {
-    color: blue;
-    transform: scale(1.05);
-  }
-`;
-
-const DropdownContent = styled.div`
-  display: none;
-  position: absolute;
-  background-color: white;
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-  z-index: 1;
-  min-width: 200px;
-  border: 1px solid #e0e0e0;
-  border-radius: 5px;
-  overflow: hidden;
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-`;
-
-const DropdownItem = styled(Link)`
-  color: black;
-  padding: 12px 16px;
-  font-size: 1em;
-  text-decoration: none;
-  display: block;
-  transition: background-color 0.3s, transform 0.3s;
-  &:hover {
-    background-color: #f1f1f1;
-    transform: translateX(10px);
-  }
-`;
-
-const LogoutLink = styled.div`
-  display: flex;
-  align-items: center;
-  margin-left: 10px;
-  cursor: pointer;
-  color: black;
-  font-size: 1em;
-  transition: color 0.3s, transform 0.3s;
-  &:hover {
-    color: blue;
-    transform: scale(1.05);
-  }
+const MobileButton = styled(Button)`
+  margin: 5px 0;
+  width: 100%;
+  justify-content: center;
 `;
 
 const Header = () => {
@@ -232,87 +198,93 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const menuRef = useRef(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token') || !!sessionStorage.getItem('token'));
+  const isLoggedIn = !!localStorage.getItem('token') || !!sessionStorage.getItem('token');
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) setMobileMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
-    setIsLoggedIn(false);
     navigate('/');
   };
 
   return (
     <HeaderContainer>
-      <Logo>
-        <Link to="/">
-          <img src={LogoImage} alt="Propertilico Logo" />
-        </Link>
+      <Logo to="/">
+        <img src={LogoImage} alt="Propertilico Logo" />
       </Logo>
       <NavLinks>
-        <NavLink to="/" className={location.pathname === '/' ? 'active' : ''}>Home</NavLink>
-        <NavLink to="/features" className={location.pathname === '/features' ? 'active' : ''}>Features</NavLink>
-        <DropdownContainer>
-          <DropdownButton>
-            Resources <FaCaretDown />
-          </DropdownButton>
-          <DropdownContent className="dropdown-content">
-            <DropdownItem to="/blog">Blog</DropdownItem>
-            <DropdownItem to="/faq">FAQ</DropdownItem>
-            <DropdownItem to="/tos">Terms of Service</DropdownItem>
-            <DropdownItem to="/privacy-policy">Privacy Policy</DropdownItem>
-          </DropdownContent>
-        </DropdownContainer>
-        <NavLink to="/pricing" className={location.pathname === '/pricing' ? 'active' : ''}>Pricing</NavLink>
+        {[
+          { to: "/", text: "Home" },
+          { to: "/features", text: "Features" },
+          { to: "/pricing", text: "Pricing" }
+        ].map(({ to, text }, idx) => (
+          <NavLink key={idx} to={to} className={location.pathname === to ? 'active' : ''}>
+            {text}
+          </NavLink>
+        ))}
         <Separator />
         {isLoggedIn ? (
           <>
-            <Button as={Link} to="/app/dashboard">Dashboard</Button>
-            <LogoutLink onClick={handleLogout}>
+            <NavLink to="/my-plan" className={location.pathname === '/my-plan' ? 'active' : ''}>My Plan</NavLink>
+            <Button to="/app/dashboard">Dashboard</Button>
+            <LogoutButton onClick={handleLogout}>
               <FaSignOutAlt style={{ marginRight: '5px' }} />
               Logout
-            </LogoutLink>
+            </LogoutButton>
           </>
         ) : (
           <>
             <NavLink to="/signin" className={location.pathname === '/signin' ? 'active' : ''}>Sign In</NavLink>
-            <GetStartedButton as={Link} to="/get-started">Get Started - Free</GetStartedButton>
+            <Button to="/get-started">Get Started - Free</Button>
           </>
         )}
       </NavLinks>
       <MobileMenuIcon onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        <FaBars />
+        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
       </MobileMenuIcon>
-      {mobileMenuOpen && <MobileMenuOverlay onClick={() => setMobileMenuOpen(false)} />}
-      <MobileMenu $isOpen={mobileMenuOpen} ref={menuRef}>
-        <MobileMenuCloseIcon onClick={() => setMobileMenuOpen(false)}>
-          <FaTimes />
-        </MobileMenuCloseIcon>
-        <MobileNavLink to="/" className={location.pathname === '/' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Home</MobileNavLink>
-        <MobileNavLink to="/features" className={location.pathname === '/features' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Features</MobileNavLink>
-        <MobileNavLink to="/blog" onClick={() => setMobileMenuOpen(false)}>Blog</MobileNavLink>
-        <MobileNavLink to="/faq" onClick={() => setMobileMenuOpen(false)}>FAQ</MobileNavLink>
-        <MobileNavLink to="/tos" onClick={() => setMobileMenuOpen(false)}>Terms of Service</MobileNavLink>
-        <MobileNavLink to="/privacy-policy" onClick={() => setMobileMenuOpen(false)}>Privacy Policy</MobileNavLink>
-        <MobileNavLink to="/pricing" className={location.pathname === '/pricing' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Pricing</MobileNavLink>
+      <MobileMenu ref={menuRef} $isOpen={mobileMenuOpen}>
+        {[
+          { to: "/", text: "Home", icon: <FaHome /> },
+          { to: "/features", text: "Features", icon: <FaInfoCircle /> },
+          { to: "/pricing", text: "Pricing", icon: <FaDollarSign /> },
+          { to: "/blog", text: "Blog", icon: <FaBlog /> },
+          { to: "/faq", text: "FAQ", icon: <FaQuestionCircle /> },
+          { to: "/tos", text: "Terms of Service", icon: <FaFileAlt /> },
+          { to: "/privacy-policy", text: "Privacy Policy", icon: <FaShieldAlt /> }
+        ].map(({ to, text, icon }, idx) => (
+          <MobileNavLink key={idx} to={to} onClick={() => setMobileMenuOpen(false)} className={location.pathname === to ? 'active' : ''}>
+            {icon}
+            {text}
+          </MobileNavLink>
+        ))}
         {isLoggedIn ? (
           <>
-            <MobileNavLink to="/app/dashboard" className={location.pathname === '/app/dashboard' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Dashboard</MobileNavLink>
-            <MobileNavLink as="button" onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>Logout</MobileNavLink>
+            <MobileNavLink to="/my-plan" onClick={() => setMobileMenuOpen(false)} className={location.pathname === '/my-plan' ? 'active' : ''}>
+              <FaDollarSign /> My Plan
+            </MobileNavLink>
+            <MobileButton to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>
+              <FaHome /> Dashboard
+            </MobileButton>
+            <LogoutButton onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
+              <FaSignOutAlt style={{ marginRight: '5px' }} />
+              Logout
+            </LogoutButton>
           </>
         ) : (
           <>
-            <MobileNavLink to="/signin" className={location.pathname === '/signin' ? 'active' : ''} onClick={() => setMobileMenuOpen(false)}>Sign In</MobileNavLink>
-            <MobileGetStartedButton as={Link} to="/get-started">Get Started - Free</MobileGetStartedButton>
+            <MobileNavLink to="/signin" onClick={() => setMobileMenuOpen(false)} className={location.pathname === '/signin' ? 'active' : ''}>
+              <FaSignOutAlt /> Sign In
+            </MobileNavLink>
+            <MobileButton to="/get-started" style={{ width: '100%', marginTop: '10px' }}>
+              <FaDollarSign /> Get Started - Free
+            </MobileButton>
           </>
         )}
       </MobileMenu>

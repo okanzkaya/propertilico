@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Typography,
   Grid,
@@ -14,63 +14,68 @@ import {
   Avatar,
   Tooltip,
   Alert,
-} from '@mui/material';
-import { styled } from '@mui/system';
-import FeedbackIcon from '@mui/icons-material/Feedback';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import SendIcon from '@mui/icons-material/Send';
+} from "@mui/material";
+import { styled } from "@mui/system";
+import FeedbackIcon from "@mui/icons-material/Feedback";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import SendIcon from "@mui/icons-material/Send";
+import { useTheme } from "@mui/material/styles";
 
-const PageWrapper = styled(Box)({
-  padding: '2rem',
-  backgroundColor: '#f4f6f8',
-  minHeight: '100vh',
-});
+const PageWrapper = styled(Box)(({ theme }) => ({
+  padding: "2rem",
+  backgroundColor: theme.palette.background.default,
+  minHeight: "100vh",
+  [theme.breakpoints.down("sm")]: {
+    padding: "1rem",
+  },
+}));
 
-const FeedbackCard = styled(Card)({
-  padding: '2rem',
-  marginBottom: '2rem',
-  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-  borderRadius: '8px',
-  backgroundColor: '#ffffff',
-});
+const FeedbackCard = styled(Card)(({ theme }) => ({
+  padding: "2rem",
+  marginBottom: "2rem",
+  boxShadow: theme.shadows[2],
+  borderRadius: "8px",
+  backgroundColor: theme.palette.background.paper,
+}));
 
 const SectionTitle = styled(Typography)({
-  marginBottom: '1.5rem',
-  fontWeight: 'bold',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
+  marginBottom: "1.5rem",
+  fontWeight: "bold",
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
 });
 
 const CustomFormControl = styled(FormControl)({
-  marginBottom: '1.5rem',
+  marginBottom: "1.5rem",
 });
 
 const InputLabelStyled = styled(InputLabel)({
-  marginBottom: '0.5rem',
+  marginBottom: "0.5rem",
 });
 
 const CustomButton = styled(Button)({
-  marginTop: '1rem',
-  width: '200px', // Set the width for the button
+  marginTop: "1rem",
+  width: "200px", // Set the width for the button
 });
 
 const CustomAttachButton = styled(Button)({
-  marginTop: '1rem',
-  width: '200px', // Set the width for the button to match Submit Feedback button
-  whiteSpace: 'nowrap',
+  marginTop: "1rem",
+  width: "200px", // Set the width for the button to match Submit Feedback button
+  whiteSpace: "nowrap",
 });
 
 const CustomRating = styled(Rating)({
-  fontSize: '2rem', // Increase the star size
+  fontSize: "2rem", // Increase the star size
 });
 
 const SendFeedbackPage = () => {
+  const theme = useTheme(); // Access the theme
   const [feedback, setFeedback] = useState({
-    message: '',
+    message: "",
     rating: 0,
-    feedbackType: '',
-    attachment: '',
+    feedbackType: "",
+    attachment: "",
   });
 
   const [feedbackSent, setFeedbackSent] = useState(false);
@@ -87,9 +92,9 @@ const SendFeedbackPage = () => {
 
   const handleSubmit = () => {
     // Handle feedback submission logic here
-    alert('Feedback submitted successfully!');
+    alert("Feedback submitted successfully!");
     setFeedbackSent(true);
-    setFeedback({ message: '', rating: 0, feedbackType: '', attachment: '' });
+    setFeedback({ message: "", rating: 0, feedbackType: "", attachment: "" });
   };
 
   return (
@@ -99,7 +104,11 @@ const SendFeedbackPage = () => {
       </Typography>
 
       {feedbackSent && (
-        <Alert severity="success" onClose={() => setFeedbackSent(false)} sx={{ mb: 2 }}>
+        <Alert
+          severity="success"
+          onClose={() => setFeedbackSent(false)}
+          sx={{ mb: 2 }}
+        >
           Feedback submitted successfully!
         </Alert>
       )}
@@ -109,7 +118,12 @@ const SendFeedbackPage = () => {
           <FeedbackCard>
             <SectionTitle variant="h6">
               <Tooltip title="Send Feedback">
-                <Avatar>
+                <Avatar
+                  sx={{
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                  }}
+                >
                   <FeedbackIcon />
                 </Avatar>
               </Tooltip>
@@ -154,11 +168,7 @@ const SendFeedbackPage = () => {
                 startIcon={<AttachFileIcon />}
               >
                 Attach File
-                <input
-                  type="file"
-                  hidden
-                  onChange={handleFileChange}
-                />
+                <input type="file" hidden onChange={handleFileChange} />
               </CustomAttachButton>
               {feedback.attachment && (
                 <Typography variant="body2" mt={2}>

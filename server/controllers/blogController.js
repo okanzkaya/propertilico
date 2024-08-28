@@ -1,16 +1,14 @@
-const Blog = require('../models/Blog'); // Assuming you have a Blog model defined
+const Blog = require('../models/Blog');
 
-// Get all blog posts
 exports.getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find();
+    const blogs = await Blog.find().sort({ date: -1 });
     res.json(blogs);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get a single blog post
 exports.getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -21,15 +19,9 @@ exports.getBlogById = async (req, res) => {
   }
 };
 
-// Create a new blog post
 exports.createBlog = async (req, res) => {
-  const blog = new Blog({
-    title: req.body.title,
-    content: req.body.content,
-  });
-
   try {
-    const newBlog = await blog.save();
+    const newBlog = await Blog.create(req.body);
     res.status(201).json(newBlog);
   } catch (err) {
     res.status(400).json({ message: err.message });

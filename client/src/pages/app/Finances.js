@@ -1,73 +1,86 @@
-import React, { useState } from 'react';
-import { Typography, Grid, Box, Card, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, IconButton, Tooltip, Tabs, Tab, Paper, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, LinearProgress } from '@mui/material';
-import { styled } from '@mui/system';
+import React, { useState, useMemo } from 'react';
+import {
+  Typography,
+  Grid,
+  Box,
+  Card,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  Tooltip,
+  Tabs,
+  Tab,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Paper,
+  Menu,
+  MenuItem as MenuListItem,
+} from '@mui/material';
+import { styled, useTheme } from '@mui/system';
 import Chart from 'react-apexcharts';
 import InfoIcon from '@mui/icons-material/Info';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SortIcon from '@mui/icons-material/Sort';
 import SearchIcon from '@mui/icons-material/Search';
 
 const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: '2rem',
-  boxSizing: 'border-box',
-  backgroundColor: '#f4f6f8',
+  padding: theme.spacing(4),
+  backgroundColor: theme.palette.background.default,
   minHeight: '100vh',
 }));
 
 const ChartCard = styled(Card)(({ theme }) => ({
-  padding: '1rem',
-  marginBottom: '1rem',
+  padding: theme.spacing(2),
+  marginBottom: theme.spacing(3),
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+  borderRadius: theme.spacing(1),
+  height: '100%',
 }));
 
 const ButtonWrapper = styled(Box)(({ theme }) => ({
-  marginTop: '1rem',
-  marginBottom: '2rem',
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: theme.spacing(1),
+  marginTop: theme.spacing(2),
 }));
 
-const StyledButton = styled(Button)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
+const IconGroup = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
 }));
 
 const commonChartOptions = {
-  chart: {
-    type: 'line',
-    toolbar: { show: false },
-    zoom: { enabled: false },
-  },
+  chart: { toolbar: { show: false }, zoom: { enabled: false }, background: 'transparent' },
   stroke: { curve: 'smooth' },
-  xaxis: {
-    categories: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-    labels: { style: { fontSize: '12px' }, rotate: -45 },
-  },
   tooltip: { x: { format: 'dd/MM/yy HH:mm' } },
   dataLabels: { enabled: false },
+  xaxis: {
+    categories: [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ],
+    labels: { style: { fontSize: '12px' }, rotate: -45 },
+  },
   grid: { padding: { bottom: 10 } },
 };
 
-const revenueSeries = [
-  { name: 'Revenues', data: [65, 59, 80, 81, 56, 55, 40, 70, 60, 75, 85, 90] },
-];
-
-const expensesSeries = [
-  { name: 'Expenses', data: [28, 48, 40, 19, 86, 27, 90, 45, 55, 65, 30, 50] },
-];
-
-const categories = ['Rent', 'Utilities', 'Maintenance', 'Miscellaneous'];
-
-const recentTransactions = [
-  { id: 1, name: 'Rent', date: '2024-01-01', amount: 1000, type: 'credit' },
-  { id: 2, name: 'Electricity', date: '2024-01-05', amount: 200, type: 'debit' },
-  { id: 3, name: 'Water', date: '2024-01-10', amount: 150, type: 'debit' },
-  { id: 4, name: 'Rent', date: '2024-02-01', amount: 1000, type: 'credit' },
-];
-
-const invoices = [
-  { id: 1, name: 'Invoice #001', date: '2024-01-01', amount: 1000, status: 'Paid' },
-  { id: 2, name: 'Invoice #002', date: '2024-01-10', amount: 200, status: 'Pending' },
-];
-
 const Finances = () => {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
+
   const [modalState, setModalState] = useState({
     revenueModalOpen: false,
     expenseModalOpen: false,
@@ -76,128 +89,193 @@ const Finances = () => {
     transactionsModalOpen: false,
     addInvoiceOpen: false,
   });
-  const [searchTerm, setSearchTerm] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  const [sortAnchorEl, setSortAnchorEl] = useState(null);
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const toggleModal = (modal, state) => setModalState({ ...modalState, [modal]: state });
+  const toggleModal = (modal, state) => setModalState((prev) => ({ ...prev, [modal]: state }));
 
-  const handleTabChange = (event, newValue) => setTabValue(newValue);
+  const handleTabChange = (_, newValue) => setTabValue(newValue);
 
-  const handleSearchChange = (event) => setSearchTerm(event.target.value);
+  const handleSortClick = (event) => setSortAnchorEl(event.currentTarget);
+  const handleFilterClick = (event) => setFilterAnchorEl(event.currentTarget);
 
-  const filteredTransactions = recentTransactions.filter((transaction) =>
-    transaction.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleSortClose = () => setSortAnchorEl(null);
+  const handleFilterClose = () => setFilterAnchorEl(null);
+
+  const handleSortOption = (option) => {
+    // Handle sort logic here
+    console.log('Sort by:', option);
+    setSortAnchorEl(null);
+  };
+
+  const handleFilterOption = (option) => {
+    // Handle filter logic here
+    console.log('Filter by:', option);
+    setFilterAnchorEl(null);
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const filteredTransactions = useMemo(
+    () => recentTransactions.filter((t) =>
+      t.name.toLowerCase().includes(searchTerm.toLowerCase())),
+    [searchTerm]
+  );
+
+  const revenueSeries = [{ name: 'Revenues', data: [65, 59, 80, 81, 56, 55, 40, 70, 60, 75, 85, 90] }];
+  const expensesSeries = [{ name: 'Expenses', data: [28, 48, 40, 19, 86, 27, 90, 45, 55, 65, 30, 50] }];
+  const profitSeries = [{ name: 'Profit', data: [37, 11, 40, 62, -30, 28, -50, 25, 5, 25, 55, 40] }];
+  const monthlyGoalSeries = [{ name: 'Monthly Goal Progress', data: [70] }];
+  const annualGoalSeries = [{ name: 'Annual Goal Progress', data: [40] }];
+  const invoices = [
+    { id: 1, name: 'Invoice #001', date: '2024-01-01', amount: 1000, status: 'Paid' },
+    { id: 2, name: 'Invoice #002', date: '2024-01-10', amount: 200, status: 'Pending' },
+  ];
+
+  const chartComponent = (title, series, chartType = 'line') => (
+    <ChartCard>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">{title}</Typography>
+        <Tooltip title={`This chart shows the monthly ${title.toLowerCase()}.`} placement="top">
+          <IconButton><InfoIcon /></IconButton>
+        </Tooltip>
+      </Box>
+      <Chart
+        options={{
+          ...commonChartOptions,
+          chart: { ...commonChartOptions.chart, type: chartType },
+          theme: { mode: isDarkMode ? 'dark' : 'light' },
+        }}
+        series={series}
+        type={chartType}
+        height={300}
+      />
+    </ChartCard>
+  );
+
+  const progressChartComponent = (title, series) => (
+    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" flexGrow={1}>
+      <Typography variant="h6" mb={2}>{title}</Typography>
+      <Chart
+        options={{
+          chart: { type: 'radialBar', background: 'transparent' },
+          plotOptions: {
+            radialBar: {
+              dataLabels: {
+                name: { fontSize: '18px', offsetY: -10, color: isDarkMode ? '#FFFFFF' : '#333333' },
+                value: { fontSize: '16px', offsetY: 5, color: isDarkMode ? '#FFFFFF' : '#333333' },
+              },
+              hollow: { size: '60%' },
+              track: {
+                background: isDarkMode ? '#4E4E4E' : '#f2f2f2',
+                strokeWidth: '97%',
+                margin: 5,
+                dropShadow: {
+                  enabled: true,
+                  top: 2,
+                  left: 0,
+                  blur: 4,
+                  opacity: 0.15,
+                },
+              },
+            },
+          },
+          theme: { mode: isDarkMode ? 'dark' : 'light' },
+        }}
+        series={series[0].data}
+        type="radialBar"
+        height={200}
+      />
+    </Box>
   );
 
   return (
     <PageWrapper>
-      <Typography variant="h4" gutterBottom>Finances & Accounting</Typography>
-      <Tabs value={tabValue} onChange={handleTabChange}>
-        <Tab label="Overview" />
-        <Tab label="Revenues" />
-        <Tab label="Expenses" />
-        <Tab label="Transactions" />
-        <Tab label="Invoices" />
-      </Tabs>
+      <Typography variant="h5" gutterBottom>Finances & Accounting</Typography>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+          {['Overview', 'Revenues', 'Expenses', 'Transactions', 'Invoices'].map((label) => (
+            <Tab key={label} label={label} />
+          ))}
+        </Tabs>
+      </Box>
 
       {tabValue === 0 && (
-        <>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <ChartCard>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6" gutterBottom>Revenues</Typography>
-                  <Tooltip title="This chart shows the monthly revenue." placement="top">
-                    <IconButton>
-                      <InfoIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Chart options={commonChartOptions} series={revenueSeries} type="line" height={300} />
-                <ButtonWrapper>
-                  <StyledButton variant="contained" color="primary" fullWidth onClick={() => toggleModal('revenueModalOpen', true)}>View Detailed Revenues</StyledButton>
-                  <StyledButton variant="contained" color="secondary" startIcon={<AddCircleIcon />} fullWidth onClick={() => toggleModal('addRevenueOpen', true)}>Record Revenue</StyledButton>
-                </ButtonWrapper>
-              </ChartCard>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <ChartCard>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6" gutterBottom>Expenses</Typography>
-                  <Tooltip title="This chart shows the monthly expenses." placement="top">
-                    <IconButton>
-                      <InfoIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Chart options={commonChartOptions} series={expensesSeries} type="line" height={300} />
-                <ButtonWrapper>
-                  <StyledButton variant="contained" color="primary" fullWidth onClick={() => toggleModal('expenseModalOpen', true)}>View Detailed Expenses</StyledButton>
-                  <StyledButton variant="contained" color="secondary" startIcon={<RemoveCircleIcon />} fullWidth onClick={() => toggleModal('addExpenseOpen', true)}>Record Expense</StyledButton>
-                </ButtonWrapper>
-              </ChartCard>
-            </Grid>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>{chartComponent('Revenues', revenueSeries)}</Grid>
+          <Grid item xs={12} md={6}>{chartComponent('Expenses', expensesSeries)}</Grid>
+          <Grid item xs={12} md={6}>{chartComponent('Profit', profitSeries)}</Grid>
+          <Grid item xs={12} md={6}>
+            <ChartCard>
+              {progressChartComponent('Monthly Goal Progress', monthlyGoalSeries)}
+              {progressChartComponent('Annual Goal Progress', annualGoalSeries)}
+            </ChartCard>
           </Grid>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <ChartCard>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6" gutterBottom>Category Breakdown</Typography>
-                  <Tooltip title="This chart shows the breakdown of categories." placement="top">
-                    <IconButton>
-                      <InfoIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Chart
-                  options={{ ...commonChartOptions, chart: { type: 'pie' }, labels: categories }}
-                  series={[44, 55, 13, 33]}
-                  type="pie"
-                  height={300}
-                />
-              </ChartCard>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <ChartCard>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6" gutterBottom>Progress</Typography>
-                  <Tooltip title="This chart shows the progress of financial goals." placement="top">
-                    <IconButton>
-                      <InfoIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Box mt={2}>
-                  <Typography variant="body1" gutterBottom>Monthly Goal</Typography>
-                  <LinearProgress variant="determinate" value={70} />
-                  <Typography variant="body1" gutterBottom>Annual Goal</Typography>
-                  <LinearProgress variant="determinate" value={40} />
-                </Box>
-              </ChartCard>
-            </Grid>
-          </Grid>
-        </>
+        </Grid>
       )}
 
       {tabValue === 1 && (
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <ButtonWrapper>
-              <StyledButton variant="contained" color="primary" startIcon={<AddCircleIcon />} onClick={() => toggleModal('addRevenueOpen', true)}>Record Revenue</StyledButton>
+              <Button variant="contained" color="primary" startIcon={<AddCircleIcon />} fullWidth
+                onClick={() => toggleModal('addRevenueOpen', true)}>
+                Record Revenue
+              </Button>
             </ButtonWrapper>
           </Grid>
           <Grid item xs={12}>
             <ChartCard>
-              <Typography variant="h6" gutterBottom>Revenues</Typography>
-              {recentTransactions.filter(t => t.type === 'credit').map((transaction) => (
-                <Box key={transaction.id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography variant="body1">{transaction.name}</Typography>
-                    <Typography variant="body2" color="textSecondary">{transaction.date}</Typography>
-                  </Box>
-                  <Typography variant="body1" color="success.main">+ ${transaction.amount}</Typography>
-                </Box>
-              ))}
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Revenues</Typography>
+                <IconGroup>
+                  <IconButton size="small" onClick={handleFilterClick}>
+                    <FilterListIcon />
+                  </IconButton>
+                  <IconButton size="small" onClick={handleSortClick}>
+                    <SortIcon />
+                  </IconButton>
+                  <TextField
+                    variant="outlined"
+                    size="small"
+                    placeholder="Search Revenues"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    sx={{ marginLeft: 2 }}
+                    InputProps={{
+                      startAdornment: <SearchIcon position="start" />,
+                    }}
+                  />
+                </IconGroup>
+              </Box>
+              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell align="right">Type</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredTransactions
+                      .filter((t) => t.type === 'credit')
+                      .map((transaction) => (
+                        <TableRow key={transaction.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
+                          <TableCell>{transaction.date}</TableCell>
+                          <TableCell>{transaction.name}</TableCell>
+                          <TableCell align="right">+ ${transaction.amount}</TableCell>
+                          <TableCell align="right">{transaction.type}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </ChartCard>
           </Grid>
         </Grid>
@@ -207,21 +285,60 @@ const Finances = () => {
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <ButtonWrapper>
-              <StyledButton variant="contained" color="primary" startIcon={<RemoveCircleIcon />} onClick={() => toggleModal('addExpenseOpen', true)}>Record Expense</StyledButton>
+              <Button variant="contained" color="primary" startIcon={<RemoveCircleIcon />} fullWidth
+                onClick={() => toggleModal('addExpenseOpen', true)}>
+                Record Expense
+              </Button>
             </ButtonWrapper>
           </Grid>
           <Grid item xs={12}>
             <ChartCard>
-              <Typography variant="h6" gutterBottom>Expenses</Typography>
-              {recentTransactions.filter(t => t.type === 'debit').map((transaction) => (
-                <Box key={transaction.id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography variant="body1">{transaction.name}</Typography>
-                    <Typography variant="body2" color="textSecondary">{transaction.date}</Typography>
-                  </Box>
-                  <Typography variant="body1" color="error.main">- ${transaction.amount}</Typography>
-                </Box>
-              ))}
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Expenses</Typography>
+                <IconGroup>
+                  <IconButton size="small" onClick={handleFilterClick}>
+                    <FilterListIcon />
+                  </IconButton>
+                  <IconButton size="small" onClick={handleSortClick}>
+                    <SortIcon />
+                  </IconButton>
+                  <TextField
+                    variant="outlined"
+                    size="small"
+                    placeholder="Search Expenses"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    sx={{ marginLeft: 2 }}
+                    InputProps={{
+                      startAdornment: <SearchIcon position="start" />,
+                    }}
+                  />
+                </IconGroup>
+              </Box>
+              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell align="right">Type</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredTransactions
+                      .filter((t) => t.type === 'debit')
+                      .map((transaction) => (
+                        <TableRow key={transaction.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
+                          <TableCell>{transaction.date}</TableCell>
+                          <TableCell>{transaction.name}</TableCell>
+                          <TableCell align="right">- ${transaction.amount}</TableCell>
+                          <TableCell align="right">{transaction.type}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </ChartCard>
           </Grid>
         </Grid>
@@ -231,17 +348,29 @@ const Finances = () => {
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <ChartCard>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6" gutterBottom>Recent Transactions</Typography>
-                <TextField
-                  variant="outlined"
-                  placeholder="Search Transactions"
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  InputProps={{ startAdornment: (<SearchIcon position="start" />) }}
-                />
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Recent Transactions</Typography>
+                <IconGroup>
+                  <IconButton size="small" onClick={handleFilterClick}>
+                    <FilterListIcon />
+                  </IconButton>
+                  <IconButton size="small" onClick={handleSortClick}>
+                    <SortIcon />
+                  </IconButton>
+                  <TextField
+                    variant="outlined"
+                    size="small"
+                    placeholder="Search Transactions"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    sx={{ marginLeft: 2 }}
+                    InputProps={{
+                      startAdornment: <SearchIcon position="start" />,
+                    }}
+                  />
+                </IconGroup>
               </Box>
-              <TableContainer component={Paper}>
+              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -253,7 +382,7 @@ const Finances = () => {
                   </TableHead>
                   <TableBody>
                     {filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
+                      <TableRow key={transaction.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
                         <TableCell>{transaction.date}</TableCell>
                         <TableCell>{transaction.name}</TableCell>
                         <TableCell align="right">{transaction.type === 'credit' ? `+ $${transaction.amount}` : `- $${transaction.amount}`}</TableCell>
@@ -263,9 +392,6 @@ const Finances = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <ButtonWrapper>
-                <StyledButton variant="contained" color="primary" fullWidth onClick={() => toggleModal('transactionsModalOpen', true)}>View All Transactions</StyledButton>
-              </ButtonWrapper>
             </ChartCard>
           </Grid>
         </Grid>
@@ -275,129 +401,140 @@ const Finances = () => {
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <ButtonWrapper>
-              <StyledButton variant="contained" color="primary" startIcon={<ReceiptIcon />} onClick={() => toggleModal('addInvoiceOpen', true)}>Create Invoice</StyledButton>
+              <Button variant="contained" color="primary" startIcon={<ReceiptIcon />} fullWidth
+                onClick={() => toggleModal('addInvoiceOpen', true)}>
+                Create Invoice
+              </Button>
             </ButtonWrapper>
           </Grid>
           <Grid item xs={12}>
             <ChartCard>
-              <Typography variant="h6" gutterBottom>Invoices</Typography>
-              {invoices.map((invoice) => (
-                <Box key={invoice.id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography variant="body1">{invoice.name}</Typography>
-                    <Typography variant="body2" color="textSecondary">{invoice.date}</Typography>
-                  </Box>
-                  <Typography variant="body1" color={invoice.status === 'Paid' ? 'success.main' : 'warning.main'}>
-                    {invoice.status} - ${invoice.amount}
-                  </Typography>
-                </Box>
-              ))}
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Invoices</Typography>
+                <IconGroup>
+                  <IconButton size="small" onClick={handleFilterClick}>
+                    <FilterListIcon />
+                  </IconButton>
+                  <IconButton size="small" onClick={handleSortClick}>
+                    <SortIcon />
+                  </IconButton>
+                  <TextField
+                    variant="outlined"
+                    size="small"
+                    placeholder="Search Invoices"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    sx={{ marginLeft: 2 }}
+                    InputProps={{
+                      startAdornment: <SearchIcon position="start" />,
+                    }}
+                  />
+                </IconGroup>
+              </Box>
+              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell align="right">Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {invoices.map((invoice) => (
+                      <TableRow key={invoice.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
+                        <TableCell>{invoice.date}</TableCell>
+                        <TableCell>{invoice.name}</TableCell>
+                        <TableCell align="right">${invoice.amount}</TableCell>
+                        <TableCell align="right" color={invoice.status === 'Paid' ? 'success.main' : 'warning.main'}>
+                          {invoice.status}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </ChartCard>
           </Grid>
         </Grid>
       )}
 
-      <Dialog open={modalState.revenueModalOpen} onClose={() => toggleModal('revenueModalOpen', false)} fullWidth maxWidth="md">
-        <DialogTitle>Detailed Revenues</DialogTitle>
-        <DialogContent>
-          <Chart options={{ ...commonChartOptions, chart: { ...commonChartOptions.chart, toolbar: { show: true, tools: { download: true } } } }} series={revenueSeries} type="line" height={500} />
-          <Box mt={2}>
-            <Typography variant="body1" gutterBottom>Detailed revenue information goes here. You can add more statistics, graphs, or any other relevant information.</Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => toggleModal('revenueModalOpen', false)} color="primary">Close</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Modals */}
+      {['revenueModalOpen', 'expenseModalOpen', 'addRevenueOpen', 'addExpenseOpen', 'transactionsModalOpen', 'addInvoiceOpen'].map((modal) => (
+        <Dialog
+          key={modal}
+          open={modalState[modal]}
+          onClose={() => toggleModal(modal, false)}
+          fullWidth
+          maxWidth={modal.includes('add') ? 'sm' : 'md'}
+        >
+          <DialogTitle>{modal.includes('revenue') ? 'Detailed Revenues' : modal.includes('expense') ? 'Detailed Expenses' : modal.includes('transactions') ? 'All Transactions' : 'Create Invoice'}</DialogTitle>
+          <DialogContent>
+            {modal.includes('revenue') || modal.includes('expense') ? (
+              <Chart
+                options={{
+                  ...commonChartOptions,
+                  chart: { ...commonChartOptions.chart, toolbar: { show: true, tools: { download: true } } },
+                  theme: { mode: isDarkMode ? 'dark' : 'light' },
+                }}
+                series={modal.includes('revenue') ? revenueSeries : expensesSeries}
+                type="line"
+                height={500}
+              />
+            ) : modal.includes('add') ? (
+              <>
+                <TextField autoFocus margin="dense" label={modal.includes('Revenue') ? 'Revenue Name' : 'Expense Name'} fullWidth variant="outlined" />
+                <TextField margin="dense" label="Amount" fullWidth variant="outlined" type="number" />
+                <TextField margin="dense" label="Date" fullWidth variant="outlined" type="date" InputLabelProps={{ shrink: true }} />
+              </>
+            ) : (
+              filteredTransactions.map((transaction) => (
+                <Box key={transaction.id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
+                  <Box>
+                    <Typography variant="body1">{transaction.name}</Typography>
+                    <Typography variant="body2" color="textSecondary">{transaction.date}</Typography>
+                  </Box>
+                  <Typography variant="body1" color={transaction.type === 'credit' ? 'success.main' : 'error.main'}>
+                    {transaction.type === 'credit' ? `+ $${transaction.amount}` : `- $${transaction.amount}`}
+                  </Typography>
+                </Box>
+              ))
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => toggleModal(modal, false)} color="primary">Close</Button>
+            {modal.includes('add') && <Button onClick={() => toggleModal(modal, false)} color="primary">Add</Button>}
+          </DialogActions>
+        </Dialog>
+      ))}
 
-      <Dialog open={modalState.expenseModalOpen} onClose={() => toggleModal('expenseModalOpen', false)} fullWidth maxWidth="md">
-        <DialogTitle>Detailed Expenses</DialogTitle>
-        <DialogContent>
-          <Chart options={{ ...commonChartOptions, chart: { ...commonChartOptions.chart, toolbar: { show: true, tools: { download: true } } } }} series={expensesSeries} type="line" height={500} />
-          <Box mt={2}>
-            <Typography variant="body1" gutterBottom>Detailed expense information goes here. You can add more statistics, graphs, or any other relevant information.</Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => toggleModal('expenseModalOpen', false)} color="primary">Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={modalState.addRevenueOpen} onClose={() => toggleModal('addRevenueOpen', false)} fullWidth maxWidth="sm">
-        <DialogTitle>Add Revenue</DialogTitle>
-        <DialogContent>
-          <TextField autoFocus margin="dense" label="Revenue Name" fullWidth variant="outlined" />
-          <TextField margin="dense" label="Amount" fullWidth variant="outlined" type="number" />
-          <TextField margin="dense" label="Date" fullWidth variant="outlined" type="date" InputLabelProps={{ shrink: true }} />
-          <TextField margin="dense" label="Category" fullWidth variant="outlined" select>
-            {categories.map((category) => (
-              <MenuItem key={category} value={category}>{category}</MenuItem>
-            ))}
-          </TextField>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => toggleModal('addRevenueOpen', false)} color="primary">Cancel</Button>
-          <Button onClick={() => toggleModal('addRevenueOpen', false)} color="primary">Add</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={modalState.addExpenseOpen} onClose={() => toggleModal('addExpenseOpen', false)} fullWidth maxWidth="sm">
-        <DialogTitle>Add Expense</DialogTitle>
-        <DialogContent>
-          <TextField autoFocus margin="dense" label="Expense Name" fullWidth variant="outlined" />
-          <TextField margin="dense" label="Amount" fullWidth variant="outlined" type="number" />
-          <TextField margin="dense" label="Date" fullWidth variant="outlined" type="date" InputLabelProps={{ shrink: true }} />
-          <TextField margin="dense" label="Category" fullWidth variant="outlined" select>
-            {categories.map((category) => (
-              <MenuItem key={category} value={category}>{category}</MenuItem>
-            ))}
-          </TextField>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => toggleModal('addExpenseOpen', false)} color="primary">Cancel</Button>
-          <Button onClick={() => toggleModal('addExpenseOpen', false)} color="primary">Add</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={modalState.transactionsModalOpen} onClose={() => toggleModal('transactionsModalOpen', false)} fullWidth maxWidth="md">
-        <DialogTitle>All Transactions</DialogTitle>
-        <DialogContent>
-          {filteredTransactions.map((transaction) => (
-            <Box key={transaction.id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="body1">{transaction.name}</Typography>
-                <Typography variant="body2" color="textSecondary">{transaction.date}</Typography>
-              </Box>
-              <Typography variant="body1" color={transaction.type === 'credit' ? 'success.main' : 'error.main'}>
-                {transaction.type === 'credit' ? `+ $${transaction.amount}` : `- $${transaction.amount}`}
-              </Typography>
-            </Box>
-          ))}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => toggleModal('transactionsModalOpen', false)} color="primary">Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={modalState.addInvoiceOpen} onClose={() => toggleModal('addInvoiceOpen', false)} fullWidth maxWidth="sm">
-        <DialogTitle>Create Invoice</DialogTitle>
-        <DialogContent>
-          <TextField autoFocus margin="dense" label="Invoice Name" fullWidth variant="outlined" />
-          <TextField margin="dense" label="Amount" fullWidth variant="outlined" type="number" />
-          <TextField margin="dense" label="Date" fullWidth variant="outlined" type="date" InputLabelProps={{ shrink: true }} />
-          <TextField margin="dense" label="Status" fullWidth variant="outlined" select>
-            {['Paid', 'Pending', 'Overdue'].map((status) => (
-              <MenuItem key={status} value={status}>{status}</MenuItem>
-            ))}
-          </TextField>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => toggleModal('addInvoiceOpen', false)} color="primary">Cancel</Button>
-          <Button onClick={() => toggleModal('addInvoiceOpen', false)} color="primary">Create</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Sort and Filter Menus */}
+      <Menu
+        anchorEl={sortAnchorEl}
+        open={Boolean(sortAnchorEl)}
+        onClose={handleSortClose}
+      >
+        <MenuListItem onClick={() => handleSortOption('Date')}>Sort by Date</MenuListItem>
+        <MenuListItem onClick={() => handleSortOption('Amount')}>Sort by Amount</MenuListItem>
+      </Menu>
+      <Menu
+        anchorEl={filterAnchorEl}
+        open={Boolean(filterAnchorEl)}
+        onClose={handleFilterClose}
+      >
+        <MenuListItem onClick={() => handleFilterOption('Paid')}>Filter by Paid</MenuListItem>
+        <MenuListItem onClick={() => handleFilterOption('Pending')}>Filter by Pending</MenuListItem>
+      </Menu>
     </PageWrapper>
   );
 };
 
 export default Finances;
+
+const recentTransactions = [
+  { id: 1, name: 'Rent', date: '2024-01-01', amount: 1000, type: 'credit' },
+  { id: 2, name: 'Electricity', date: '2024-01-05', amount: 200, type: 'debit' },
+  { id: 3, name: 'Water', date: '2024-01-10', amount: 150, type: 'debit' },
+  { id: 4, name: 'Rent', date: '2024-02-01', amount: 1000, type: 'credit' },
+];

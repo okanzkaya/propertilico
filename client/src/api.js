@@ -1,40 +1,32 @@
-// src/api.js
-import axios from 'axios';
+// client/src/api.js
+import axiosInstance from './axiosSetup';
 
-const API_URL = 'http://localhost:5000/api';
-
-const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+const authHeaders = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` },
+});
 
 export const registerUser = async (userData) => {
-  try {
-    const response = await axios.post(`${API_URL}/auth/register`, userData);
-    return response.data;
-  } catch (error) {
-    console.error('Error registering user:', error.response.data);
-    throw error;
-  }
+  const response = await axiosInstance.post('/auth/register', userData);
+  localStorage.setItem('token', response.data.token);
+  localStorage.setItem('refreshToken', response.data.refreshToken);
+  return response.data;
 };
 
 export const loginUser = async (userData) => {
-  try {
-    const response = await axios.post(`${API_URL}/auth/login`, userData);
-    return response.data;
-  } catch (error) {
-    console.error('Error logging in user:', error.response.data);
-    throw error;
-  }
+  const response = await axiosInstance.post('/auth/login', userData);
+  localStorage.setItem('token', response.data.token);
+  localStorage.setItem('refreshToken', response.data.refreshToken);
+  return response.data;
 };
 
 export const getProtectedData = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/protected`, {
-      headers: {
-        Authorization: `Bearer ${getToken()}`,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching protected data:', error.response.data);
-    throw error;
-  }
+  return (await axiosInstance.get('/protected/user', authHeaders())).data;
+};
+
+export const extendSubscription = async () => {
+  return (await axiosInstance.post('/protected/extend-subscription', {}, authHeaders())).data;
+};
+
+export const reduceSubscription = async () => {
+  return (await axiosInstance.post('/protected/reduce-subscription', {}, authHeaders())).data;
 };

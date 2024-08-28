@@ -1,25 +1,29 @@
+// src/GlobalStyles.js
+
 import { createGlobalStyle } from 'styled-components';
 
 const GlobalStyle = createGlobalStyle`
+  :root {
+    --global-border-radius: 8px;
+  }
+
   body {
+    background: ${({ theme }) => theme.palette.background.default};
+    color: ${({ theme }) => theme.palette.text.primary};
+    font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: #f5f5f5;
+    transition: background 3s ease, color 3s ease; /* Even slower transition */
   }
 
-  code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  .content {
+    padding: 20px;
+    transition: all 3s ease; /* Even slower transition */
   }
 
-  a {
-    text-decoration: none;
-  }
-
-  * {
-    box-sizing: border-box;
+  .box {
+    border-radius: var(--global-border-radius);
+    transition: background-color 3s ease, color 3s ease; /* Even slower transition */
   }
 `;
 

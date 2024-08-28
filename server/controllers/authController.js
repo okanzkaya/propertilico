@@ -1,55 +1,47 @@
 const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 
-const generateToken = (id, expiresIn = '30d') => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not defined');
-  }
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn });
-};
+const generateToken = (id, expiresIn = '30m') => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn });
+const generateRefreshToken = (id) => jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
-exports.registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
+  if (await User.findOne({ email })) return res.status(400).json({ message: 'User already exists' });
 
-  try {
-    const userExists = await User.findOne({ email });
+  const user = await User.create({ name, email, password, subscriptionEndDate: new Date(Date.now() + 30*24*60*60*1000) });
 
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+  res.status(201).json({
+    _id: user._id, name: user.name, email: user.email,
+    token: generateToken(user._id), refreshToken: generateRefreshToken(user._id),
+    subscriptionEndDate: user.subscriptionEndDate,
+  });
+};
 
-    const user = await User.create({ name, email, password });
-
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      token: generateToken(user._id),
+const authUser = async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (user && await user.matchPassword(password)) {
+    return res.json({
+      _id: user._id, name: user.name, email: user.email,
+      token: generateToken(user._id), refreshToken: generateRefreshToken(user._id),
+      subscriptionEndDate: user.subscriptionEndDate,
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
   }
+  res.status(401).json({ message: 'Invalid email or password' });
 };
 
-exports.authUser = async (req, res) => {
-  const { email, password, rememberMe } = req.body;
+const refreshAccessToken = (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(401).json({ message: 'Refresh token required' });
 
-  try {
-    const user = await User.findOne({ email });
+  jwt.verify(token, process.env.JWT_REFRESH_SECRET, async (err, decoded) => {
+    if (err) return res.status(403).json({ message: 'Invalid refresh token' });
 
-    if (user && (await user.matchPassword(password))) {
-      const tokenExpiry = rememberMe ? '30d' : '1d';
-      const token = generateToken(user._id, tokenExpiry);
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: token,
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid email or password' });
-    }
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.json({ token: generateToken(user._id) });
+  });
 };
+
+module.exports = { registerUser, authUser, refreshAccessToken };

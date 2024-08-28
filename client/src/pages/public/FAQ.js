@@ -62,7 +62,7 @@ const Answer = styled.p`
   font-size: 1em;
   margin-top: 10px;
   color: #666;
-  display: ${props => (props.isOpen ? 'block' : 'none')};
+  display: ${props => (props.$isOpen ? 'block' : 'none')};
   transition: all 0.3s;
 `;
 
@@ -104,7 +104,7 @@ function FAQ() {
         {faqData.map((item, index) => (
           <FAQItem key={index} onClick={() => toggleFAQ(index)}>
             <Question>{item.question}</Question>
-            <Answer isOpen={openIndex === index}>{item.answer}</Answer>
+            <Answer $isOpen={openIndex === index}>{item.answer}</Answer>
           </FAQItem>
         ))}
       </FAQList>
