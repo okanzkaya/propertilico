@@ -1,329 +1,184 @@
-// src/pages/Home.js
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { FaHome, FaChartBar, FaShieldAlt, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
-import exampleImage from '../../assets/public/homepage.jpg';
+import styled, { createGlobalStyle, keyframes } from 'styled-components';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaHome, FaChartBar, FaShieldAlt, FaArrowLeft, FaArrowRight, FaStar, FaCheck } from 'react-icons/fa';
+import { Helmet } from 'react-helmet';
 
-const placeholderImage = 'https://via.placeholder.com/150';
-
-const HomeContainer = styled.div`
-  text-align: center;
-  padding: 50px;
-  margin-bottom: 100px;
-  font-family: 'Poppins', sans-serif;
-
-  @media (max-width: 768px) {
-    padding: 20px;
-    margin-bottom: 50px;
+const GlobalStyle = createGlobalStyle`
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #f8f9fa;
+    color: #333;
   }
 `;
 
-const Section = styled.div`
+const gradientAnimation = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
+
+const Section = styled(motion.section)`
+  padding: 100px 5%;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 10px;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
+  overflow: hidden;
 `;
 
-const TextContent = styled.div`
-  flex: 1;
-  padding: 20px;
-  text-align: left;
-  min-width: 300px;
-
-  @media (max-width: 768px) {
-    text-align: center;
-    padding: 10px;
-  }
-`;
-
-const ImageContent = styled.div`
-  flex: 1;
-  padding: 20px;
-  text-align: center;
-  min-width: 300px;
-  transition: transform 0.3s;
-
-  @media (max-width: 768px) {
-    padding: 10px;
-  }
-
-  img {
-    width: 90%;
-    border-radius: 10px;
-    transition: transform 0.3s;
-
-    @media (max-width: 768px) {
-      width: 100%;
-    }
-  }
-
-  &:hover img {
-    transform: scale(1.05);
-  }
-`;
-
-const Header = styled.h2`
-  font-size: 2.5em;
-  margin-bottom: 10px;
-
-  @media (max-width: 768px) {
-    font-size: 2em;
-  }
-`;
-
-const SubText = styled.p`
-  font-size: 1em;
-  margin-bottom: 25px;
-  color: #555;
-
-  @media (max-width: 768px) {
-    font-size: 0.9em;
-  }
-`;
-
-const GetStartedButton = styled.button`
-  background-color: #007BFF;
+const HeroSection = styled(Section)`
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: ${gradientAnimation} 15s ease infinite;
+  min-height: 100vh;
   color: white;
-  padding: 12px 25px;
-  border: none;
-  border-radius: 5px;
-  font-size: 1em;
-  cursor: pointer;
-  margin-top: 10px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  transition: background-color 0.3s, transform 0.3s;
+  padding: 0;
+`;
+
+const Container = styled.div`
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+`;
+
+const HeroContainer = styled(Container)`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5%;
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    text-align: center;
+  }
+`;
+
+const HeroContent = styled.div`
+  flex: 1;
+  max-width: 600px;
+`;
+
+const HeroImageGrid = styled(motion.div)`
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-left: 40px;
+
+  @media (max-width: 1024px) {
+    margin-left: 0;
+    margin-top: 40px;
+  }
+`;
+
+const HeroImage = styled.img`
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 20px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
 
   &:hover {
-    background-color: #0056b3;
     transform: scale(1.05);
   }
-
-  @media (max-width: 768px) {
-    padding: 10px 20px;
-    font-size: 0.9em;
-  }
 `;
 
-const TrialText = styled.p`
-  font-size: 0.8em;
-  color: #888;
-  text-align: center;
-  margin-top: 10px;
-
-  @media (max-width: 768px) {
-    font-size: 0.7em;
-  }
+const Heading = styled(motion.h1)`
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 20px;
+  line-height: 1.2;
 `;
 
-const FeaturesSection = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-top: 40px;
-  padding-top: 40px;
-  border-top: 1px solid #e0e0e0;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    padding-top: 20px;
-    margin-top: 20px;
-  }
+const SubHeading = styled(motion.p)`
+  font-size: 1.4rem;
+  line-height: 1.6;
+  margin-bottom: 30px;
 `;
 
-const Feature = styled.div`
-  flex: 1;
-  max-width: 30%;
-  padding: 20px;
-  text-align: center;
-  border-left: 1px solid #e0e0e0;
-
-  &:first-child {
-    border-left: none;
-  }
-  &:last-child {
-    border-right: none;
-  }
+const CTAButton = styled(motion.button)`
+  background: white;
+  color: #e73c7e;
+  border: none;
+  padding: 15px 40px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 
   &:hover {
-    background-color: #f9f9f9;
-    transform: scale(1.02);
-    transition: background-color 0.3s, transform 0.3s;
+    background: #e73c7e;
+    color: white;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   }
+`;
 
-  @media (max-width: 768px) {
-    max-width: 100%;
-    border-left: none;
-    border-top: 1px solid #e0e0e0;
+const FeaturesSection = styled(Section)`
+  background: #fff;
+`;
 
-    &:first-child {
-      border-top: none;
-    }
+const FeatureCard = styled(motion.div)`
+  background: #fff;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 
-    &:hover {
-      transform: none;
-    }
+  &:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   }
 `;
 
 const FeatureIcon = styled.div`
-  font-size: 3em;
-  margin-bottom: 10px;
-  color: #007BFF;
-  transition: transform 0.3s, color 0.3s;
-
-  &:hover {
-    transform: scale(1.2);
-    color: #0056b3;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 2.5em;
-  }
+  font-size: 3rem;
+  color: #e73c7e;
+  margin-bottom: 20px;
 `;
 
-const FeatureHeader = styled.h3`
-  font-size: 1.5em;
-  margin-bottom: 10px;
-  color: #333;
-
-  @media (max-width: 768px) {
-    font-size: 1.2em;
-  }
-`;
-
-const FeatureText = styled.p`
-  font-size: 0.9em;
-  color: #666;
-
-  @media (max-width: 768px) {
-    font-size: 0.8em;
-  }
-`;
-
-const CardSectionWrapper = styled.div`
-  margin-top: 50px;
-  padding: 30px 0;
-  background-color: #f0f4f8;
-  overflow: hidden;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  border-radius: 15px;
-
-  @media (max-width: 768px) {
-    margin-top: 30px;
-    padding: 20px 0;
-  }
-`;
-
-const CardSection = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
+const TestimonialSection = styled(Section)`
+  background: linear-gradient(135deg, #f6f9fc, #e9f2f9);
   position: relative;
-  width: 100%;
-  max-width: 1000px;
-  height: 400px; /* Increased height to accommodate all text */
-
-  @media (max-width: 768px) {
-    height: 350px;
-  }
 `;
 
-const Card = styled.div`
-  width: 250px;
-  height: 100%; /* Ensure full height utilization */
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+const TestimonialCard = styled(motion.div)`
+  background: #fff;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  width: 80%;
+  max-width: 800px;
+  margin: 0 auto;
   text-align: center;
-  padding: 15px;
-  transition: transform 0.3s, opacity 0.3s;
-  position: absolute;
-  opacity: ${props => (props.visible ? 1 : 0)};
-  transform: ${props => (props.active ? 'scale(1.1)' : 'scale(0.9)')};
-  left: ${props => {
-    if (props.position === 'center') return '50%';
-    if (props.position === 'left') return 'calc(50% - 280px)';
-    if (props.position === 'right') return 'calc(50% + 280px)';
-    return '0';
-  }};
-  transform: translateX(-50%) ${props => (props.active ? 'scale(1.1)' : 'scale(0.9)')};
-  z-index: ${props => (props.active ? 2 : 1)};
-  visibility: ${props => (props.visible ? 'visible' : 'hidden')};
+`;
 
-  img {
-    border-radius: 10px;
-    width: 100px;
-    height: 100px;
-    margin-bottom: 10px;
-  }
-
-  h4 {
-    font-size: 1.1em;
-    margin-bottom: 5px;
-    color: #333;
-  }
-
-  h5 {
-    font-size: 0.9em;
-    color: #555;
-    margin-bottom: 10px;
-  }
-
-  p {
-    font-size: 0.9em;
-    color: #666;
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 5; /* Limits to 5 lines */
-    -webkit-box-orient: vertical;
-  }
-
-  @media (max-width: 768px) {
-    width: 200px;
-    height: 90%; /* Adjust height for smaller screens */
-    left: ${props => {
-      if (props.position === 'center') return '50%';
-      if (props.position === 'left') return 'calc(50% - 220px)';
-      if (props.position === 'right') return 'calc(50% + 220px)';
-      return '0';
-    }};
-    transform: translateX(-50%) ${props => (props.active ? 'scale(1.1)' : 'scale(0.9)')};
-
-    img {
-      width: 80px;
-      height: 80px;
-    }
-  }
+const TestimonialImage = styled.img`
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-bottom: 15px;
+  border: 4px solid #e73c7e;
 `;
 
 const ArrowButton = styled.button`
   background: none;
   border: none;
-  color: #007BFF;
-  font-size: 2em;
+  font-size: 2rem;
+  color: #e73c7e;
   cursor: pointer;
+  transition: color 0.3s;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  transition: color 0.3s;
-  z-index: 3;
 
   &:hover {
-    color: #0056b3;
+    color: #23a6d5;
   }
 
   &:disabled {
@@ -338,137 +193,155 @@ const ArrowButton = styled.button`
   &.right {
     right: 20px;
   }
+`;
 
-  @media (max-width: 768px) {
-    &.left {
-      left: 10px;
-    }
+const FeatureGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+`;
 
-    &.right {
-      right: 10px;
-    }
+const BenefitList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin-top: 20px;
+`;
+
+const BenefitItem = styled.li`
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+
+  svg {
+    color: #23d5ab;
+    margin-right: 10px;
   }
 `;
 
+const features = [
+  { icon: FaHome, title: "Smart Property Management", description: "Streamline operations with AI-powered tools." },
+  { icon: FaChartBar, title: "Advanced Analytics", description: "Make data-driven decisions to maximize ROI." },
+  { icon: FaShieldAlt, title: "Bank-Level Security", description: "Protect your data with top-tier security measures." }
+];
+
+const testimonials = [
+  { image: "https://via.placeholder.com/100", name: "John Doe", title: "Property Investor", rating: 5, text: "Propertilico has revolutionized how I manage my properties. It's an absolute game-changer." },
+  { image: "https://via.placeholder.com/100", name: "Jane Smith", title: "Real Estate Mogul", rating: 5, text: "The analytics feature in Propertilico is truly a game-changer. It's become indispensable." },
+  { image: "https://via.placeholder.com/100", name: "Mike Johnson", title: "Property Manager", rating: 5, text: "Propertilico has streamlined my workflow beyond belief. I highly recommend it." }
+];
+
+const benefits = [
+  "Increase property value",
+  "Reduce operational costs",
+  "Improve tenant satisfaction",
+  "Streamline maintenance processes"
+];
+
 const Home = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
   const navigate = useNavigate();
 
-  const cards = [
-    {
-      img: placeholderImage,
-      name: 'John Doe',
-      title: 'CEO of Something',
-      comment: 'Propertilico made property management so much easier for me. I can now manage all my properties effortlessly!'
-    },
-    {
-      img: placeholderImage,
-      name: 'Jane Smith',
-      title: 'CTO of Another Corp',
-      comment: 'The analytics feature is fantastic! It helps me make data-driven decisions and increase my revenue.'
-    },
-    {
-      img: placeholderImage,
-      name: 'Michael Johnson',
-      title: 'Real Estate Expert',
-      comment: 'The secure and reliable platform gives me peace of mind knowing my data is safe and secure.'
-    },
-    {
-      img: placeholderImage,
-      name: 'Emily Davis',
-      title: 'Property Manager',
-      comment: 'The user-friendly interface allows me to manage multiple properties with ease.'
-    },
-    {
-      img: placeholderImage,
-      name: 'Robert Wilson',
-      title: 'Investor',
-      comment: 'Propertilico is the ultimate property management solution. Highly recommended!'
-    }
-  ];
-
-  const handleNext = () => {
-    setActiveIndex((prevIndex) => (prevIndex + 1) % cards.length);
-  };
-
-  const handlePrev = () => {
-    setActiveIndex((prevIndex) => (prevIndex - 1 + cards.length) % cards.length);
-  };
-
-  const getPosition = (index) => {
-    const relativeIndex = (index - activeIndex + cards.length) % cards.length;
-    if (relativeIndex === 0) return 'left';
-    if (relativeIndex === 1) return 'center';
-    if (relativeIndex === 2) return 'right';
-    return 'hidden';
-  };
-
-  const isVisible = (index) => {
-    const relativeIndex = (index - activeIndex + cards.length) % cards.length;
-    return relativeIndex >= 0 && relativeIndex <= 2;
-  };
+  const nextTestimonial = useCallback(() => setActiveTestimonial((prev) => (prev + 1) % testimonials.length), []);
+  const prevTestimonial = useCallback(() => setActiveTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length), []);
 
   return (
-    <HomeContainer>
-      <Section>
-        <TextContent>
-          <Header>Your Ultimate Property Management Solution</Header>
-          <SubText>
-            Managing properties has never been easier! Propertilico is a cutting-edge property management designed to streamline and optimize your property management tasks, making your job effortless and efficient.
-          </SubText>
-          <GetStartedButton onClick={() => navigate('/get-started')}>
-            Start your free trial
-          </GetStartedButton>
-          <TrialText>Cancel anytime during 30 days trial.</TrialText>
-        </TextContent>
-        <ImageContent>
-          <img src={exampleImage} alt="Property Management" />
-        </ImageContent>
-      </Section>
+    <>
+      <GlobalStyle />
+      <Helmet>
+        <title>Propertilico - Revolutionary Property Management Software</title>
+        <meta name="description" content="Transform your property management with Propertilico. Our AI-powered platform offers smart tools for efficient property tracking, advanced analytics, and secure tenant management." />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "http://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Propertilico",
+            "applicationCategory": "Property Management Software",
+            "operatingSystem": "Web-based",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "5",
+              "ratingCount": "100"
+            }
+          })}
+        </script>
+      </Helmet>
+
+      <HeroSection>
+        <HeroContainer>
+          <HeroContent>
+            <Heading initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              Transform Your Property Management
+            </Heading>
+            <SubHeading initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+              Streamline operations, boost efficiency, and maximize returns with our AI-powered platform.
+            </SubHeading>
+            <CTAButton whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/get-started')}>
+              Start Your Free Trial
+            </CTAButton>
+            <BenefitList>
+              {benefits.map((benefit, index) => (
+                <BenefitItem key={index}>
+                  <FaCheck /> {benefit}
+                </BenefitItem>
+              ))}
+            </BenefitList>
+          </HeroContent>
+          <HeroImageGrid
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <HeroImage src="https://via.placeholder.com/300x200" alt="Property Management" />
+            <HeroImage src="https://via.placeholder.com/300x200" alt="Data Analytics" />
+            <HeroImage src="https://via.placeholder.com/300x200" alt="Tenant Portal" />
+            <HeroImage src="https://via.placeholder.com/300x200" alt="Financial Reports" />
+          </HeroImageGrid>
+        </HeroContainer>
+      </HeroSection>
 
       <FeaturesSection>
-        <Feature>
-          <FeatureIcon><FaHome /></FeatureIcon>
-          <FeatureHeader>Property Management</FeatureHeader>
-          <FeatureText>
-            Manage all your properties effortlessly with our all-in-one solution that simplifies property tracking and tenant management.
-          </FeatureText>
-        </Feature>
-        <Feature>
-          <FeatureIcon><FaChartBar /></FeatureIcon>
-          <FeatureHeader>Advanced Analytics</FeatureHeader>
-          <FeatureText>
-            Get insights into your property performance with our advanced analytics and reporting tools.
-          </FeatureText>
-        </Feature>
-        <Feature>
-          <FeatureIcon><FaShieldAlt /></FeatureIcon>
-          <FeatureHeader>Secure & Reliable</FeatureHeader>
-          <FeatureText>
-            Experience peace of mind with our secure and reliable platform that ensures your data is protected.
-          </FeatureText>
-        </Feature>
+        <Container>
+          <FeatureGrid>
+            {features.map((feature, index) => (
+              <FeatureCard key={index} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }}>
+                <FeatureIcon>{<feature.icon />}</FeatureIcon>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </FeatureCard>
+            ))}
+          </FeatureGrid>
+        </Container>
       </FeaturesSection>
 
-      <CardSectionWrapper>
-        <CardSection>
-          <ArrowButton className="left" onClick={handlePrev} disabled={activeIndex === 0}>
-            <FaArrowLeft />
-          </ArrowButton>
-          {cards.map((card, index) => (
-            <Card key={index} active={getPosition(index) === 'center'} position={getPosition(index)} visible={isVisible(index)}>
-              <img src={card.img} alt={card.name} />
-              <h4>{card.name}</h4>
-              <h5>{card.title}</h5>
-              <p>{card.comment}</p>
-            </Card>
-          ))}
-          <ArrowButton className="right" onClick={handleNext} disabled={activeIndex === cards.length - 1}>
-            <FaArrowRight />
-          </ArrowButton>
-        </CardSection>
-      </CardSectionWrapper>
-    </HomeContainer>
+      <TestimonialSection>
+        <Container>
+          <AnimatePresence mode="wait">
+            <TestimonialCard
+              key={activeTestimonial}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.5 }}
+            >
+              <TestimonialImage src={testimonials[activeTestimonial].image} alt={testimonials[activeTestimonial].name} />
+              <h4>{testimonials[activeTestimonial].name}</h4>
+              <p>{testimonials[activeTestimonial].title}</p>
+              <div>{[...Array(testimonials[activeTestimonial].rating)].map((_, i) => <FaStar key={i} color="#FFD700" />)}</div>
+              <p>"{testimonials[activeTestimonial].text}"</p>
+            </TestimonialCard>
+          </AnimatePresence>
+          <ArrowButton className="left" onClick={prevTestimonial} disabled={activeTestimonial === 0}><FaArrowLeft /></ArrowButton>
+          <ArrowButton className="right" onClick={nextTestimonial} disabled={activeTestimonial === testimonials.length - 1}><FaArrowRight /></ArrowButton>
+        </Container>
+      </TestimonialSection>
+    </>
   );
 };
 

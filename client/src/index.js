@@ -1,27 +1,25 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { ThemeProvider } from 'styled-components';
-import App from './App';
-import { lightTheme, darkTheme } from './pages/app/theme';
 import CssBaseline from '@mui/material/CssBaseline';
+import { HelmetProvider } from 'react-helmet-async';
+import App from './App';
+import { lightTheme, darkTheme } from './theme';
+import { UserProvider } from './context/UserContext';
 
 const container = document.getElementById('root');
 const root = createRoot(container);
 
 const Main = () => {
-  const [themeMode, setThemeMode] = useState('dark'); // Default to dark mode
+  const [themeMode, setThemeMode] = useState(() => 
+    localStorage.getItem('theme') || 'dark' // Default to dark mode
+  );
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setThemeMode(savedTheme);
-    }
-  }, []);
-
-  const theme = useMemo(() => {
-    return themeMode === 'light' ? lightTheme : darkTheme;
-  }, [themeMode]);
+  const theme = useMemo(() => 
+    themeMode === 'light' ? lightTheme : darkTheme, 
+    [themeMode]
+  );
 
   const toggleTheme = (mode) => {
     setThemeMode(mode);
@@ -29,12 +27,16 @@ const Main = () => {
   };
 
   return (
-    <MuiThemeProvider theme={theme}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <App toggleTheme={toggleTheme} />
-      </ThemeProvider>
-    </MuiThemeProvider>
+    <HelmetProvider>
+      <MuiThemeProvider theme={theme}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <UserProvider>
+            <App toggleTheme={toggleTheme} />
+          </UserProvider>
+        </ThemeProvider>
+      </MuiThemeProvider>
+    </HelmetProvider>
   );
 };
 
@@ -43,3 +45,9 @@ root.render(
     <Main />
   </React.StrictMode>
 );
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+// import reportWebVitals from './reportWebVitals';
+// reportWebVitals();

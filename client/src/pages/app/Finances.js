@@ -1,540 +1,574 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
-  Typography,
-  Grid,
-  Box,
-  Card,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  IconButton,
-  Tooltip,
-  Tabs,
-  Tab,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Paper,
-  Menu,
-  MenuItem as MenuListItem,
+  Typography, Grid, Box, Button, Dialog, DialogTitle, DialogContent,
+  DialogActions, TextField, IconButton, Tooltip, Tabs, Tab, Table,
+  TableHead, TableRow, TableCell, TableBody, Paper, Menu, MenuItem,
+  Fade, useMediaQuery, Chip
 } from '@mui/material';
-import { styled, useTheme } from '@mui/system';
-import Chart from 'react-apexcharts';
-import InfoIcon from '@mui/icons-material/Info';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
-import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import SortIcon from '@mui/icons-material/Sort';
-import SearchIcon from '@mui/icons-material/Search';
+import { styled, useTheme } from '@mui/material/styles';
+import { 
+  Add as AddIcon, Remove as RemoveIcon, Receipt as ReceiptIcon,
+  FilterList as FilterListIcon, Sort as SortIcon, Search as SearchIcon,
+  Info as InfoIcon, BarChart as BarChartIcon, PieChart as PieChartIcon,
+  Timeline as TimelineIcon, AttachMoney as MoneyIcon
+} from '@mui/icons-material';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend
+} from 'recharts';
 
 const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(4),
+  padding: theme.spacing(3),
   backgroundColor: theme.palette.background.default,
   minHeight: '100vh',
-}));
-
-const ChartCard = styled(Card)(({ theme }) => ({
-  padding: theme.spacing(2),
-  marginBottom: theme.spacing(3),
-  backgroundColor: theme.palette.background.paper,
-  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-  borderRadius: theme.spacing(1),
-  height: '100%',
-}));
-
-const ButtonWrapper = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: theme.spacing(1),
-  marginTop: theme.spacing(2),
-}));
-
-const IconGroup = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
-}));
-
-const commonChartOptions = {
-  chart: { toolbar: { show: false }, zoom: { enabled: false }, background: 'transparent' },
-  stroke: { curve: 'smooth' },
-  tooltip: { x: { format: 'dd/MM/yy HH:mm' } },
-  dataLabels: { enabled: false },
-  xaxis: {
-    categories: [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ],
-    labels: { style: { fontSize: '12px' }, rotate: -45 },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
   },
-  grid: { padding: { bottom: 10 } },
-};
+}));
+
+const StyledCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: '0 4px 20px 0 rgba(0,0,0,0.12)',
+  transition: 'all 0.3s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-5px)',
+    boxShadow: '0 8px 25px 0 rgba(0,0,0,0.15)',
+  },
+}));
+
+const ChartCard = styled(StyledCard)(({ theme }) => ({
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+}));
+
+const ButtonGroup = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: theme.spacing(2),
+  marginBottom: theme.spacing(3),
+  [theme.breakpoints.down('sm')]: {
+    flexDirection: 'column',
+  },
+}));
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  flexGrow: 1,
+  padding: theme.spacing(1.5),
+  borderRadius: theme.shape.borderRadius * 1.5,
+}));
+
+const TableCard = styled(StyledCard)(({ theme }) => ({
+  overflow: 'hidden',
+}));
+
+const StyledTableContainer = styled(Box)(({ theme }) => ({
+  maxHeight: 400,
+  overflow: 'auto',
+  '&::-webkit-scrollbar': {
+    width: '0.4em',
+    height: '0.4em',
+  },
+  '&::-webkit-scrollbar-track': {
+    boxShadow: 'inset 0 0 6px rgba(0,0,0,0.00)',
+    webkitBoxShadow: 'inset 0 0 6px rgba(0,0,0,0.00)',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: 'rgba(0,0,0,.1)',
+    borderRadius: '10px',
+  },
+}));
+
+const StyledChip = styled(Chip)(({ theme }) => ({
+  marginRight: theme.spacing(1),
+  marginBottom: theme.spacing(1),
+}));
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28BFF', '#FF6B6B'];
+
+const financialData = [
+  { name: 'Jan', revenue: 4000, expenses: 2400, profit: 1600 },
+  { name: 'Feb', revenue: 3000, expenses: 1398, profit: 1602 },
+  { name: 'Mar', revenue: 2000, expenses: 9800, profit: -7800 },
+  { name: 'Apr', revenue: 2780, expenses: 3908, profit: -1128 },
+  { name: 'May', revenue: 1890, expenses: 4800, profit: -2910 },
+  { name: 'Jun', revenue: 2390, expenses: 3800, profit: -1410 },
+];
+
+const revenueBreakdown = [
+  { name: 'Rent', value: 4000 },
+  { name: 'Parking', value: 300 },
+  { name: 'Laundry', value: 300 },
+  { name: 'Pet Fees', value: 200 },
+  { name: 'Late Fees', value: 100 },
+];
+
+const expenseBreakdown = [
+  { name: 'Utilities', value: 400 },
+  { name: 'Maintenance', value: 300 },
+  { name: 'Insurance', value: 300 },
+  { name: 'Property Tax', value: 200 },
+  { name: 'Management', value: 100 },
+];
 
 const Finances = () => {
   const theme = useTheme();
-  const isDarkMode = theme.palette.mode === 'dark';
-
-  const [modalState, setModalState] = useState({
-    revenueModalOpen: false,
-    expenseModalOpen: false,
-    addRevenueOpen: false,
-    addExpenseOpen: false,
-    transactionsModalOpen: false,
-    addInvoiceOpen: false,
-  });
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [tabValue, setTabValue] = useState(0);
+  const [modalState, setModalState] = useState({
+    addRevenue: false,
+    addExpense: false,
+    addInvoice: false,
+  });
   const [sortAnchorEl, setSortAnchorEl] = useState(null);
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
+  const [filterConfig, setFilterConfig] = useState('all');
 
-  const toggleModal = (modal, state) => setModalState((prev) => ({ ...prev, [modal]: state }));
+  const toggleModal = useCallback((modal, state) => {
+    setModalState(prev => ({ ...prev, [modal]: state }));
+  }, []);
 
-  const handleTabChange = (_, newValue) => setTabValue(newValue);
+  const handleTabChange = useCallback((_, newValue) => {
+    setTabValue(newValue);
+  }, []);
 
-  const handleSortClick = (event) => setSortAnchorEl(event.currentTarget);
-  const handleFilterClick = (event) => setFilterAnchorEl(event.currentTarget);
+  const handleSortClick = useCallback((event) => {
+    setSortAnchorEl(event.currentTarget);
+  }, []);
 
-  const handleSortClose = () => setSortAnchorEl(null);
-  const handleFilterClose = () => setFilterAnchorEl(null);
+  const handleFilterClick = useCallback((event) => {
+    setFilterAnchorEl(event.currentTarget);
+  }, []);
 
-  const handleSortOption = (option) => {
-    // Handle sort logic here
-    console.log('Sort by:', option);
+  const handleSortClose = useCallback(() => {
     setSortAnchorEl(null);
-  };
+  }, []);
 
-  const handleFilterOption = (option) => {
-    // Handle filter logic here
-    console.log('Filter by:', option);
+  const handleFilterClose = useCallback(() => {
     setFilterAnchorEl(null);
-  };
+  }, []);
 
-  const handleSearchChange = (event) => {
+  const handleSearchChange = useCallback((event) => {
     setSearchTerm(event.target.value);
-  };
+  }, []);
 
-  const filteredTransactions = useMemo(
-    () => recentTransactions.filter((t) =>
-      t.name.toLowerCase().includes(searchTerm.toLowerCase())),
-    [searchTerm]
-  );
+  const handleSort = useCallback((key) => {
+    setSortConfig(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc',
+    }));
+    handleSortClose();
+  }, [handleSortClose]);
 
-  const revenueSeries = [{ name: 'Revenues', data: [65, 59, 80, 81, 56, 55, 40, 70, 60, 75, 85, 90] }];
-  const expensesSeries = [{ name: 'Expenses', data: [28, 48, 40, 19, 86, 27, 90, 45, 55, 65, 30, 50] }];
-  const profitSeries = [{ name: 'Profit', data: [37, 11, 40, 62, -30, 28, -50, 25, 5, 25, 55, 40] }];
-  const monthlyGoalSeries = [{ name: 'Monthly Goal Progress', data: [70] }];
-  const annualGoalSeries = [{ name: 'Annual Goal Progress', data: [40] }];
-  const invoices = [
-    { id: 1, name: 'Invoice #001', date: '2024-01-01', amount: 1000, status: 'Paid' },
-    { id: 2, name: 'Invoice #002', date: '2024-01-10', amount: 200, status: 'Pending' },
-  ];
+  const handleFilter = useCallback((filter) => {
+    setFilterConfig(filter);
+    handleFilterClose();
+  }, [handleFilterClose]);
 
-  const chartComponent = (title, series, chartType = 'line') => (
+  const filteredAndSortedTransactions = useMemo(() => {
+    let filtered = transactions.filter(t => 
+      t.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (filterConfig === 'all' || t.type === filterConfig)
+    );
+
+    return filtered.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [searchTerm, filterConfig, sortConfig]);
+
+  const filteredAndSortedInvoices = useMemo(() => {
+    let filtered = invoices.filter(i => 
+      i.description.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (filterConfig === 'all' || i.status.toLowerCase() === filterConfig)
+    );
+
+    return filtered.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [searchTerm, filterConfig, sortConfig]);
+
+  const renderChart = useCallback((title, ChartComponent, data) => (
     <ChartCard>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">{title}</Typography>
-        <Tooltip title={`This chart shows the monthly ${title.toLowerCase()}.`} placement="top">
-          <IconButton><InfoIcon /></IconButton>
+        <Tooltip title={`This chart shows ${title.toLowerCase()}`}>
+          <IconButton size="small"><InfoIcon /></IconButton>
         </Tooltip>
       </Box>
-      <Chart
-        options={{
-          ...commonChartOptions,
-          chart: { ...commonChartOptions.chart, type: chartType },
-          theme: { mode: isDarkMode ? 'dark' : 'light' },
-        }}
-        series={series}
-        type={chartType}
-        height={300}
-      />
+      <Box flexGrow={1} display="flex" alignItems="center" justifyContent="center">
+        <ResponsiveContainer width="100%" height={300}>
+          <ChartComponent data={data} />
+        </ResponsiveContainer>
+      </Box>
     </ChartCard>
-  );
+  ), []);
 
-  const progressChartComponent = (title, series) => (
-    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" flexGrow={1}>
-      <Typography variant="h6" mb={2}>{title}</Typography>
-      <Chart
-        options={{
-          chart: { type: 'radialBar', background: 'transparent' },
-          plotOptions: {
-            radialBar: {
-              dataLabels: {
-                name: { fontSize: '18px', offsetY: -10, color: isDarkMode ? '#FFFFFF' : '#333333' },
-                value: { fontSize: '16px', offsetY: 5, color: isDarkMode ? '#FFFFFF' : '#333333' },
-              },
-              hollow: { size: '60%' },
-              track: {
-                background: isDarkMode ? '#4E4E4E' : '#f2f2f2',
-                strokeWidth: '97%',
-                margin: 5,
-                dropShadow: {
-                  enabled: true,
-                  top: 2,
-                  left: 0,
-                  blur: 4,
-                  opacity: 0.15,
-                },
-              },
-            },
-          },
-          theme: { mode: isDarkMode ? 'dark' : 'light' },
-        }}
-        series={series[0].data}
-        type="radialBar"
-        height={200}
-      />
-    </Box>
-  );
+  const BarChartComponent = useCallback(({ data }) => (
+    <BarChart data={data}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="name" />
+      <YAxis />
+      <RechartsTooltip />
+      <Legend />
+      <Bar dataKey="revenue" fill="#8884d8" name="Revenue" />
+      <Bar dataKey="expenses" fill="#82ca9d" name="Expenses" />
+    </BarChart>
+  ), []);
+
+  const LineChartComponent = useCallback(({ data }) => (
+    <LineChart data={data}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="name" />
+      <YAxis />
+      <RechartsTooltip />
+      <Legend />
+      <Line type="monotone" dataKey="profit" stroke="#8884d8" name="Profit" />
+    </LineChart>
+  ), []);
+
+  const PieChartComponent = useCallback(({ data }) => (
+    <PieChart>
+      <Pie
+        data={data}
+        cx="50%"
+        cy="50%"
+        labelLine={false}
+        outerRadius={80}
+        fill="#8884d8"
+        dataKey="value"
+        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+      >
+        {data.map((entry, index) => (
+          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+        ))}
+      </Pie>
+      <RechartsTooltip />
+    </PieChart>
+  ), []);
+
+  const renderTransactionsTable = useCallback(() => (
+    <TableCard>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">Recent Transactions</Typography>
+        <Box display="flex" alignItems="center">
+          <IconButton size="small" onClick={handleFilterClick}>
+            <FilterListIcon />
+          </IconButton>
+          <IconButton size="small" onClick={handleSortClick}>
+            <SortIcon />
+          </IconButton>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder="Search"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            InputProps={{
+              startAdornment: <SearchIcon fontSize="small" />,
+            }}
+          />
+        </Box>
+      </Box>
+      <StyledTableContainer>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>Date</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell align="right">Amount</TableCell>
+              <TableCell align="right">Type</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredAndSortedTransactions.map((transaction) => (
+              <TableRow key={transaction.id} hover>
+                <TableCell>{transaction.date}</TableCell>
+                <TableCell>{transaction.name}</TableCell>
+                <TableCell align="right" 
+                  sx={{ color: transaction.type === 'credit' ? 'success.main' : 'error.main' }}>
+                  {transaction.type === 'credit' ? '+' : '-'} ${transaction.amount}
+                </TableCell>
+                <TableCell align="right">
+                  <StyledChip
+                    label={transaction.type}
+                    color={transaction.type === 'credit' ? 'success' : 'error'}
+                    size="small"
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </StyledTableContainer>
+    </TableCard>
+  ), [filteredAndSortedTransactions, handleFilterClick, handleSortClick, handleSearchChange, searchTerm]);
+
+  const renderInvoicesTable = useCallback(() => (
+    <TableCard>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">Invoices</Typography>
+        <Box display="flex" alignItems="center">
+          <IconButton size="small" onClick={handleFilterClick}>
+            <FilterListIcon />
+          </IconButton>
+          <IconButton size="small" onClick={handleSortClick}>
+            <SortIcon />
+          </IconButton>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder="Search"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            InputProps={{
+              startAdornment: <SearchIcon fontSize="small" />,
+            }}
+          />
+        </Box>
+      </Box>
+      <StyledTableContainer>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>Invoice #</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell align="right">Amount</TableCell>
+              <TableCell align="right">Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredAndSortedInvoices.map((invoice) => (
+              <TableRow key={invoice.id} hover>
+                <TableCell>{invoice.id}</TableCell>
+                <TableCell>{invoice.date}</TableCell>
+                <TableCell>{invoice.description}</TableCell>
+                <TableCell align="right">${invoice.amount}</TableCell>
+                <TableCell align="right">
+                  <StyledChip
+                    label={invoice.status}
+                    color={invoice.status === 'Paid' ? 'success' : invoice.status === 'Pending' ? 'warning' : 'error'}
+                    size="small"
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </StyledTableContainer>
+    </TableCard>
+  ), [filteredAndSortedInvoices, handleFilterClick, handleSortClick, handleSearchChange, searchTerm]);
+
+  const renderContent = useCallback(() => {
+    switch (tabValue) {
+      case 0: // Overview
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              {renderChart('Revenue vs Expenses', BarChartComponent, financialData)}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              {renderChart('Profit Trend', LineChartComponent, financialData)}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              {renderChart('Revenue Breakdown', PieChartComponent, revenueBreakdown)}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              {renderChart('Expense Breakdown', PieChartComponent, expenseBreakdown)}
+            </Grid>
+            <Grid item xs={12}>
+              {renderTransactionsTable()}
+            </Grid>
+          </Grid>
+        );
+      case 1: // Revenues
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              {renderChart('Monthly Revenue', BarChartComponent, financialData.map(item => ({ name: item.name, revenue: item.revenue })))}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              {renderChart('Revenue Breakdown', PieChartComponent, revenueBreakdown)}
+            </Grid>
+            <Grid item xs={12}>
+              {renderTransactionsTable()}
+            </Grid>
+          </Grid>
+        );
+      case 2: // Expenses
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              {renderChart('Monthly Expenses', BarChartComponent, financialData.map(item => ({ name: item.name, expenses: item.expenses })))}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              {renderChart('Expense Breakdown', PieChartComponent, expenseBreakdown)}
+            </Grid>
+            <Grid item xs={12}>
+              {renderTransactionsTable()}
+            </Grid>
+          </Grid>
+        );
+      case 3: // Transactions
+        return renderTransactionsTable();
+      case 4: // Invoices
+        return renderInvoicesTable();
+      default:
+        return null;
+    }
+  }, [tabValue, renderChart, BarChartComponent, LineChartComponent, PieChartComponent, renderTransactionsTable, renderInvoicesTable]);
 
   return (
     <PageWrapper>
-      <Typography variant="h5" gutterBottom>Finances & Accounting</Typography>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-          {['Overview', 'Revenues', 'Expenses', 'Transactions', 'Invoices'].map((label) => (
-            <Tab key={label} label={label} />
-          ))}
-        </Tabs>
-      </Box>
-
-      {tabValue === 0 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>{chartComponent('Revenues', revenueSeries)}</Grid>
-          <Grid item xs={12} md={6}>{chartComponent('Expenses', expensesSeries)}</Grid>
-          <Grid item xs={12} md={6}>{chartComponent('Profit', profitSeries)}</Grid>
-          <Grid item xs={12} md={6}>
-            <ChartCard>
-              {progressChartComponent('Monthly Goal Progress', monthlyGoalSeries)}
-              {progressChartComponent('Annual Goal Progress', annualGoalSeries)}
-            </ChartCard>
-          </Grid>
-        </Grid>
-      )}
-
-      {tabValue === 1 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <ButtonWrapper>
-              <Button variant="contained" color="primary" startIcon={<AddCircleIcon />} fullWidth
-                onClick={() => toggleModal('addRevenueOpen', true)}>
-                Record Revenue
-              </Button>
-            </ButtonWrapper>
-          </Grid>
-          <Grid item xs={12}>
-            <ChartCard>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Revenues</Typography>
-                <IconGroup>
-                  <IconButton size="small" onClick={handleFilterClick}>
-                    <FilterListIcon />
-                  </IconButton>
-                  <IconButton size="small" onClick={handleSortClick}>
-                    <SortIcon />
-                  </IconButton>
-                  <TextField
-                    variant="outlined"
-                    size="small"
-                    placeholder="Search Revenues"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    sx={{ marginLeft: 2 }}
-                    InputProps={{
-                      startAdornment: <SearchIcon position="start" />,
-                    }}
-                  />
-                </IconGroup>
-              </Box>
-              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell align="right">Type</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredTransactions
-                      .filter((t) => t.type === 'credit')
-                      .map((transaction) => (
-                        <TableRow key={transaction.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
-                          <TableCell>{transaction.date}</TableCell>
-                          <TableCell>{transaction.name}</TableCell>
-                          <TableCell align="right">+ ${transaction.amount}</TableCell>
-                          <TableCell align="right">{transaction.type}</TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </ChartCard>
-          </Grid>
-        </Grid>
-      )}
-
-      {tabValue === 2 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <ButtonWrapper>
-              <Button variant="contained" color="primary" startIcon={<RemoveCircleIcon />} fullWidth
-                onClick={() => toggleModal('addExpenseOpen', true)}>
-                Record Expense
-              </Button>
-            </ButtonWrapper>
-          </Grid>
-          <Grid item xs={12}>
-            <ChartCard>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Expenses</Typography>
-                <IconGroup>
-                  <IconButton size="small" onClick={handleFilterClick}>
-                    <FilterListIcon />
-                  </IconButton>
-                  <IconButton size="small" onClick={handleSortClick}>
-                    <SortIcon />
-                  </IconButton>
-                  <TextField
-                    variant="outlined"
-                    size="small"
-                    placeholder="Search Expenses"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    sx={{ marginLeft: 2 }}
-                    InputProps={{
-                      startAdornment: <SearchIcon position="start" />,
-                    }}
-                  />
-                </IconGroup>
-              </Box>
-              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell align="right">Type</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredTransactions
-                      .filter((t) => t.type === 'debit')
-                      .map((transaction) => (
-                        <TableRow key={transaction.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
-                          <TableCell>{transaction.date}</TableCell>
-                          <TableCell>{transaction.name}</TableCell>
-                          <TableCell align="right">- ${transaction.amount}</TableCell>
-                          <TableCell align="right">{transaction.type}</TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </ChartCard>
-          </Grid>
-        </Grid>
-      )}
-
-      {tabValue === 3 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <ChartCard>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Recent Transactions</Typography>
-                <IconGroup>
-                  <IconButton size="small" onClick={handleFilterClick}>
-                    <FilterListIcon />
-                  </IconButton>
-                  <IconButton size="small" onClick={handleSortClick}>
-                    <SortIcon />
-                  </IconButton>
-                  <TextField
-                    variant="outlined"
-                    size="small"
-                    placeholder="Search Transactions"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    sx={{ marginLeft: 2 }}
-                    InputProps={{
-                      startAdornment: <SearchIcon position="start" />,
-                    }}
-                  />
-                </IconGroup>
-              </Box>
-              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell align="right">Type</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
-                        <TableCell>{transaction.date}</TableCell>
-                        <TableCell>{transaction.name}</TableCell>
-                        <TableCell align="right">{transaction.type === 'credit' ? `+ $${transaction.amount}` : `- $${transaction.amount}`}</TableCell>
-                        <TableCell align="right">{transaction.type}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </ChartCard>
-          </Grid>
-        </Grid>
-      )}
-
-      {tabValue === 4 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <ButtonWrapper>
-              <Button variant="contained" color="primary" startIcon={<ReceiptIcon />} fullWidth
-                onClick={() => toggleModal('addInvoiceOpen', true)}>
-                Create Invoice
-              </Button>
-            </ButtonWrapper>
-          </Grid>
-          <Grid item xs={12}>
-            <ChartCard>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Invoices</Typography>
-                <IconGroup>
-                  <IconButton size="small" onClick={handleFilterClick}>
-                    <FilterListIcon />
-                  </IconButton>
-                  <IconButton size="small" onClick={handleSortClick}>
-                    <SortIcon />
-                  </IconButton>
-                  <TextField
-                    variant="outlined"
-                    size="small"
-                    placeholder="Search Invoices"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    sx={{ marginLeft: 2 }}
-                    InputProps={{
-                      startAdornment: <SearchIcon position="start" />,
-                    }}
-                  />
-                </IconGroup>
-              </Box>
-              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell align="right">Status</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {invoices.map((invoice) => (
-                      <TableRow key={invoice.id} sx={{ '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
-                        <TableCell>{invoice.date}</TableCell>
-                        <TableCell>{invoice.name}</TableCell>
-                        <TableCell align="right">${invoice.amount}</TableCell>
-                        <TableCell align="right" color={invoice.status === 'Paid' ? 'success.main' : 'warning.main'}>
-                          {invoice.status}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </ChartCard>
-          </Grid>
-        </Grid>
-      )}
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+        Financial Dashboard
+      </Typography>
+      <ButtonGroup>
+        <ActionButton
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => toggleModal('addRevenue', true)}
+        >
+          Add Revenue
+        </ActionButton>
+        <ActionButton
+          variant="contained"
+          color="secondary"
+          startIcon={<RemoveIcon />}
+          onClick={() => toggleModal('addExpense', true)}
+        >
+          Add Expense
+        </ActionButton>
+        <ActionButton
+          variant="contained"
+          color="info"
+          startIcon={<ReceiptIcon />}
+          onClick={() => toggleModal('addInvoice', true)}
+        >
+          Create Invoice
+        </ActionButton>
+      </ButtonGroup>
+      <Tabs
+        value={tabValue}
+        onChange={handleTabChange}
+        variant={isMobile ? "scrollable" : "fullWidth"}
+        scrollButtons="auto"
+        sx={{ mb: 3 }}
+      >
+        <Tab icon={<BarChartIcon />} label="Overview" />
+        <Tab icon={<MoneyIcon />} label="Revenues" />
+        <Tab icon={<PieChartIcon />} label="Expenses" />
+        <Tab icon={<TimelineIcon />} label="Transactions" />
+        <Tab icon={<ReceiptIcon />} label="Invoices" />
+      </Tabs>
+      <Fade in={true}>
+        <Box>{renderContent()}</Box>
+      </Fade>
 
       {/* Modals */}
-      {['revenueModalOpen', 'expenseModalOpen', 'addRevenueOpen', 'addExpenseOpen', 'transactionsModalOpen', 'addInvoiceOpen'].map((modal) => (
+      {['addRevenue', 'addExpense', 'addInvoice'].map((modal) => (
         <Dialog
           key={modal}
           open={modalState[modal]}
           onClose={() => toggleModal(modal, false)}
           fullWidth
-          maxWidth={modal.includes('add') ? 'sm' : 'md'}
+          maxWidth="sm"
         >
-          <DialogTitle>{modal.includes('revenue') ? 'Detailed Revenues' : modal.includes('expense') ? 'Detailed Expenses' : modal.includes('transactions') ? 'All Transactions' : 'Create Invoice'}</DialogTitle>
+          <DialogTitle>
+            {modal === 'addRevenue' ? 'Add Revenue' : 
+             modal === 'addExpense' ? 'Add Expense' : 'Create Invoice'}
+          </DialogTitle>
           <DialogContent>
-            {modal.includes('revenue') || modal.includes('expense') ? (
-              <Chart
-                options={{
-                  ...commonChartOptions,
-                  chart: { ...commonChartOptions.chart, toolbar: { show: true, tools: { download: true } } },
-                  theme: { mode: isDarkMode ? 'dark' : 'light' },
-                }}
-                series={modal.includes('revenue') ? revenueSeries : expensesSeries}
-                type="line"
-                height={500}
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Description"
+              fullWidth
+              variant="outlined"
+            />
+            <TextField
+              margin="dense"
+              label="Amount"
+              fullWidth
+              variant="outlined"
+              type="number"
+            />
+            <TextField
+              margin="dense"
+              label="Date"
+              fullWidth
+              variant="outlined"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+            />
+            {modal === 'addInvoice' && (
+              <TextField
+                margin="dense"
+                label="Due Date"
+                fullWidth
+                variant="outlined"
+                type="date"
+                InputLabelProps={{ shrink: true }}
               />
-            ) : modal.includes('add') ? (
-              <>
-                <TextField autoFocus margin="dense" label={modal.includes('Revenue') ? 'Revenue Name' : 'Expense Name'} fullWidth variant="outlined" />
-                <TextField margin="dense" label="Amount" fullWidth variant="outlined" type="number" />
-                <TextField margin="dense" label="Date" fullWidth variant="outlined" type="date" InputLabelProps={{ shrink: true }} />
-              </>
-            ) : (
-              filteredTransactions.map((transaction) => (
-                <Box key={transaction.id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', '&:nth-of-type(even)': { backgroundColor: theme.palette.action.hover } }}>
-                  <Box>
-                    <Typography variant="body1">{transaction.name}</Typography>
-                    <Typography variant="body2" color="textSecondary">{transaction.date}</Typography>
-                  </Box>
-                  <Typography variant="body1" color={transaction.type === 'credit' ? 'success.main' : 'error.main'}>
-                    {transaction.type === 'credit' ? `+ $${transaction.amount}` : `- $${transaction.amount}`}
-                  </Typography>
-                </Box>
-              ))
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => toggleModal(modal, false)} color="primary">Close</Button>
-            {modal.includes('add') && <Button onClick={() => toggleModal(modal, false)} color="primary">Add</Button>}
+            <Button onClick={() => toggleModal(modal, false)}>Cancel</Button>
+            <Button onClick={() => toggleModal(modal, false)} color="primary">Add</Button>
           </DialogActions>
         </Dialog>
       ))}
 
-      {/* Sort and Filter Menus */}
+      {/* Menus */}
       <Menu
         anchorEl={sortAnchorEl}
         open={Boolean(sortAnchorEl)}
         onClose={handleSortClose}
       >
-        <MenuListItem onClick={() => handleSortOption('Date')}>Sort by Date</MenuListItem>
-        <MenuListItem onClick={() => handleSortOption('Amount')}>Sort by Amount</MenuListItem>
+        <MenuItem onClick={() => handleSort('date')}>Sort by Date</MenuItem>
+        <MenuItem onClick={() => handleSort('amount')}>Sort by Amount</MenuItem>
       </Menu>
       <Menu
         anchorEl={filterAnchorEl}
         open={Boolean(filterAnchorEl)}
         onClose={handleFilterClose}
       >
-        <MenuListItem onClick={() => handleFilterOption('Paid')}>Filter by Paid</MenuListItem>
-        <MenuListItem onClick={() => handleFilterOption('Pending')}>Filter by Pending</MenuListItem>
+        <MenuItem onClick={() => handleFilter('all')}>Show All</MenuItem>
+        <MenuItem onClick={() => handleFilter('credit')}>Show Revenues</MenuItem>
+        <MenuItem onClick={() => handleFilter('debit')}>Show Expenses</MenuItem>
       </Menu>
     </PageWrapper>
   );
 };
 
-export default Finances;
-
-const recentTransactions = [
-  { id: 1, name: 'Rent', date: '2024-01-01', amount: 1000, type: 'credit' },
-  { id: 2, name: 'Electricity', date: '2024-01-05', amount: 200, type: 'debit' },
-  { id: 3, name: 'Water', date: '2024-01-10', amount: 150, type: 'debit' },
-  { id: 4, name: 'Rent', date: '2024-02-01', amount: 1000, type: 'credit' },
+// Sample data for demonstration purposes
+const transactions = [
+  { id: 1, name: 'Rent Payment', date: '2024-01-01', amount: 1000, type: 'credit' },
+  { id: 2, name: 'Electricity Bill', date: '2024-01-05', amount: 150, type: 'debit' },
+  { id: 3, name: 'Maintenance Fee', date: '2024-01-10', amount: 200, type: 'debit' },
+  { id: 4, name: 'Tenant Deposit', date: '2024-01-15', amount: 500, type: 'credit' },
+  { id: 5, name: 'Property Tax', date: '2024-01-20', amount: 300, type: 'debit' },
 ];
+
+const invoices = [
+  { id: 'INV-001', date: '2024-01-01', description: 'January Rent', amount: 1000, status: 'Paid' },
+  { id: 'INV-002', date: '2024-02-01', description: 'February Rent', amount: 1000, status: 'Pending' },
+  { id: 'INV-003', date: '2024-03-01', description: 'March Rent', amount: 1000, status: 'Overdue' },
+];
+
+export default Finances;

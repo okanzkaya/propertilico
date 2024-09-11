@@ -1,55 +1,69 @@
-// src/axiosSetup.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
-const getRefreshToken = () => localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
-
 const axiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
+
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => refreshSubscribers.push(cb);
+
+const onRrefreshed = (token) => {
+  refreshSubscribers.map(cb => cb(token));
+};
 
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
-    // Only retry once to prevent infinite loops
-    if (error.response.status === 401 && error.response.data.message === 'Token expired' && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) {
-        // Handle missing refresh token scenario
-        console.error('No refresh token available');
-        return Promise.reject(error);
+    if (error.response.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token) => {
+            originalRequest.headers['Authorization'] = 'Bearer ' + token;
+            resolve(axiosInstance(originalRequest));
+          });
+        });
       }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
-        const { data } = await axios.post(`${API_URL}/auth/refresh-token`, {
-          token: refreshToken,
-        });
-
-        // Store the new token and retry the original request
-        localStorage.setItem('token', data.token);
-        originalRequest.headers['Authorization'] = `Bearer ${data.token}`;
-
+        const refreshToken = localStorage.getItem('refreshToken');
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/refresh-token`, { refreshToken });
+        const { token } = response.data;
+        localStorage.setItem('token', token);
+        axiosInstance.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+        onRrefreshed(token);
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.error('Error refreshing token:', refreshError);
-
-        // Clear tokens on refresh failure
+        // Handle refresh token error (e.g., logout user)
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('refreshToken');
-
-        // Optionally, you can redirect to the login page here
-        // window.location.href = '/login';
-
+        window.location.href = '/signin';
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+        refreshSubscribers = [];
       }
     }
-
     return Promise.reject(error);
   }
 );

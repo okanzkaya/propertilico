@@ -1,27 +1,25 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getProtectedData } from '../../api';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
+import { CircularProgress, Box } from '@mui/material';
 
 const ProtectedRoute = ({ children }) => {
-  const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, loading } = useUser();
+  const location = useLocation();
 
-  useEffect(() => {
-    const checkAuthAndSubscription = async () => {
-      try {
-        const { subscriptionEndDate } = await getProtectedData();
-        const isValidSubscription = new Date(subscriptionEndDate) > new Date();
-        setIsAuthenticated(isValidSubscription);
-        if (!isValidSubscription) navigate('/my-plan', { replace: true });
-      } catch {
-        navigate('/signin', { replace: true });
-      }
-    };
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-    checkAuthAndSubscription();
-  }, [navigate]);
+  if (!user) {
+    return <Navigate to="/signin" state={{ from: location }} replace />;
+  }
 
-  return isAuthenticated ? children : null;
+  return children;
 };
 
 export default ProtectedRoute;

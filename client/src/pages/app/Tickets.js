@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Typography,
   Grid,
@@ -10,485 +10,654 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  IconButton,
   Select,
   MenuItem,
   FormControl,
+  InputLabel,
   InputAdornment,
-  Divider,
   List,
   ListItem,
   ListItemText,
+  Chip,
+  Snackbar,
+  Alert,
+  useMediaQuery,
+  AppBar,
+  Toolbar,
+  CircularProgress,
+  Tabs,
+  Tab,
+  Paper,
+  useTheme,
+  IconButton,
+  Drawer,
+  Avatar,
+  Tooltip,
 } from "@mui/material";
 import {
-  AddCircle as AddCircleIcon,
+  Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Sort as SortIcon,
-  NoteAdd as NoteAddIcon,
-  Save as SaveIcon,
+  Menu as MenuIcon,
+  FilterList as FilterListIcon,
+  Today as TodayIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
-import { styled, useTheme } from "@mui/system";
+import { styled } from "@mui/system";
 
 const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(4),
+  padding: theme.spacing(3),
   backgroundColor: theme.palette.background.default,
   minHeight: "100vh",
+  color: theme.palette.text.primary,
 }));
 
-const TicketCard = styled(Card)(({ theme }) => ({
-  padding: theme.spacing(2),
-  marginBottom: theme.spacing(2),
-  cursor: "pointer",
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: theme.shape.borderRadius,
-  transition: "all 0.3s ease",
-  "&:hover": {
-    boxShadow: theme.shadows[4],
-    transform: "translateY(-3px)",
-  },
-  [theme.breakpoints.up("md")]: {
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: theme.spacing(1),
-    "& .MuiTypography-h6": {
-      fontSize: "1rem",
-    },
-    "& .MuiTypography-body2": {
-      fontSize: "0.875rem",
-    },
-  },
-}));
-
-const ControlsWrapper = styled(Box)(({ theme }) => ({
+const StyledCard = styled(Card)(({ theme }) => ({
+  height: "100%",
   display: "flex",
   flexDirection: "column",
-  marginBottom: theme.spacing(3),
-  gap: theme.spacing(2),
-  [theme.breakpoints.up("sm")]: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  transition: "all 0.3s ease",
+  cursor: "pointer",
+  "&:hover": {
+    boxShadow: theme.shadows[8],
+    transform: "translateY(-5px)",
+  },
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius * 2,
+}));
+
+const CardContent = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  flexGrow: 1,
+}));
+
+const CardActions = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2),
+  borderTop: `1px solid ${theme.palette.divider}`,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+}));
+
+const SearchBar = styled(TextField)(({ theme }) => ({
+  "& .MuiOutlinedInput-root": {
+    borderRadius: theme.shape.borderRadius * 2,
+    "&:hover fieldset": {
+      borderColor: theme.palette.primary.main,
+    },
   },
 }));
 
-const ButtonWrapper = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(2),
-  width: "100%",
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "stretch",
-  },
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
 }));
 
 const Tickets = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [tickets, setTickets] = useState(() => {
+    const storedTickets = localStorage.getItem("tickets");
+    return storedTickets ? JSON.parse(storedTickets) : [];
+  });
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [dialogType, setDialogType] = useState(null);
   const [formValues, setFormValues] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("priority");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [filterPriority, setFilterPriority] = useState("All");
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [noteContent, setNoteContent] = useState("");
 
-  const ticketsData = useMemo(
-    () => [
-      {
-        id: 1,
-        title: "Leaky Faucet",
-        description: "The kitchen faucet is leaking and needs to be fixed.",
-        status: "Open",
-        priority: "High",
-        createdBy: "John Doe",
-        assignee: "Property Manager",
-        createdAt: "2024-07-01",
-        notes: [
-          {
-            title: "Initial Note",
-            content: "Tenant reported the leak on 1st July. Scheduled repair for 3rd July.",
-            date: "2024-07-01",
-          },
-        ],
-      },
-      {
-        id: 2,
-        title: "Broken Window",
-        description: "The window in the living room is broken.",
-        status: "In Progress",
-        priority: "Medium",
-        createdBy: "Jane Smith",
-        assignee: "Property Manager",
-        createdAt: "2024-06-25",
-        notes: [
-          {
-            title: "Assessment",
-            content: "Window needs replacement, contacted contractor for a quote.",
-            date: "2024-06-26",
-          },
-        ],
-      },
-      {
-        id: 3,
-        title: "Clogged Drain",
-        description: "The drain in the bathroom is clogged.",
-        status: "Closed",
-        priority: "Low",
-        createdBy: "Alice Brown",
-        assignee: "Property Manager",
-        createdAt: "2024-06-20",
-        notes: [
-          {
-            title: "Resolved",
-            content: "Drain was unclogged, and tenant confirmed no further issues.",
-            date: "2024-06-22",
-          },
-        ],
-      },
-    ],
-    []
-  );
+  useEffect(() => {
+    localStorage.setItem("tickets", JSON.stringify(tickets));
+  }, [tickets]);
+
+  useEffect(() => {
+    setTimeout(() => setIsLoading(false), 1000);
+  }, []);
 
   const filteredTickets = useMemo(() => {
-    return ticketsData
-      .filter(({ title, description }) =>
-        [title, description].some((field) =>
-          field.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+    const statusFilter = ["All", "Open", "In Progress", "Closed"][currentTab];
+    return tickets
+      .filter(
+        ({ title, description, status, priority }) =>
+          (statusFilter === "All" || status === statusFilter) &&
+          (filterPriority === "All" || priority === filterPriority) &&
+          [title, description].some((field) =>
+            field.toLowerCase().includes(searchTerm.toLowerCase())
+          )
       )
       .sort((a, b) => {
         switch (sortOrder) {
           case "priority":
-            return a.priority.localeCompare(b.priority);
+            return b.priority.localeCompare(a.priority);
           case "dateAsc":
             return new Date(a.createdAt) - new Date(b.createdAt);
           case "dateDesc":
             return new Date(b.createdAt) - new Date(a.createdAt);
           case "status":
             return a.status.localeCompare(b.status);
+          case "dueDate":
+            return new Date(a.dueDate) - new Date(b.dueDate);
           default:
             return 0;
         }
       });
-  }, [searchTerm, sortOrder, ticketsData]);
+  }, [searchTerm, sortOrder, currentTab, tickets, filterPriority]);
 
-  const handleOpenDialog = (type, ticket = null) => {
+  const handleOpenDialog = useCallback((type, ticket = null) => {
     setSelectedTicket(ticket);
-    setFormValues(ticket || {});
+    setFormValues(ticket || { status: "Open", priority: "Low" });
     setDialogType(type);
-  };
+  }, []);
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setSelectedTicket(null);
     setFormValues({});
     setDialogType(null);
-  };
+  }, []);
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = useCallback((field, value) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const handleSaveNote = () => {
-    const updatedTicket = {
-      ...selectedTicket,
-      notes: [
-        ...selectedTicket.notes,
-        {
-          title: formValues.newNoteTitle.trim(),
-          content: formValues.newNoteContent.trim(),
-          date: new Date().toISOString().split("T")[0],
-        },
-      ],
-    };
-    setSelectedTicket(updatedTicket);
-    setFormValues({});
-  };
+  const handleSaveTicket = useCallback(() => {
+    if (!formValues.title || !formValues.description) {
+      setSnackbarMessage("Please fill in all required fields.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+      return;
+    }
 
-  const handleSaveStatus = () => {
-    const updatedTicket = {
-      ...selectedTicket,
-      status: formValues.status,
-    };
-    setSelectedTicket(updatedTicket);
-    console.log(`Status for ticket ${selectedTicket.id} saved as ${selectedTicket.status}`);
-  };
+    if (dialogType === "add") {
+      const newTicket = {
+        id: Date.now(),
+        ...formValues,
+        createdAt: new Date().toISOString().split("T")[0],
+        notes: [],
+      };
+      setTickets((prevTickets) => [...prevTickets, newTicket]);
+      setSnackbarMessage("New ticket created successfully.");
+    } else if (dialogType === "edit") {
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) =>
+          ticket.id === selectedTicket.id ? { ...ticket, ...formValues } : ticket
+        )
+      );
+      setSnackbarMessage("Ticket updated successfully.");
+    }
+    setSnackbarSeverity("success");
+    setSnackbarOpen(true);
+    handleCloseDialog();
+  }, [dialogType, formValues, selectedTicket, handleCloseDialog]);
 
-  const dialogContent = () => {
+  const handleDeleteTicket = useCallback(() => {
+    setTickets((prevTickets) => prevTickets.filter((ticket) => ticket.id !== selectedTicket.id));
+    setSnackbarMessage("Ticket deleted successfully.");
+    setSnackbarSeverity("success");
+    setSnackbarOpen(true);
+    handleCloseDialog();
+  }, [selectedTicket, handleCloseDialog]);
+
+  const handleAddNote = useCallback(() => {
+    if (noteContent.trim()) {
+      const newNote = {
+        id: Date.now(),
+        content: noteContent,
+        createdAt: new Date().toISOString(),
+      };
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) =>
+          ticket.id === selectedTicket.id
+            ? { ...ticket, notes: [...ticket.notes, newNote] }
+            : ticket
+        )
+      );
+      setNoteContent("");
+      setNoteDialogOpen(false);
+      setSnackbarMessage("Note added successfully.");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    }
+  }, [noteContent, selectedTicket]);
+
+  const renderChip = useCallback((label, color) => (
+    <Chip label={label} color={color} size="small" sx={{ fontWeight: 'bold', borderRadius: '16px' }} />
+  ), []);
+
+  const dialogContent = useCallback(() => {
     switch (dialogType) {
       case "view":
         return (
-          <>
-            <Typography variant="h6">Details</Typography>
-            <List>
-              <ListItem>
-                <ListItemText primary="Description" secondary={selectedTicket.description} />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Status" secondary={selectedTicket.status} />
-                <FormControl fullWidth variant="outlined" margin="dense">
-                  <Select
-                    value={formValues.status || selectedTicket.status}
-                    onChange={(e) => handleInputChange("status", e.target.value)}
-                  >
-                    <MenuItem value="Open">Open</MenuItem>
-                    <MenuItem value="In Progress">In Progress</MenuItem>
-                    <MenuItem value="Closed">Closed</MenuItem>
-                  </Select>
-                </FormControl>
-                <Box display="flex" justifyContent="flex-end" mt={2}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<SaveIcon />}
-                    onClick={handleSaveStatus}
-                  >
-                    Save
-                  </Button>
-                </Box>
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Priority" secondary={selectedTicket.priority} />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Created By" secondary={selectedTicket.createdBy} />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Assignee" secondary={selectedTicket.assignee} />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Created At" secondary={selectedTicket.createdAt} />
-              </ListItem>
-            </List>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="h6">Notes</Typography>
-            {selectedTicket.notes.map((note, index) => (
-              <Box
-                key={index}
-                sx={{
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: theme.shape.borderRadius,
-                  padding: theme.spacing(1),
-                  marginBottom: theme.spacing(2),
-                  backgroundColor: theme.palette.background.paper,
-                }}
-              >
-                <Typography variant="subtitle1">{note.title}</Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {note.date}
-                </Typography>
-                <Typography variant="body2" mt={1}>
-                  {note.content}
-                </Typography>
-              </Box>
-            ))}
-            <TextField
-              variant="outlined"
-              label="Note Title"
-              fullWidth
-              value={formValues.newNoteTitle || ""}
-              onChange={(e) => handleInputChange("newNoteTitle", e.target.value)}
-              sx={{ marginTop: 2 }}
-            />
-            <TextField
-              variant="outlined"
-              label="Note Content"
-              fullWidth
-              multiline
-              rows={3}
-              value={formValues.newNoteContent || ""}
-              onChange={(e) => handleInputChange("newNoteContent", e.target.value)}
-              sx={{ marginTop: 2 }}
-            />
-            <Box display="flex" justifyContent="flex-end" mt={2}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>{selectedTicket.title}</Typography>
+              <Typography variant="body1" paragraph>{selectedTicket.description}</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2">Status</Typography>
+              {renderChip(selectedTicket.status, selectedTicket.status === "Open" ? "error" : selectedTicket.status === "In Progress" ? "warning" : "success")}
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2">Priority</Typography>
+              {renderChip(selectedTicket.priority, selectedTicket.priority === "High" ? "error" : selectedTicket.priority === "Medium" ? "warning" : "info")}
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2">Assignee</Typography>
+              <Typography variant="body2">{selectedTicket.assignee}</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2">Due Date</Typography>
+              <Typography variant="body2">{selectedTicket.dueDate}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Notes</Typography>
+              <List>
+                {selectedTicket.notes && selectedTicket.notes.map((note, index) => (
+                  <ListItem key={index} divider>
+                    <ListItemText
+                      primary={new Date(note.createdAt).toLocaleString()}
+                      secondary={note.content}
+                    />
+                  </ListItem>
+                ))}
+              </List>
               <Button
-                variant="contained"
-                color="primary"
-                startIcon={<NoteAddIcon />}
-                onClick={handleSaveNote}
+                startIcon={<AddIcon />}
+                onClick={() => setNoteDialogOpen(true)}
+                sx={{ mt: 2 }}
+                variant="outlined"
               >
                 Add Note
               </Button>
-            </Box>
-          </>
+            </Grid>
+          </Grid>
         );
       case "add":
+      case "edit":
         return (
-          <>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Title"
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                autoFocus
+                label="Title"
+                fullWidth
+                variant="outlined"
+                value={formValues.title || ""}
+                onChange={(e) => handleInputChange("title", e.target.value)}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Description"
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={4}
+                value={formValues.description || ""}
+                onChange={(e) => handleInputChange("description", e.target.value)}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={formValues.status || "Open"}
+                  onChange={(e) => handleInputChange("status", e.target.value)}
+                  label="Status"
+                >
+                  <MenuItem value="Open">Open</MenuItem>
+                  <MenuItem value="In Progress">In Progress</MenuItem>
+                  <MenuItem value="Closed">Closed</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Priority</InputLabel>
+                <Select
+                  value={formValues.priority || "Low"}
+                  onChange={(e) => handleInputChange("priority", e.target.value)}
+                  label="Priority"
+                >
+                  <MenuItem value="Low">Low</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="High">High</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Assignee"
+                fullWidth
+                variant="outlined"
+                value={formValues.assignee || ""}
+                onChange={(e) => handleInputChange("assignee", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Due Date"
+                type="date"
+                fullWidth
+                variant="outlined"
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                value={formValues.dueDate || ""}
+                onChange={(e) => handleInputChange("dueDate", e.target.value)}
+              />
+            </Grid>
+          </Grid>
+        );
+      case "delete":
+        return (
+          <Typography>
+            Are you sure you want to delete this ticket? This action cannot be undone.
+          </Typography>
+        );
+      default:
+        return null;
+    }
+  }, [dialogType, selectedTicket, formValues, handleInputChange, renderChip]);
+
+  const renderTicketCard = useCallback((ticket) => (
+    <Grid item xs={12} sm={6} md={4} key={ticket.id}>
+      <StyledCard onClick={() => handleOpenDialog("view", ticket)}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6" noWrap sx={{ flex: 1 }}>{ticket.title}</Typography>
+            <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 40, height: 40, fontSize: '1rem' }}>
+              {ticket.assignee ? ticket.assignee[0].toUpperCase() : 'U'}
+            </Avatar>
+          </Box>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2, height: '3em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {ticket.description}
+          </Typography>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            {renderChip(ticket.status, ticket.status === "Open" ? "error" : ticket.status === "In Progress" ? "warning" : "success")}
+            {renderChip(ticket.priority, ticket.priority === "High" ? "error" : ticket.priority === "Medium" ? "warning" : "info")}
+          </Box>
+        </CardContent>
+        <CardActions>
+          <Box>
+            <Tooltip title="Edit">
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenDialog("edit", ticket); }}>
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleOpenDialog("delete", ticket); }}>
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Tooltip title="Due Date">
+            <Typography variant="caption" color="textSecondary">
+              <TodayIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
+              {ticket.dueDate}
+            </Typography>
+          </Tooltip>
+        </CardActions>
+      </StyledCard>
+    </Grid>
+  ), [handleOpenDialog, renderChip, theme.palette.primary.main]);
+
+  return (
+    <PageWrapper>
+      <AppBar position="static" color="primary" elevation={0}>
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            onClick={() => setDrawerOpen(true)}
+            sx={{ mr: 2, display: { sm: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: "white" }}>
+            Tickets
+          </Typography>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog("add")}
+          >
+            New Ticket
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        <Box
+          sx={{ width: 250 }}
+          role="presentation"
+          onClick={() => setDrawerOpen(false)}
+          onKeyDown={() => setDrawerOpen(false)}
+        >
+          <List>
+            {["All Tickets", "Open Tickets", "In Progress Tickets", "Closed Tickets"].map((text, index) => (
+              <ListItem button key={text} onClick={() => setCurrentTab(index)}>
+                <ListItemText primary={text} />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
+
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Grid container spacing={3} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <SearchBar
               fullWidth
               variant="outlined"
-              value={formValues.title || ""}
-              onChange={(e) => handleInputChange("title", e.target.value)}
+              placeholder="Search Tickets"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <TextField
-              margin="dense"
-              label="Description"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={4}
-              value={formValues.description || ""}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-            />
-            <FormControl fullWidth variant="outlined" margin="dense">
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Sort</InputLabel>
               <Select
-                value={formValues.status || "Open"}
-                onChange={(e) => handleInputChange("status", e.target.value)}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                label="Sort"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <SortIcon />
+                  </InputAdornment>
+                }
               >
-                <MenuItem value="Open">Open</MenuItem>
-                <MenuItem value="In Progress">In Progress</MenuItem>
-                <MenuItem value="Closed">Closed</MenuItem>
+                <MenuItem value="priority">Priority</MenuItem>
+                <MenuItem value="dateAsc">Oldest First</MenuItem>
+                <MenuItem value="dateDesc">Newest First</MenuItem>
+                <MenuItem value="status">Status</MenuItem>
+                <MenuItem value="dueDate">Due Date</MenuItem>
               </Select>
             </FormControl>
-            <FormControl fullWidth variant="outlined" margin="dense">
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Filter Priority</InputLabel>
               <Select
-                value={formValues.priority || "Low"}
-                onChange={(e) => handleInputChange("priority", e.target.value)}
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                label="Filter Priority"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <FilterListIcon />
+                  </InputAdornment>
+                }
               >
+                <MenuItem value="All">All Priorities</MenuItem>
                 <MenuItem value="Low">Low</MenuItem>
                 <MenuItem value="Medium">Medium</MenuItem>
                 <MenuItem value="High">High</MenuItem>
               </Select>
             </FormControl>
-            <TextField
-              margin="dense"
-              label="Assignee"
-              fullWidth
-              variant="outlined"
-              value={formValues.assignee || ""}
-              onChange={(e) => handleInputChange("assignee", e.target.value)}
-            />
-          </>
-        );
-      case "edit":
-        return dialogContent();
-      case "delete":
-        return <Typography>Are you sure you want to delete this ticket? This action cannot be undone.</Typography>;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <PageWrapper>
-      <Typography variant="h4" gutterBottom>
-        Tickets
-      </Typography>
-      <ControlsWrapper>
-        <ButtonWrapper>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => handleOpenDialog("add")}
-            startIcon={<AddCircleIcon />}
-            sx={{ padding: "8px 16px" }}
-          >
-            Create New Ticket
-          </Button>
-          <FormControl variant="outlined" sx={{ minWidth: 120 }}>
-            <Select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              startAdornment={
-                <InputAdornment position="start">
-                  <SortIcon />
-                </InputAdornment>
-              }
-            >
-              <MenuItem value="priority">Priority</MenuItem>
-              <MenuItem value="dateAsc">Oldest First</MenuItem>
-              <MenuItem value="dateDesc">Newest First</MenuItem>
-              <MenuItem value="status">Status</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            variant="outlined"
-            placeholder="Search Tickets"
-            sx={{ maxWidth: "300px", marginLeft: "auto" }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </ButtonWrapper>
-      </ControlsWrapper>
-      <Grid container spacing={3}>
-        {filteredTickets.map((ticket) => (
-          <Grid item xs={12} sm={6} md={4} key={ticket.id}>
-            <TicketCard onClick={() => handleOpenDialog("view", ticket)}>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">{ticket.title}</Typography>
-                <Box>
-                  <IconButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenDialog("edit", ticket);
-                    }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenDialog("delete", ticket);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              </Box>
-              <Typography variant="body2" color="textSecondary">
-                {ticket.description}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Status: {ticket.status}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Priority: {ticket.priority}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Created By: {ticket.createdBy}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Assignee: {ticket.assignee}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Created At: {ticket.createdAt}
-              </Typography>
-            </TicketCard>
           </Grid>
-        ))}
-      </Grid>
+        </Grid>
+      </Box>
 
-      <Dialog open={!!dialogType} onClose={handleCloseDialog} fullWidth maxWidth="md">
-        <DialogTitle>{dialogType === "add" ? "Create New Ticket" : dialogType === "edit" ? "Edit Ticket" : dialogType === "view" ? selectedTicket?.title : "Confirm Delete"}</DialogTitle>
-        <DialogContent>{dialogContent()}</DialogContent>
+      <Paper sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
+        <Tabs
+          value={currentTab}
+          onChange={(e, newValue) => setCurrentTab(newValue)}
+          indicatorColor="primary"
+          textColor="primary"
+          centered={!isMobile}
+          variant={isMobile ? "scrollable" : "standard"}
+          sx={{ bgcolor: 'background.paper' }}
+        >
+          <Tab label="All" />
+          <Tab label="Open" />
+          <Tab label="In Progress" />
+          <Tab label="Closed" />
+        </Tabs>
+      </Paper>
+
+      {isLoading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          {filteredTickets.length === 0 ? (
+            <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+              No tickets found. Try adjusting your filters or create a new ticket.
+            </Typography>
+          ) : (
+            <Grid container spacing={3}>
+              {filteredTickets.map(renderTicketCard)}
+            </Grid>
+          )}
+        </>
+      )}
+
+      <Dialog
+        open={!!dialogType}
+        onClose={handleCloseDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            borderRadius: '16px',
+          }
+        }}
+      >
+        <StyledDialogTitle>
+          {dialogType === "add"
+            ? "Create New Ticket"
+            : dialogType === "edit"
+            ? "Edit Ticket"
+            : dialogType === "view"
+            ? selectedTicket?.title
+            : "Confirm Delete"}
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseDialog}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </StyledDialogTitle>
+        <DialogContent dividers>{dialogContent()}</DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Cancel
-          </Button>
+          <Button onClick={handleCloseDialog} variant="outlined">Cancel</Button>
           {dialogType === "add" || dialogType === "edit" ? (
-            <Button onClick={handleCloseDialog} color="primary">
+            <Button onClick={handleSaveTicket} color="primary" variant="contained">
               {dialogType === "add" ? "Create Ticket" : "Save Changes"}
             </Button>
           ) : dialogType === "delete" ? (
-            <Button onClick={() => console.log(`Deleting ticket with id: ${selectedTicket.id}`)} color="primary">
+            <Button onClick={handleDeleteTicket} color="error" variant="contained">
               Delete
             </Button>
           ) : null}
         </DialogActions>
       </Dialog>
+
+      <Dialog
+        open={noteDialogOpen}
+        onClose={() => setNoteDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+          }
+        }}
+      >
+        <DialogTitle>Add Note</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Note Content"
+            type="text"
+            fullWidth
+            multiline
+            rows={4}
+            value={noteContent}
+            onChange={(e) => setNoteContent(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNoteDialogOpen(false)} variant="outlined">Cancel</Button>
+          <Button onClick={handleAddNote} color="primary" variant="contained">
+            Add Note
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </PageWrapper>
   );
 };

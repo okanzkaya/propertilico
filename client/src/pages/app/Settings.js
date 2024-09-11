@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Typography,
   Box,
+  Typography,
   Card,
   Button,
   TextField,
@@ -14,10 +15,10 @@ import {
   Avatar,
   Tooltip,
   Divider,
-  Tabs,
-  Tab,
   IconButton,
   Grid,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -27,78 +28,13 @@ import {
   Palette as PaletteIcon,
   TextFields as TextFieldsIcon,
   Lock as LockIcon,
+  Camera as CameraIcon,
 } from '@mui/icons-material';
-import { styled } from '@mui/system';
-
-const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: '2rem',
-  backgroundColor: theme.palette.background.default,
-  minHeight: '100vh',
-  display: 'flex',
-  justifyContent: 'flex-start',
-  color: theme.palette.text.primary,
-}));
-
-const ContentWrapper = styled(Box)({
-  width: '100%',
-  maxWidth: '800px',
-});
-
-const SettingsCard = styled(Card)(({ theme }) => ({
-  padding: '1.5rem',
-  boxShadow: theme.shadows[1],
-  borderRadius: '8px',
-  backgroundColor: theme.palette.background.paper,
-  marginBottom: '1.5rem',
-}));
-
-const SectionTitle = styled(Typography)({
-  marginBottom: '1rem',
-  fontWeight: 'bold',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  fontSize: '1.2rem',
-});
-
-const CustomFormControl = styled(FormControl)({
-  marginBottom: '1rem',
-});
-
-const TabPanel = ({ children, value, index }) => (
-  <div role="tabpanel" hidden={value !== index}>
-    {value === index && <Box p={3}>{children}</Box>}
-  </div>
-);
-
-const UploadAvatar = styled(Box)({
-  position: 'relative',
-  display: 'inline-block',
-  cursor: 'pointer',
-  '& input': { display: 'none' },
-  '&:hover .overlay': { opacity: 1 },
-  textAlign: 'center',
-  marginBottom: '1rem',
-});
-
-const AvatarOverlay = styled(Box)({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  borderRadius: '50%',
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  color: '#fff',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  opacity: 0,
-  transition: 'opacity 0.3s',
-});
 
 const SettingsPage = ({ toggleTheme }) => {
-  const [tabIndex, setTabIndex] = useState(0);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [activeTab, setActiveTab] = useState('preferences');
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     pushNotifications: true,
@@ -133,259 +69,412 @@ const SettingsPage = ({ toggleTheme }) => {
 
   const handleProfilePictureChange = (e) => {
     const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onloadend = () =>
-      setAccountSettings((prev) => ({ ...prev, profilePicture: reader.result }));
-    if (file) reader.readAsDataURL(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setAccountSettings((prev) => ({ ...prev, profilePicture: reader.result }));
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSave = () => {
     toggleTheme(appearanceSettings.theme);
-    alert('Settings saved');
+    // Implement actual save logic here
+    console.log('Settings saved');
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'preferences':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <UserPreferences
+              accountSettings={accountSettings}
+              notificationSettings={notificationSettings}
+              handleChange={handleChange}
+              setAccountSettings={setAccountSettings}
+              setNotificationSettings={setNotificationSettings}
+              handleProfilePictureChange={handleProfilePictureChange}
+            />
+          </motion.div>
+        );
+      case 'appearance':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <AppearanceSettings
+              appearanceSettings={appearanceSettings}
+              handleChange={handleChange}
+              setAppearanceSettings={setAppearanceSettings}
+            />
+          </motion.div>
+        );
+      case 'security':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <SecuritySettings
+              securitySettings={securitySettings}
+              handleChange={handleChange}
+              setSecuritySettings={setSecuritySettings}
+            />
+          </motion.div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <PageWrapper>
-      <ContentWrapper>
-        <Typography variant="h4" gutterBottom>Settings</Typography>
-        <Tabs
-          value={tabIndex}
-          onChange={(e, newValue) => setTabIndex(newValue)}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="scrollable"
-          scrollButtons="auto"
+    <Box
+      sx={{
+        padding: { xs: '1rem', sm: '2rem' },
+        backgroundColor: theme.palette.background.default,
+        minHeight: '100vh',
+        color: theme.palette.text.primary,
+      }}
+    >
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        Settings
+      </Typography>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={3}>
+          <Card
+            sx={{
+              padding: '1rem',
+              boxShadow: theme.shadows[1],
+              borderRadius: '12px',
+              backgroundColor: theme.palette.background.paper,
+              height: '100%',
+            }}
+          >
+            <TabButton
+              icon={<PersonIcon />}
+              label="User Preferences"
+              active={activeTab === 'preferences'}
+              onClick={() => setActiveTab('preferences')}
+            />
+            <TabButton
+              icon={<PaletteIcon />}
+              label="Appearance"
+              active={activeTab === 'appearance'}
+              onClick={() => setActiveTab('appearance')}
+            />
+            <TabButton
+              icon={<SecurityIcon />}
+              label="Security"
+              active={activeTab === 'security'}
+              onClick={() => setActiveTab('security')}
+            />
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={9}>
+          <Card
+            sx={{
+              padding: '1.5rem',
+              boxShadow: theme.shadows[1],
+              borderRadius: '12px',
+              backgroundColor: theme.palette.background.paper,
+            }}
+          >
+            {renderTabContent()}
+          </Card>
+        </Grid>
+      </Grid>
+      <Box mt={3}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSave}
+          sx={{
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 'bold',
+            padding: '0.5rem 2rem',
+          }}
         >
-          <Tab label="User Preferences" icon={<PersonIcon />} />
-          <Tab label="Appearance" icon={<PaletteIcon />} />
-          <Tab label="Security" icon={<SecurityIcon />} />
-        </Tabs>
-
-        <TabPanel value={tabIndex} index={0}>
-          <SettingsCard>
-            <SectionTitle>
-              <PersonIcon /> User Preferences
-              <Tooltip title="Manage your personal preferences">
-                <IconButton><InfoIcon /></IconButton>
-              </Tooltip>
-            </SectionTitle>
-            <Divider />
-            <Box display="flex" justifyContent="center" my={2}>
-              <UploadAvatar>
-                <input type="file" onChange={handleProfilePictureChange} />
-                <Avatar src={accountSettings.profilePicture} sx={{ width: 120, height: 120 }} />
-                <AvatarOverlay className="overlay">Upload Avatar</AvatarOverlay>
-              </UploadAvatar>
-            </Box>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <CustomFormControl fullWidth>
-                  <TextField
-                    label="Username"
-                    variant="outlined"
-                    name="username"
-                    value={accountSettings.username}
-                    onChange={handleChange(setAccountSettings)}
-                    size="small"
-                    fullWidth
-                  />
-                </CustomFormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <CustomFormControl fullWidth>
-                  <TextField
-                    label="Email"
-                    variant="outlined"
-                    name="email"
-                    value={accountSettings.email}
-                    onChange={handleChange(setAccountSettings)}
-                    size="small"
-                    fullWidth
-                  />
-                </CustomFormControl>
-              </Grid>
-            </Grid>
-            <Button variant="contained" color="primary" onClick={handleSave} size="small">Save</Button>
-          </SettingsCard>
-
-          <SettingsCard>
-            <SectionTitle>
-              <NotificationsIcon /> Notification Settings
-              <Tooltip title="Configure your notification preferences">
-                <IconButton><InfoIcon /></IconButton>
-              </Tooltip>
-            </SectionTitle>
-            <Divider />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={notificationSettings.emailNotifications}
-                  onChange={handleChange(setNotificationSettings)}
-                  name="emailNotifications"
-                  size="small"
-                />
-              }
-              label="Email Notifications"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={notificationSettings.pushNotifications}
-                  onChange={handleChange(setNotificationSettings)}
-                  name="pushNotifications"
-                  size="small"
-                />
-              }
-              label="Push Notifications"
-            />
-          </SettingsCard>
-
-          <SettingsCard>
-            <SectionTitle>
-              <PersonIcon /> Language, Time & Currency Settings
-              <Tooltip title="Manage your language, time zone, and currency settings">
-                <IconButton><InfoIcon /></IconButton>
-              </Tooltip>
-            </SectionTitle>
-            <Divider />
-            {['language', 'timeZone', 'currency'].map((field, index) => (
-              <CustomFormControl fullWidth key={index}>
-                <InputLabel>{field.charAt(0).toUpperCase() + field.slice(1)}</InputLabel>
-                <Select
-                  name={field}
-                  value={accountSettings[field]}
-                  onChange={handleChange(setAccountSettings)}
-                  size="small"
-                >
-                  {field === 'language' && ['english', 'spanish', 'french', 'german', 'chinese'].map((lang) => (
-                    <MenuItem key={lang} value={lang}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</MenuItem>
-                  ))}
-                  {field === 'timeZone' && ['PST', 'MST', 'CST', 'EST', 'GMT'].map((tz) => (
-                    <MenuItem key={tz} value={tz}>{tz}</MenuItem>
-                  ))}
-                  {field === 'currency' && ['USD', 'EUR', 'GBP', 'JPY', 'CNY'].map((curr) => (
-                    <MenuItem key={curr} value={curr}>{curr}</MenuItem>
-                  ))}
-                </Select>
-              </CustomFormControl>
-            ))}
-            <Button variant="contained" color="primary" onClick={handleSave} size="small">Save</Button>
-          </SettingsCard>
-        </TabPanel>
-
-        <TabPanel value={tabIndex} index={1}>
-          <SettingsCard>
-            <SectionTitle>
-              <PaletteIcon /> Theme
-              <Tooltip title="Select your preferred theme">
-                <IconButton><InfoIcon /></IconButton>
-              </Tooltip>
-            </SectionTitle>
-            <Divider />
-            <CustomFormControl fullWidth>
-              <InputLabel>Theme</InputLabel>
-              <Select
-                name="theme"
-                value={appearanceSettings.theme}
-                onChange={handleChange(setAppearanceSettings)}
-                size="small"
-              >
-                <MenuItem value="light">Light</MenuItem>
-                <MenuItem value="dark">Dark</MenuItem>
-              </Select>
-            </CustomFormControl>
-          </SettingsCard>
-
-          <SettingsCard>
-            <SectionTitle>
-              <TextFieldsIcon /> Font Size
-              <Tooltip title="Select your preferred font size">
-                <IconButton><InfoIcon /></IconButton>
-              </Tooltip>
-            </SectionTitle>
-            <Divider />
-            <CustomFormControl fullWidth>
-              <InputLabel>Font Size</InputLabel>
-              <Select
-                name="fontSize"
-                value={appearanceSettings.fontSize}
-                onChange={handleChange(setAppearanceSettings)}
-                size="small"
-              >
-                <MenuItem value="small">Small</MenuItem>
-                <MenuItem value="medium">Medium</MenuItem>
-                <MenuItem value="large">Large</MenuItem>
-              </Select>
-            </CustomFormControl>
-            <Button variant="contained" color="primary" onClick={handleSave} size="small">Save</Button>
-          </SettingsCard>
-        </TabPanel>
-
-        <TabPanel value={tabIndex} index={2}>
-          <SettingsCard>
-            <SectionTitle>
-              <SecurityIcon /> Security Settings
-              <Tooltip title="Manage your security settings">
-                <IconButton><InfoIcon /></IconButton>
-              </Tooltip>
-            </SectionTitle>
-            <Divider />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={securitySettings.twoFactorAuth}
-                  onChange={handleChange(setSecuritySettings)}
-                  name="twoFactorAuth"
-                  size="small"
-                />
-              }
-              label="Two-Factor Authentication"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={securitySettings.loginAlerts}
-                  onChange={handleChange(setSecuritySettings)}
-                  name="loginAlerts"
-                  size="small"
-                />
-              }
-              label="Login Alerts"
-            />
-          </SettingsCard>
-
-          <SettingsCard>
-            <SectionTitle>
-              <LockIcon /> Change Password
-              <Tooltip title="Update your password">
-                <IconButton><InfoIcon /></IconButton>
-              </Tooltip>
-            </SectionTitle>
-            <Divider />
-            <Grid container spacing={2}>
-              {['oldPassword', 'newPassword', 'confirmPassword'].map((field, index) => (
-                <Grid item xs={12} key={index}>
-                  <CustomFormControl fullWidth>
-                    <TextField
-                      label={field.replace(/([A-Z])/g, ' $1')}
-                      type="password"
-                      variant="outlined"
-                      name={field}
-                      value={securitySettings[field]}
-                      onChange={handleChange(setSecuritySettings)}
-                      size="small"
-                      fullWidth
-                    />
-                  </CustomFormControl>
-                </Grid>
-              ))}
-            </Grid>
-            <Button variant="contained" color="primary" onClick={handleSave} size="small">Save</Button>
-          </SettingsCard>
-        </TabPanel>
-      </ContentWrapper>
-    </PageWrapper>
+          Save Changes
+        </Button>
+      </Box>
+    </Box>
   );
 };
+
+const TabButton = ({ icon, label, active, onClick }) => {
+  const theme = useTheme();
+  return (
+    <Button
+      startIcon={icon}
+      onClick={onClick}
+      fullWidth
+      sx={{
+        justifyContent: 'flex-start',
+        padding: '0.75rem 1rem',
+        marginBottom: '0.5rem',
+        borderRadius: '8px',
+        color: active ? theme.palette.primary.main : theme.palette.text.primary,
+        backgroundColor: active ? theme.palette.action.selected : 'transparent',
+        '&:hover': {
+          backgroundColor: theme.palette.action.hover,
+        },
+      }}
+    >
+      {label}
+    </Button>
+  );
+};
+
+const SectionTitle = ({ icon, title, tooltipText }) => (
+  <Box display="flex" alignItems="center" mb={2}>
+    {icon}
+    <Typography variant="h6" fontWeight="bold" ml={1}>
+      {title}
+    </Typography>
+    <Tooltip title={tooltipText}>
+      <IconButton size="small" sx={{ ml: 1 }}>
+        <InfoIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  </Box>
+);
+
+const UserPreferences = ({
+  accountSettings,
+  notificationSettings,
+  handleChange,
+  setAccountSettings,
+  setNotificationSettings,
+  handleProfilePictureChange,
+}) => (
+  <>
+    <SectionTitle
+      icon={<PersonIcon />}
+      title="User Preferences"
+      tooltipText="Manage your personal preferences"
+    />
+    <Box display="flex" justifyContent="center" mb={3}>
+      <Box position="relative">
+        <Avatar
+          src={accountSettings.profilePicture}
+          sx={{ width: 120, height: 120, cursor: 'pointer' }}
+        />
+        <label htmlFor="profile-picture-input">
+          <IconButton
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              backgroundColor: (theme) => theme.palette.primary.main,
+              color: 'white',
+              '&:hover': {
+                backgroundColor: (theme) => theme.palette.primary.dark,
+              },
+            }}
+            component="span"
+          >
+            <CameraIcon />
+          </IconButton>
+        </label>
+        <input
+          id="profile-picture-input"
+          type="file"
+          accept="image/*"
+          onChange={handleProfilePictureChange}
+          style={{ display: 'none' }}
+        />
+      </Box>
+    </Box>
+    <Grid container spacing={2}>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Username"
+          variant="outlined"
+          name="username"
+          value={accountSettings.username}
+          onChange={handleChange(setAccountSettings)}
+          fullWidth
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Email"
+          variant="outlined"
+          name="email"
+          value={accountSettings.email}
+          onChange={handleChange(setAccountSettings)}
+          fullWidth
+        />
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <FormControl fullWidth>
+          <InputLabel>Language</InputLabel>
+          <Select
+            name="language"
+            value={accountSettings.language}
+            onChange={handleChange(setAccountSettings)}
+          >
+            {['English', 'Spanish', 'French', 'German', 'Chinese'].map((lang) => (
+              <MenuItem key={lang} value={lang.toLowerCase()}>{lang}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <FormControl fullWidth>
+          <InputLabel>Time Zone</InputLabel>
+          <Select
+            name="timeZone"
+            value={accountSettings.timeZone}
+            onChange={handleChange(setAccountSettings)}
+          >
+            {['PST', 'MST', 'CST', 'EST', 'GMT'].map((tz) => (
+              <MenuItem key={tz} value={tz}>{tz}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <FormControl fullWidth>
+          <InputLabel>Currency</InputLabel>
+          <Select
+            name="currency"
+            value={accountSettings.currency}
+            onChange={handleChange(setAccountSettings)}
+          >
+            {['USD', 'EUR', 'GBP', 'JPY', 'CNY'].map((curr) => (
+              <MenuItem key={curr} value={curr}>{curr}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+    </Grid>
+    <Box mt={3}>
+      <SectionTitle
+        icon={<NotificationsIcon />}
+        title="Notification Settings"
+        tooltipText="Configure your notification preferences"
+      />
+      <FormControlLabel
+        control={
+          <Switch
+            checked={notificationSettings.emailNotifications}
+            onChange={handleChange(setNotificationSettings)}
+            name="emailNotifications"
+          />
+        }
+        label="Email Notifications"
+      />
+      <FormControlLabel
+        control={
+          <Switch
+            checked={notificationSettings.pushNotifications}
+            onChange={handleChange(setNotificationSettings)}
+            name="pushNotifications"
+          />
+        }
+        label="Push Notifications"
+      />
+    </Box>
+  </>
+);
+
+const AppearanceSettings = ({ appearanceSettings, handleChange, setAppearanceSettings }) => (
+  <>
+    <SectionTitle
+      icon={<PaletteIcon />}
+      title="Theme"
+      tooltipText="Select your preferred theme"
+    />
+    <FormControl fullWidth sx={{ mb: 3 }}>
+      <InputLabel>Theme</InputLabel>
+      <Select
+        name="theme"
+        value={appearanceSettings.theme}
+        onChange={handleChange(setAppearanceSettings)}
+      >
+        <MenuItem value="light">Light</MenuItem>
+        <MenuItem value="dark">Dark</MenuItem>
+      </Select>
+    </FormControl>
+    <SectionTitle
+      icon={<TextFieldsIcon />}
+      title="Font Size"
+      tooltipText="Select your preferred font size"
+    />
+    <FormControl fullWidth>
+      <InputLabel>Font Size</InputLabel>
+      <Select
+        name="fontSize"
+        value={appearanceSettings.fontSize}
+        onChange={handleChange(setAppearanceSettings)}
+      >
+        <MenuItem value="small">Small</MenuItem>
+        <MenuItem value="medium">Medium</MenuItem>
+        <MenuItem value="large">Large</MenuItem>
+      </Select>
+    </FormControl>
+  </>
+);
+
+const SecuritySettings = ({ securitySettings, handleChange, setSecuritySettings }) => (
+  <>
+    <SectionTitle
+      icon={<SecurityIcon />}
+      title="Security Settings"
+      tooltipText="Manage your security settings"
+    />
+    <FormControlLabel
+      control={
+        <Switch
+          checked={securitySettings.twoFactorAuth}
+          onChange={handleChange(setSecuritySettings)}
+          name="twoFactorAuth"
+        />
+      }
+      label="Two-Factor Authentication"
+    />
+    <FormControlLabel
+      control={
+        <Switch
+          checked={securitySettings.loginAlerts}
+          onChange={handleChange(setSecuritySettings)}
+          name="loginAlerts"
+        />
+      }
+      label="Login Alerts"
+    />
+    <Box mt={3}>
+      <SectionTitle
+        icon={<LockIcon />}
+        title="Change Password"
+        tooltipText="Update your password"
+      />
+      <Grid container spacing={2}>
+        {['oldPassword', 'newPassword', 'confirmPassword'].map((field) => (
+          <Grid item xs={12} key={field}>
+            <TextField
+              label={field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+              type="password"
+              variant="outlined"
+              name={field}
+              value={securitySettings[field]}
+              onChange={handleChange(setSecuritySettings)}
+              fullWidth
+            />
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  </>
+);
 
 export default SettingsPage;

@@ -1,16 +1,15 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Typography,
   Grid,
   Box,
   Card,
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Button,
   TextField,
-  Tooltip,
   Select,
   MenuItem,
   InputLabel,
@@ -19,74 +18,150 @@ import {
   Pagination,
   Snackbar,
   Alert,
+  Chip,
+  IconButton,
+  useMediaQuery,
+  Autocomplete,
 } from "@mui/material";
-import { styled } from "@mui/system";
+import { styled, useTheme } from "@mui/material/styles";
 import {
-  Info as InfoIcon,
-  AddCircle as AddCircleIcon,
   FilterList as FilterListIcon,
   Search as SearchIcon,
-  ColorLens as ColorLensIcon,
-  Label as TagIcon,
   GetApp as ExportIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
-import Chart from "react-apexcharts";
-import jsPDF from "jspdf";
-import { useTheme } from "@mui/material/styles";
-import moment from "moment";
+import { jsPDF } from "jspdf";
+import ReportChart from './ReportChart';
+
+const formatDate = (date) => date.toISOString().split('T')[0];
+const subMonths = (date, months) => {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() - months);
+  return newDate;
+};
 
 const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: "2rem",
+  padding: theme.spacing(3),
   backgroundColor: theme.palette.background.default,
   minHeight: "100vh",
-  [theme.breakpoints.down("sm")]: { padding: "1rem" },
+  [theme.breakpoints.down("sm")]: { padding: theme.spacing(2) },
 }));
 
 const ReportCard = styled(Card)(({ theme }) => ({
-  padding: "1rem",
-  marginBottom: "1rem",
+  padding: theme.spacing(2),
+  marginBottom: theme.spacing(2),
   cursor: "pointer",
   border: `1px solid ${theme.palette.divider}`,
-  borderRadius: "8px",
+  borderRadius: theme.shape.borderRadius,
   transition: "all 0.3s ease",
-  "&:hover": { boxShadow: theme.shadows[4], transform: "translateY(-3px)" },
+  "&:hover": { 
+    boxShadow: theme.shadows[4], 
+    transform: "translateY(-3px)",
+    borderColor: theme.palette.primary.main,
+  },
 }));
 
-const REPORTS_PER_PAGE = 9;
+const StyledChip = styled(Chip)(({ theme }) => ({
+  margin: theme.spacing(0.5),
+}));
+
+const REPORTS_PER_PAGE = 6;
+
+const FilterBox = ({ filterType, setFilterType, filterTags, setFilterTags, reports, isMobile }) => (
+  <Box display="flex" flexDirection={isMobile ? "column" : "row"} alignItems="stretch" gap={2}>
+    <FormControl variant="outlined" fullWidth={isMobile}>
+      <InputLabel>Filter By Type</InputLabel>
+      <Select 
+        value={filterType} 
+        onChange={(e) => setFilterType(e.target.value)} 
+        label="Filter By Type"
+        startAdornment={<InputAdornment position="start"><FilterListIcon /></InputAdornment>}
+      >
+        <MenuItem value=""><em>None</em></MenuItem>
+        <MenuItem value="Financial">Financial</MenuItem>
+        <MenuItem value="Quantitative">Quantitative</MenuItem>
+      </Select>
+    </FormControl>
+    <Autocomplete
+      multiple
+      options={Array.from(new Set(reports.flatMap(report => report.tags)))}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          variant="outlined"
+          label="Filter By Tags"
+          placeholder="Select tags"
+        />
+      )}
+      value={filterTags}
+      onChange={(_, newValue) => setFilterTags(newValue)}
+      fullWidth={isMobile}
+    />
+  </Box>
+);
+
+const SearchBox = ({ searchTerm, setSearchTerm, startDate, setStartDate, endDate, setEndDate, isMobile }) => (
+  <Box display="flex" flexDirection={isMobile ? "column" : "row"} alignItems="stretch" gap={2}>
+    <TextField
+      variant="outlined"
+      placeholder="Search Reports"
+      fullWidth={isMobile}
+      InputProps={{
+        startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
+      }}
+      onChange={(e) => setSearchTerm(e.target.value)}
+    />
+    <TextField
+      type="date"
+      label="Start Date"
+      InputLabelProps={{ shrink: true }}
+      value={startDate}
+      onChange={(e) => setStartDate(e.target.value)}
+      fullWidth={isMobile}
+    />
+    <TextField
+      type="date"
+      label="End Date"
+      InputLabelProps={{ shrink: true }}
+      value={endDate}
+      onChange={(e) => setEndDate(e.target.value)}
+      fullWidth={isMobile}
+    />
+  </Box>
+);
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState(null);
-  const [addReportOpen, setAddReportOpen] = useState(false);
-  const [reportType, setReportType] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterTags, setFilterTags] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [chartColor, setChartColor] = useState("#00E396");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [startDate, setStartDate] = useState(formatDate(subMonths(new Date(), 12)));
+  const [endDate, setEndDate] = useState(formatDate(new Date()));
 
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const commonChartOptions = {
-    chart: { toolbar: { show: false }, zoom: { enabled: false }, foreColor: theme.palette.text.primary, background: theme.palette.background.default },
-    xaxis: { categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"], labels: { style: { colors: theme.palette.text.primary } } },
-    yaxis: { labels: { style: { colors: theme.palette.text.primary } } },
-    grid: { borderColor: theme.palette.divider },
-    tooltip: { theme: theme.palette.mode },
-    colors: [chartColor],
-  };
+  const generateRandomData = useCallback((length = 7) => {
+    return Array.from({ length }, () => Math.floor(Math.random() * 100) + 1);
+  }, []);
 
-  const reports = useMemo(() => [
-    { id: 1, title: "Monthly Financial Report", description: "Detailed financial overview of the month.", type: "Financial", data: [45, 52, 38, 45, 19, 23, 2], chartType: "line", createdAt: moment().subtract(1, "months").format("YYYY-MM-DD"), tags: ["finance", "monthly"] },
-    { id: 2, title: "Quarterly Expense Report", description: "Breakdown of expenses for the last quarter.", type: "Financial", data: [35, 41, 36, 26, 45, 48, 52], chartType: "bar", createdAt: moment().subtract(2, "months").format("YYYY-MM-DD"), tags: ["finance", "quarterly", "expense"] },
-    { id: 3, title: "Quarterly Revenue Report", description: "Summary of revenue for the last quarter.", type: "Financial", data: [50, 60, 70, 80, 90, 100, 110], chartType: "bar", createdAt: moment().subtract(3, "months").format("YYYY-MM-DD"), tags: ["finance", "quarterly", "revenue"] },
-    { id: 4, title: "Yearly Expense Report", description: "Annual breakdown of expenses.", type: "Financial", data: [300, 400, 500, 600, 700, 800, 900], chartType: "area", createdAt: moment().subtract(1, "years").format("YYYY-MM-DD"), tags: ["finance", "yearly", "expense"] },
-    { id: 5, title: "Yearly Revenue Report", description: "Annual revenue summary.", type: "Financial", data: [400, 500, 600, 700, 800, 900, 1000], chartType: "area", createdAt: moment().subtract(1, "years").format("YYYY-MM-DD"), tags: ["finance", "yearly", "revenue"] },
-    { id: 6, title: "Ticket Occurrence Report", description: "Summary of ticket occurrences over the last year.", type: "Quantitative", data: [15, 20, 18, 22, 19, 23, 25], chartType: "line", createdAt: moment().subtract(1, "months").format("YYYY-MM-DD"), tags: ["ticket", "occurrence"] },
-    { id: 7, title: "Monthly Maintenance Report", description: "Overview of maintenance activities for the month.", type: "Quantitative", data: [3, 4, 3, 5, 4, 5, 6], chartType: "bar", createdAt: moment().subtract(1, "months").format("YYYY-MM-DD"), tags: ["maintenance", "monthly"] },
-    { id: 8, title: "Yearly Occupancy Report", description: "Annual report on property occupancy.", type: "Quantitative", data: [87, 89, 85, 90, 92, 94, 95], chartType: "line", createdAt: moment().subtract(1, "years").format("YYYY-MM-DD"), tags: ["property", "occupancy", "yearly"] },
-    { id: 9, title: "Monthly Tenant Feedback Report", description: "Summary of tenant feedback for the month.", type: "Qualitative", data: [4.5, 4.0, 4.2, 4.6, 4.7, 4.8, 5.0], chartType: "radar", createdAt: moment().subtract(1, "months").format("YYYY-MM-DD"), tags: ["tenant", "feedback", "monthly"] },
-  ], []);
+  const refreshReport = useCallback((event, report) => {
+    event.stopPropagation();
+    const updatedReport = { ...report, data: { ...report.data, values: generateRandomData() }};
+    setReports(prev => prev.map(r => r.id === updatedReport.id ? updatedReport : r));
+    setSnackbarOpen(true);
+  }, [generateRandomData]);
+
+  const [reports, setReports] = useState(() => [
+    { id: 1, title: "Monthly Profit Report", description: "Monthly profit overview.", type: "Financial", data: { label: 'Profit', values: generateRandomData() }, chartType: "line", tags: ["finance", "monthly", "profit"] },
+    { id: 2, title: "Quarterly Profit Report", description: "Quarterly profit summary.", type: "Financial", data: { label: 'Profit', values: generateRandomData() }, chartType: "bar", tags: ["finance", "quarterly", "profit"] },
+    { id: 3, title: "Yearly Profit Report", description: "Annual profit analysis.", type: "Financial", data: { label: 'Profit', values: generateRandomData() }, chartType: "line", tags: ["finance", "yearly", "profit"] },
+    { id: 4, title: "Revenue Report", description: "Comprehensive revenue breakdown.", type: "Financial", data: { label: 'Revenue', values: generateRandomData() }, chartType: "bar", tags: ["finance", "revenue"] },
+    { id: 5, title: "Expenses Report", description: "Detailed expense analysis.", type: "Financial", data: { label: 'Expenses', values: generateRandomData() }, chartType: "bar", tags: ["finance", "expenses"] },
+    { id: 6, title: "Maintenance Trends", description: "Analysis of maintenance patterns.", type: "Quantitative", data: { label: 'Maintenance', values: generateRandomData() }, chartType: "line", tags: ["maintenance", "trends"] },
+  ]);
 
   const filteredReports = useMemo(() => reports
     .filter((report) => report.title.toLowerCase().includes(searchTerm.toLowerCase()) || report.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -100,144 +175,126 @@ const Reports = () => {
 
   const handlePageChange = (_, value) => setCurrentPage(value);
 
-  const exportReport = (report) => {
+  const exportReport = useCallback((report) => {
     const doc = new jsPDF();
-    doc.text(report.title, 10, 10);
-    doc.text(report.description, 10, 20);
+    doc.setFontSize(18);
+    doc.text(report.title, 20, 20);
+    doc.setFontSize(12);
+    doc.text(report.description, 20, 30);
+    doc.text(`Type: ${report.type}`, 20, 40);
+    doc.text(`Tags: ${report.tags.join(", ")}`, 20, 50);
+    doc.text("Chart image would be inserted here", 20, 70);
     doc.save(`${report.title}.pdf`);
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setSelectedReport(null);
-    setAddReportOpen(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, filterTags, startDate, endDate]);
 
   return (
     <PageWrapper>
-      <Typography variant="h4" gutterBottom>Reports</Typography>
+      <Typography variant="h4" gutterBottom>Reports Dashboard</Typography>
 
-      <Box mb={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap">
-        <Box display="flex" alignItems="center" gap={2}>
-          <Button variant="contained" color="primary" onClick={() => setAddReportOpen(true)} startIcon={<AddCircleIcon />} sx={{ whiteSpace: "nowrap" }}>Create New Report</Button>
-
-          <FormControl variant="outlined" sx={{ minWidth: 120 }}>
-            <InputLabel>Filter By Type</InputLabel>
-            <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} startAdornment={<InputAdornment position="start"><FilterListIcon /></InputAdornment>}>
-              <MenuItem value=""><em>None</em></MenuItem>
-              <MenuItem value="Financial">Financial</MenuItem>
-              <MenuItem value="Quantitative">Quantitative</MenuItem>
-              <MenuItem value="Qualitative">Qualitative</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl variant="outlined" sx={{ minWidth: 120 }}>
-            <InputLabel>Filter By Tags</InputLabel>
-            <Select multiple value={filterTags} onChange={(e) => setFilterTags(e.target.value)} startAdornment={<InputAdornment position="start"><TagIcon /></InputAdornment>}>
-              {["finance", "monthly", "quarterly", "yearly", "expense", "revenue", "ticket", "occurrence", "maintenance", "property", "tenant", "feedback"].map((tag) => (
-                <MenuItem key={tag} value={tag}>{tag}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-
-        <Box display="flex" alignItems="center" gap={2}>
-          <TextField
-            variant="outlined"
-            placeholder="Search Reports"
-            sx={{ maxWidth: "300px", flexGrow: 1 }}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
-            }}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {selectedReport && <Button variant="contained" color="secondary" startIcon={<ExportIcon />} onClick={() => exportReport(selectedReport)}>Export Report</Button>}
-        </Box>
+      <Box mb={3} display="flex" flexDirection={isMobile ? "column" : "row"} justifyContent="space-between" alignItems={isMobile ? "stretch" : "center"} gap={2}>
+        <FilterBox
+          filterType={filterType}
+          setFilterType={setFilterType}
+          filterTags={filterTags}
+          setFilterTags={setFilterTags}
+          reports={reports}
+          isMobile={isMobile}
+        />
+        <SearchBox
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          isMobile={isMobile}
+        />
       </Box>
 
       <Grid container spacing={3}>
         {paginatedReports.map((report) => (
-          <Grid item xs={12} md={6} key={report.id}>
+          <Grid item xs={12} sm={6} md={4} key={report.id}>
             <ReportCard onClick={() => setSelectedReport(report)}>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">{report.title}</Typography>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6" noWrap>{report.title}</Typography>
+                <IconButton onClick={(e) => refreshReport(e, report)} size="small">
+                  <RefreshIcon />
+                </IconButton>
               </Box>
-              <Typography variant="body2" color="textSecondary">{report.description}</Typography>
-              <Typography variant="body2" color="textSecondary">Created At: {report.createdAt}</Typography>
-              <Chart options={commonChartOptions} series={[{ name: report.type, data: report.data }]} type={report.chartType} height={200} />
+              <Typography variant="body2" color="textSecondary" mb={2}>{report.description}</Typography>
+              <Box mb={2}>
+                {report.tags.map((tag) => (
+                  <StyledChip key={tag} label={tag} size="small" />
+                ))}
+              </Box>
+              <ReportChart
+                type={report.chartType}
+                data={report.data}
+                options={{}}
+              />
             </ReportCard>
           </Grid>
         ))}
       </Grid>
 
-      {filteredReports.length > REPORTS_PER_PAGE && <Box display="flex" justifyContent="center" mt={2}><Pagination count={Math.ceil(filteredReports.length / REPORTS_PER_PAGE)} page={currentPage} onChange={handlePageChange} color="primary" /></Box>}
+      {filteredReports.length > REPORTS_PER_PAGE && (
+        <Box display="flex" justifyContent="center" mt={3}>
+          <Pagination 
+            count={Math.ceil(filteredReports.length / REPORTS_PER_PAGE)} 
+            page={currentPage} 
+            onChange={handlePageChange} 
+            color="primary" 
+          />
+        </Box>
+      )}
 
       {selectedReport && (
         <Dialog open={!!selectedReport} onClose={handleClose} fullWidth maxWidth="md">
           <DialogTitle>{selectedReport.title}</DialogTitle>
           <DialogContent>
             <Typography variant="h6" gutterBottom>Details</Typography>
-            <Typography variant="body1">{selectedReport.description}</Typography>
-            <Chart options={commonChartOptions} series={[{ name: selectedReport.type, data: selectedReport.data }]} type={selectedReport.chartType} height={300} />
+            <Typography variant="body1" paragraph>{selectedReport.description}</Typography>
+            <Typography variant="body2" color="textSecondary" paragraph>Type: {selectedReport.type}</Typography>
+            <Box mb={2}>
+              {selectedReport.tags.map((tag) => (
+                <StyledChip key={tag} label={tag} />
+              ))}
+            </Box>
+            <ReportChart
+              type={selectedReport.chartType}
+              data={selectedReport.data}
+              options={{}}
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="primary">Close</Button>
-            <Button onClick={() => exportReport(selectedReport)} color="primary" startIcon={<ExportIcon />}>Export Report</Button>
+            <Button onClick={() => exportReport(selectedReport)} color="primary" startIcon={<ExportIcon />}>
+              Export Report
+            </Button>
+            <Button onClick={(e) => refreshReport(e, selectedReport)} color="primary" startIcon={<RefreshIcon />}>
+              Refresh Data
+            </Button>
           </DialogActions>
         </Dialog>
       )}
 
-      <Dialog open={addReportOpen} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle>Create New Report</DialogTitle>
-        <DialogContent>
-          {["Report Title", "Description", "Data"].map((label, index) => (
-            <TextField
-              key={index}
-              autoFocus={index === 0}
-              margin="dense"
-              label={label}
-              fullWidth
-              variant="outlined"
-              InputProps={{ endAdornment: <Tooltip title={`Enter ${label.toLowerCase()}`} placement="top"><InfoIcon /></Tooltip> }}
-              multiline={label === "Description" || label === "Data"}
-              rows={label === "Description" ? 4 : 2}
-            />
-          ))}
-          <FormControl fullWidth variant="outlined" margin="dense">
-            <InputLabel>Report Type</InputLabel>
-            <Select value={reportType} onChange={(e) => setReportType(e.target.value)} label="Report Type">
-              <MenuItem value="Financial">Financial</MenuItem>
-              <MenuItem value="Quantitative">Quantitative</MenuItem>
-              <MenuItem value="Qualitative">Qualitative</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl fullWidth variant="outlined" margin="dense">
-            <InputLabel>Chart Type</InputLabel>
-            <Select label="Chart Type">
-              <MenuItem value="line">Line</MenuItem>
-              <MenuItem value="bar">Bar</MenuItem>
-              <MenuItem value="area">Area</MenuItem>
-              <MenuItem value="radar">Radar</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            margin="dense"
-            label="Chart Color"
-            fullWidth
-            variant="outlined"
-            type="color"
-            value={chartColor}
-            onChange={(e) => setChartColor(e.target.value)}
-            InputProps={{ endAdornment: <Tooltip title="Choose a custom color for the chart" placement="top"><ColorLensIcon /></Tooltip> }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="primary">Cancel</Button>
-          <Button onClick={handleClose} color="primary">Create Report</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: "bottom", horizontal: "left" }}>
-        <Alert onClose={() => setSnackbarOpen(false)} severity="success">Report created successfully!</Alert>
+      <Snackbar 
+        open={snackbarOpen} 
+        autoHideDuration={3000} 
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
+          Report data refreshed successfully!
+        </Alert>
       </Snackbar>
     </PageWrapper>
   );

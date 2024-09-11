@@ -1,6 +1,10 @@
 {
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
-    "@fortawesome/react-fontawesome": "^0.2.2"
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@mui/x-date-pickers": "^7.15.0",
+    "date-fns": "^3.6.0",
+    "react-helmet-async": "^2.0.5",
+    "react-intersection-observer": "^9.13.1"
   }
 }
