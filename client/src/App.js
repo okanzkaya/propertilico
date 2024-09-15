@@ -2,7 +2,7 @@ import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, Box, CircularProgress } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
-import { HelmetProvider, Helmet } from 'react-helmet-async';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import PublicHeader from './components/public/Header';
 import PublicFooter from './components/public/Footer';
 import Sidebar from './components/app/Sidebar';
@@ -10,6 +10,8 @@ import ProtectedRoute from './components/public/ProtectedRoute';
 import AuthenticatedRoute from './components/public/AuthenticatedRoute';
 import { lightTheme, darkTheme } from './theme';
 import { UserProvider, useUser } from './context/UserContext';
+
+const queryClient = new QueryClient();
 
 // Lazy load components
 const Home = lazy(() => import('./pages/public/Home'));
@@ -59,7 +61,7 @@ const App = () => {
   const publicTheme = useMemo(() => themeMode.public === 'light' ? lightTheme : darkTheme, [themeMode.public]);
 
   return (
-    <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
       <UserProvider>
         <Router>
           <AppContent
@@ -70,7 +72,7 @@ const App = () => {
           />
         </Router>
       </UserProvider>
-    </HelmetProvider>
+    </QueryClientProvider>
   );
 };
 
@@ -83,14 +85,6 @@ const AppContent = ({ appTheme, publicTheme, toggleTheme, themeMode }) => {
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Helmet>
-        <title>Property Management App</title>
-        <meta name="description" content="Efficient property management solution for real estate professionals" />
-        <meta name="keywords" content="property management, real estate, landlord, tenant, rent collection" />
-        <meta name="author" content="Your Company Name" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="canonical" href="https://yourwebsite.com" />
-      </Helmet>
       <Routes>
         <Route path="/" element={<PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}><Home /></PublicLayout>} />
         <Route path="/features" element={<PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}><Features /></PublicLayout>} />

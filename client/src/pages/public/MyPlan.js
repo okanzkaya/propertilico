@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { extendSubscription, reduceSubscription, getProtectedData } from '../../api';
+import { useUser } from '../../context/UserContext';
 import { ThemeProvider, createTheme, styled } from '@mui/material/styles';
 import {
   Container,
@@ -79,6 +80,7 @@ const FeatureChip = styled(Chip)(({ theme }) => ({
 }));
 
 const MyPlan = () => {
+  const { user } = useUser();
   const [state, setState] = useState({
     subscription: null,
     loading: true,
@@ -90,6 +92,18 @@ const MyPlan = () => {
   });
 
   const handleSubscriptionChange = useCallback(async (action) => {
+    if (!user?.isAdmin) {
+      setState((prev) => ({
+        ...prev,
+        message: {
+          text: 'Unauthorized access. This incident will be reported.',
+          severity: 'error',
+        },
+      }));
+      console.error('Unauthorized subscription change attempt');
+      return;
+    }
+
     setState((prev) => ({ ...prev, message: null, [action]: true }));
     try {
       let data;
@@ -122,22 +136,18 @@ const MyPlan = () => {
         },
       }));
     }
-  }, []);
+  }, [user]);
 
   const fetchSubscription = useCallback(async () => {
     try {
       const data = await getProtectedData();
       setState((prev) => ({ ...prev, subscription: data.subscriptionEndDate, loading: false }));
     } catch (error) {
-      if (error.response?.status === 401) {
-        window.location.href = '/signin';
-      } else {
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          message: { text: 'Failed to load subscription details. Please try again later.', severity: 'error' },
-        }));
-      }
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        message: { text: 'Failed to load subscription details. Please try again later.', severity: 'error' },
+      }));
     }
   }, []);
 
@@ -200,47 +210,51 @@ const MyPlan = () => {
     </>
   );
 
-  const renderSubscriptionActions = () => (
-    <>
-      <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-        Manage Subscription
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
-          <Tooltip title="Extend your subscription by 1 week">
-            <span>
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                startIcon={<AddCircleOutline />}
-                onClick={() => handleOpenDialog('extending')}
-                disabled={state.extending || state.reducing}
-              >
-                Extend
-              </Button>
-            </span>
-          </Tooltip>
+  const renderSubscriptionActions = () => {
+    if (!user?.isAdmin) return null;
+
+    return (
+      <>
+        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+          Manage Subscription
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Tooltip title="Extend your subscription by 1 week">
+              <span>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  startIcon={<AddCircleOutline />}
+                  onClick={() => handleOpenDialog('extending')}
+                  disabled={state.extending || state.reducing}
+                >
+                  Extend
+                </Button>
+              </span>
+            </Tooltip>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Tooltip title="Reduce your subscription by 1 week">
+              <span>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  fullWidth
+                  startIcon={<RemoveCircleOutline />}
+                  onClick={() => handleOpenDialog('reducing')}
+                  disabled={state.extending || state.reducing || daysLeft <= 7}
+                >
+                  Reduce
+                </Button>
+              </span>
+            </Tooltip>
+          </Grid>
         </Grid>
-        <Grid item xs={12} sm={6}>
-          <Tooltip title="Reduce your subscription by 1 week">
-            <span>
-              <Button
-                variant="outlined"
-                color="secondary"
-                fullWidth
-                startIcon={<RemoveCircleOutline />}
-                onClick={() => handleOpenDialog('reducing')}
-                disabled={state.extending || state.reducing || daysLeft <= 7}
-              >
-                Reduce
-              </Button>
-            </span>
-          </Tooltip>
-        </Grid>
-      </Grid>
-    </>
-  );
+      </>
+    );
+  };
 
   const renderFeatures = () => (
     <>

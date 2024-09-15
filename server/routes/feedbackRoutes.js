@@ -17,7 +17,7 @@ const limiter = rateLimit({
 });
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+const uploadsDir = path.join(__dirname, '..', 'uploads/feedbacks');
 fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
 const storage = multer.diskStorage({
@@ -96,7 +96,7 @@ router.post('/', protect, limiter, (req, res) => {
         const secureFileName = generateSecureFileName(req.file.originalname);
         const newPath = path.join(uploadsDir, secureFileName);
         await fs.rename(req.file.path, newPath);
-        attachment = `${process.env.SERVER_URL || 'http://localhost:5000'}/uploads/${secureFileName}`;
+        attachment = `/uploads/feedbacks/${secureFileName}`;
       }
 
       const newFeedback = new Feedback({

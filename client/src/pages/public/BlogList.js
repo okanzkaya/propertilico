@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { FaSearch, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 import axios from 'axios';
-import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const BlogListContainer = styled(motion.div)`
@@ -190,10 +189,18 @@ const BlogList = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    document.title = 'Blog | Your Property Management Insights';
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Explore our latest articles on property management tips, industry trends, and expert advice for property managers.');
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchPosts = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get('http://localhost:5000/api/blogs');
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs`);
         setPosts(response.data);
         setIsLoading(false);
       } catch (err) {
@@ -227,59 +234,53 @@ const BlogList = () => {
   }, []);
 
   return (
-    <>
-      <Helmet>
-        <title>Blog | Your Property Management Insights</title>
-        <meta name="description" content="Explore our latest articles on property management tips, industry trends, and expert advice for property managers." />
-      </Helmet>
-      <BlogListContainer
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Header>Property Management Insights</Header>
-        <SearchBarContainer>
-          <SearchBar
-            type="text"
-            placeholder="Search blog posts..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            aria-label="Search blog posts"
-          />
-          <SearchIcon aria-hidden="true" />
-        </SearchBarContainer>
-        <SortingOptions>
-          <SortButton onClick={toggleSortOption} aria-label={`Sort by ${sortOption === 'newest' ? 'oldest' : 'newest'}`}>
-            {sortOption === 'newest' ? 'Newest' : 'Oldest'}
-            {sortOption === 'newest' ? <FaSortAmountDown aria-hidden="true" /> : <FaSortAmountUp aria-hidden="true" />}
-          </SortButton>
-        </SortingOptions>
-        {isLoading && <LoadingSpinner />}
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-        <AnimatePresence>
-          {filteredAndSortedPosts.map((post) => (
-            <PostCard
-              key={post._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <PostTitle to={`/blog/${post._id}`}>{post.title}</PostTitle>
-              <PostMeta>
-                By {post.author} on {new Date(post.date).toLocaleDateString()}
-              </PostMeta>
-              <PostExcerpt>{post.excerpt}</PostExcerpt>
-              <TagList>
-                {post.tags.map((tag, index) => (
-                  <Tag key={index}>{tag}</Tag>
-                ))}
-              </TagList>
-            </PostCard>
-          ))}
-        </AnimatePresence>
-      </BlogListContainer>
-    </>
+    <BlogListContainer
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Header>Property Management Insights</Header>
+      <SearchBarContainer>
+        <SearchBar
+          type="text"
+          placeholder="Search blog posts..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          aria-label="Search blog posts"
+        />
+        <SearchIcon aria-hidden="true" />
+      </SearchBarContainer>
+      <SortingOptions>
+        <SortButton onClick={toggleSortOption} aria-label={`Sort by ${sortOption === 'newest' ? 'oldest' : 'newest'}`}>
+          {sortOption === 'newest' ? 'Newest' : 'Oldest'}
+          {sortOption === 'newest' ? <FaSortAmountDown aria-hidden="true" /> : <FaSortAmountUp aria-hidden="true" />}
+        </SortButton>
+      </SortingOptions>
+      {isLoading && <LoadingSpinner />}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      <AnimatePresence>
+        {filteredAndSortedPosts.map((post) => (
+          <PostCard
+            key={post._id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <PostTitle to={`/blog/${post._id}`}>{post.title}</PostTitle>
+            <PostMeta>
+              By {post.author} on {new Date(post.date).toLocaleDateString()}
+            </PostMeta>
+            <PostExcerpt>{post.excerpt}</PostExcerpt>
+            <TagList>
+              {post.tags.map((tag, index) => (
+                <Tag key={index}>{tag}</Tag>
+              ))}
+            </TagList>
+          </PostCard>
+        ))}
+      </AnimatePresence>
+    </BlogListContainer>
   );
 };
 

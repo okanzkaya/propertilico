@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Drawer, List, ListItem, ListItemIcon, Typography, Box, AppBar, IconButton,
   Badge, Popover, useTheme, Menu, MenuItem, Avatar, Divider, Tooltip, Toolbar,
-  useMediaQuery
+  useMediaQuery, ListItemText, ListItemAvatar, Button
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import NotificationsIcon from '@mui/icons-material/Notifications';
@@ -17,7 +17,8 @@ import {
   Dashboard as DashboardIcon, AccountBalance as FinancesIcon, Home as PropertiesIcon,
   ConfirmationNumber as TicketsIcon, Contacts as ContactsIcon, Receipt as TaxesIcon,
   Description as DocumentsIcon, BarChart as ReportsIcon, Settings as SettingsIcon,
-  Feedback as FeedbackIcon,
+  Feedback as FeedbackIcon, Check as CheckIcon, Error as ErrorIcon, Warning as WarningIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import { useUser } from '../../context/UserContext';
 
@@ -116,6 +117,35 @@ const SidebarContent = React.memo(({ isMobile, handleDrawerClose }) => (
   </List>
 ));
 
+const NotificationItem = ({ type, message, date, handleClose }) => {
+  const getIcon = () => {
+    switch (type) {
+      case 'success': return <CheckIcon color="success" />;
+      case 'error': return <ErrorIcon color="error" />;
+      case 'warning': return <WarningIcon color="warning" />;
+      default: return <InfoIcon color="info" />;
+    }
+  };
+
+  return (
+    <ListItem alignItems="flex-start">
+      <ListItemAvatar>
+        <Avatar>{getIcon()}</Avatar>
+      </ListItemAvatar>
+      <ListItemText
+        primary={message}
+        secondary={
+          <React.Fragment>
+            <Typography component="span" variant="body2" color="text.primary">
+              {new Date(date).toLocaleString()}
+            </Typography>
+          </React.Fragment>
+        }
+      />
+    </ListItem>
+  );
+};
+
 const Sidebar = ({ themeMode, toggleTheme }) => {
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -126,6 +156,14 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user, logout } = useUser();
+
+  const [notifications, setNotifications] = useState([
+    { id: 1, type: 'success', message: 'Payment received for Property A', date: new Date() },
+    { id: 2, type: 'warning', message: 'Maintenance request for Property B', date: new Date(Date.now() - 86400000) },
+    { id: 3, type: 'error', message: 'Failed to process rent for Tenant C', date: new Date(Date.now() - 172800000) },
+    { id: 4, type: 'info', message: 'New document uploaded for Property D', date: new Date(Date.now() - 259200000) },
+    { id: 5, type: 'success', message: 'Lease renewed for Tenant E', date: new Date(Date.now() - 345600000) },
+  ]);
 
   const handleDrawerClose = useCallback(() => {
     setOpen(false);
@@ -155,8 +193,13 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
 
   const handleReturnToHomepage = useCallback(() => navigate('/'), [navigate]);
 
-  const notificationsCount = 7;
-  const notifications = Array(7).fill('').map((_, i) => `Notification ${i + 1}`);
+  const handleNotificationDismiss = useCallback((id) => {
+    setNotifications((prevNotifications) => prevNotifications.filter((notification) => notification.id !== id));
+  }, []);
+
+  const handleDismissAll = useCallback(() => {
+    setNotifications([]);
+  }, []);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -180,7 +223,7 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
             <Avatar src={user?.avatar} alt={user?.name} sx={{ width: 32, height: 32 }} />
           </IconButton>
           <IconButton color="inherit" onClick={handleNotificationsClick}>
-            <Badge badgeContent={notificationsCount > 9 ? '9+' : notificationsCount} color="error">
+            <Badge badgeContent={notifications.length > 9 ? '9+' : notifications.length} color="error">
               <NotificationsIcon />
             </Badge>
           </IconButton>
@@ -225,20 +268,31 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Box sx={{ width: '300px', maxHeight: '400px', overflow: 'auto' }}>
-          <Typography variant="h6" sx={{ p: 2, borderBottom: '1px solid #eee' }}>Notifications</Typography>
+        <Box sx={{ width: '350px', maxHeight: '500px', overflow: 'auto' }}>
+          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
+            <Typography variant="h6">Notifications</Typography>
+            <Button color="primary" onClick={handleDismissAll} disabled={notifications.length === 0}>
+              Dismiss All
+            </Button>
+          </Box>
           <List>
-            {notifications.map((notification, index) => (
-              <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemIcon>
-                    <NotificationsIcon color="primary" />
-                  </ListItemIcon>
-                  <Typography variant="body2">{notification}</Typography>
-                </ListItem>
-                {index < notifications.length - 1 && <Divider />}
-              </React.Fragment>
-            ))}
+            {notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <React.Fragment key={notification.id}>
+                  <NotificationItem
+                    type={notification.type}
+                    message={notification.message}
+                    date={notification.date}
+                    handleClose={() => handleNotificationDismiss(notification.id)}
+                  />
+                  <Divider variant="inset" component="li" />
+                </React.Fragment>
+              ))
+            ) : (
+              <ListItem>
+                <ListItemText primary="No new notifications" />
+              </ListItem>
+            )}
           </List>
         </Box>
       </Popover>

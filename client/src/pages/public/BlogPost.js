@@ -1,137 +1,72 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import styled from 'styled-components';
 import axios from 'axios';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import DOMPurify from 'dompurify';
-import { motion } from 'framer-motion';
+import { Typography, Box, Avatar, Chip, CircularProgress } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
-const PostContainer = styled(motion.article)`
-  padding: 2rem;
-  max-width: 800px;
-  margin: 2rem auto;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+const PostContainer = styled(Box)(({ theme }) => ({
+  maxWidth: '800px',
+  margin: '2rem auto',
+  padding: '2rem',
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: theme.shadows[3],
+}));
 
-  @media (max-width: 768px) {
-    padding: 1rem;
-    margin: 1rem;
-  }
-`;
+const PostTitle = styled(Typography)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  color: theme.palette.primary.main,
+}));
 
-const PostTitle = styled.h1`
-  font-size: 2.5rem;
-  color: #2c3e50;
-  margin-bottom: 1rem;
-  line-height: 1.2;
+const PostMeta = styled(Typography)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  color: theme.palette.text.secondary,
+}));
 
-  @media (max-width: 768px) {
-    font-size: 2rem;
-  }
-`;
+const PostContent = styled('div')(({ theme }) => ({
+  '& img': {
+    maxWidth: '100%',
+    height: 'auto',
+    borderRadius: theme.shape.borderRadius,
+    marginBottom: theme.spacing(2),
+  },
+  '& h2, & h3, & h4': {
+    marginTop: theme.spacing(3),
+    marginBottom: theme.spacing(2),
+  },
+  '& p': {
+    marginBottom: theme.spacing(2),
+  },
+  '& blockquote': {
+    borderLeft: `4px solid ${theme.palette.primary.main}`,
+    paddingLeft: theme.spacing(2),
+    fontStyle: 'italic',
+    margin: `${theme.spacing(2)} 0`,
+  },
+}));
 
-const PostMeta = styled.div`
-  color: #7f8c8d;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
-`;
+const AuthorContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginTop: theme.spacing(4),
+  marginBottom: theme.spacing(2),
+}));
 
-const PostContent = styled.div`
-  font-size: 1.1rem;
-  color: #34495e;
-  line-height: 1.8;
-  margin-top: 2rem;
+const AuthorAvatar = styled(Avatar)(({ theme }) => ({
+  marginRight: theme.spacing(2),
+}));
 
-  h2, h3, h4 {
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    color: #2c3e50;
-  }
+const TagsContainer = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(3),
+}));
 
-  p {
-    margin-bottom: 1rem;
-  }
-
-  img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin: 1rem 0;
-  }
-
-  blockquote {
-    border-left: 4px solid #3498db;
-    padding-left: 1rem;
-    margin-left: 0;
-    font-style: italic;
-    color: #7f8c8d;
-  }
-`;
-
-const AuthorContainer = styled.div`
-  display: flex;
-  align-items: center;
-  margin: 2rem 0;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-`;
-
-const AuthorImage = styled.img`
-  border-radius: 50%;
-  width: 60px;
-  height: 60px;
-  margin-right: 1rem;
-`;
-
-const AuthorName = styled.div`
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #2c3e50;
-`;
-
-const TagsContainer = styled.div`
-  margin-top: 2rem;
-`;
-
-const Tag = styled.span`
-  display: inline-block;
-  background: #e0f2fe;
-  color: #3498db;
-  padding: 0.3rem 0.8rem;
-  margin: 0 0.5rem 0.5rem 0;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  transition: background 0.3s, color 0.3s;
-
-  &:hover {
-    background: #3498db;
-    color: #fff;
-  }
-`;
-
-const ErrorMessage = styled.div`
-  color: #e74c3c;
-  text-align: center;
-  font-size: 1.2rem;
-  margin-top: 2rem;
-`;
-
-const LoadingSpinner = styled.div`
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 2rem auto;
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
+const ErrorMessage = styled(Typography)(({ theme }) => ({
+  color: theme.palette.error.main,
+  textAlign: 'center',
+  marginTop: theme.spacing(4),
+}));
 
 const BlogPost = () => {
   const { id } = useParams();
@@ -139,25 +74,35 @@ const BlogPost = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchPost = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/blogs/${id}`);
-      setPost(response.data);
-      setIsLoading(false);
-    } catch (err) {
-      console.error('Failed to fetch blog post:', err);
-      setError('Failed to load the blog post. Please try again later.');
-      setIsLoading(false);
-    }
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
+        setPost(response.data);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch blog post:', err);
+        setError('Failed to load the blog post. Please try again later.');
+        setIsLoading(false);
+      }
+    };
+
+    fetchPost();
   }, [id]);
 
-  useEffect(() => {
-    fetchPost();
-  }, [fetchPost]);
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage>{error}</ErrorMessage>;
+  if (error) {
+    return <ErrorMessage variant="h6">{error}</ErrorMessage>;
+  }
+
   if (!post) return null;
 
   const sanitizedContent = DOMPurify.sanitize(post.content);
@@ -176,22 +121,20 @@ const BlogPost = () => {
           <meta property="article:tag" content={tag} key={tag} />
         ))}
       </Helmet>
-      <PostContainer
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <PostTitle>{post.title}</PostTitle>
-        <PostMeta>
+      <PostContainer>
+        <PostTitle variant="h2">{post.title}</PostTitle>
+        <PostMeta variant="subtitle2">
           Published on {new Date(post.date).toLocaleDateString()} by {post.author}
         </PostMeta>
         <AuthorContainer>
-          <AuthorImage src={`https://i.pravatar.cc/60?u=${post.author}`} alt={post.author} />
-          <AuthorName>{post.author}</AuthorName>
+          <AuthorAvatar src={`https://i.pravatar.cc/40?u=${post.author}`} alt={post.author} />
+          <Typography variant="subtitle1">{post.author}</Typography>
         </AuthorContainer>
         <PostContent dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
         <TagsContainer>
-          {post.tags.map(tag => <Tag key={tag}>{tag}</Tag>)}
+          {post.tags.map(tag => (
+            <Chip key={tag} label={tag} variant="outlined" style={{ marginRight: 8, marginBottom: 8 }} />
+          ))}
         </TagsContainer>
       </PostContainer>
     </>

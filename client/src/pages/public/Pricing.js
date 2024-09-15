@@ -1,36 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { keyframes, css } from 'styled-components';
-import { FaCheck, FaTimes, FaCrown } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaCrown, FaRegLightbulb, FaRocket } from 'react-icons/fa';
 
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+const gradientAnimation = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
+
+const float = keyframes`
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
 `;
 
 const PricingContainer = styled.div`
-  padding: 60px 20px;
-  background: linear-gradient(135deg, #f6f9fc 0%, #e9ecef 100%);
-  color: #2d3748;
+  padding: 100px 20px;
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: ${gradientAnimation} 15s ease infinite;
+  color: #ffffff;
   text-align: center;
-  animation: ${fadeIn} 0.6s ease-out;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+`;
+
+const GlassPanes = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  z-index: 1;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 50%;
+  }
+
+  &::before {
+    top: -100px;
+    left: -100px;
+  }
+
+  &::after {
+    bottom: -100px;
+    right: -100px;
+  }
+`;
+
+const ContentWrapper = styled.div`
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1200px;
 `;
 
 const Header = styled.h1`
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  margin-bottom: 20px;
-  color: #2b6cb0;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  margin-bottom: 30px;
+  color: #ffffff;
   font-weight: 800;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 2px;
 `;
 
 const Description = styled.p`
   font-size: clamp(1rem, 3vw, 1.3rem);
-  margin-bottom: 40px;
-  color: #4a5568;
+  margin-bottom: 60px;
+  color: #ffffff;
   max-width: 800px;
-  margin: 0 auto 40px;
-  line-height: 1.7;
+  margin: 0 auto 60px;
+  line-height: 1.8;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 `;
 
 const PlansWrapper = styled.div`
@@ -41,32 +98,43 @@ const PlansWrapper = styled.div`
 `;
 
 const PlanCard = styled.div`
-  background-color: white;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
   padding: 40px 30px;
-  border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 30px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   width: 100%;
-  max-width: 400px;
+  max-width: 480px;
   transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 850px;
 
-  ${props => props.featured && css`
-    border: 3px solid #4299e1;
+  ${props => props.$featured && css`
     transform: scale(1.05);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.5);
   `}
 
   &:hover {
     transform: translateY(-10px);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 48px rgba(31, 38, 135, 0.6);
+  }
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 40px;
   }
 `;
 
 const PlanHeader = styled.h2`
-  font-size: 2rem;
+  font-size: 2.2rem;
   margin-bottom: 20px;
-  color: #2b6cb0;
+  color: #ffffff;
   font-weight: 700;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 `;
 
 const PriceContainer = styled.div`
@@ -78,15 +146,16 @@ const PriceContainer = styled.div`
 
 const OriginalPrice = styled.span`
   font-size: 1.2rem;
-  color: #a0aec0;
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: line-through;
   margin-bottom: 5px;
 `;
 
 const DiscountedPrice = styled.span`
-  font-size: 2.5rem;
-  color: #38a169;
+  font-size: 3rem;
+  color: #ffffff;
   font-weight: 800;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 `;
 
 const FeatureList = styled.ul`
@@ -101,44 +170,48 @@ const Feature = styled.li`
   margin-bottom: 15px;
   display: flex;
   align-items: center;
-  color: ${props => props.included ? '#4a5568' : '#a0aec0'};
+  color: ${props => props.$included ? '#ffffff' : 'rgba(255, 255, 255, 0.6)'};
 `;
 
 const FeatureIcon = styled.span`
   margin-right: 10px;
-  color: ${props => props.included ? '#38a169' : '#e53e3e'};
+  color: ${props => props.$included ? '#4ded30' : '#ff6b6b'};
+  font-size: 1.1rem;
 `;
 
 const PopularLabel = styled.span`
-  background-color: #4299e1;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 0 0 20px 0;
-  font-size: 0.9rem;
+  background-color: #4ded30;
+  color: #1a1a1a;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 1rem;
   font-weight: 700;
   position: absolute;
-  top: 0;
-  left: 0;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   gap: 5px;
 `;
 
 const DiscountLabel = styled.span`
-  background-color: #ed8936;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 20px;
+  background-color: #ff6b6b;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 15px;
   font-size: 0.9rem;
   font-weight: 700;
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 15px;
+  right: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
 
 const CTAButton = styled.button`
-  background-color: #4299e1;
-  color: white;
+  background-color: #4ded30;
+  color: #1a1a1a;
   padding: 15px 30px;
   border-radius: 50px;
   border: none;
@@ -147,24 +220,24 @@ const CTAButton = styled.button`
   transition: all 0.3s ease;
   cursor: pointer;
   outline: none;
-  box-shadow: 0 10px 20px rgba(66, 153, 225, 0.3);
+  box-shadow: 0 10px 20px rgba(77, 237, 48, 0.3);
   width: 100%;
 
   &:hover {
-    background-color: #3182ce;
+    background-color: #3aba20;
     transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(66, 153, 225, 0.4);
+    box-shadow: 0 15px 30px rgba(77, 237, 48, 0.4);
   }
 
   &:focus {
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+    box-shadow: 0 0 0 3px rgba(77, 237, 48, 0.5);
   }
 `;
 
 const TrialText = styled.p`
   font-size: 0.9rem;
-  color: #718096;
-  margin-top: 20px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 15px;
   font-weight: 600;
 `;
 
@@ -172,30 +245,40 @@ const ComparisonToggle = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 40px;
+  margin: 0 auto 60px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  border-radius: 50px;
+  padding: 5px;
+  width: fit-content;
 `;
 
 const ToggleButton = styled.button`
-  background-color: ${props => props.active ? '#4299e1' : 'transparent'};
-  color: ${props => props.active ? 'white' : '#4a5568'};
-  border: 2px solid #4299e1;
+  background-color: ${props => props.$active ? 'rgba(255, 255, 255, 0.2)' : 'transparent'};
+  color: #ffffff;
+  border: none;
   padding: 10px 20px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-
-  &:first-child {
-    border-radius: 20px 0 0 20px;
-  }
-
-  &:last-child {
-    border-radius: 0 20px 20px 0;
-  }
+  border-radius: 25px;
 
   &:hover {
-    background-color: ${props => props.active ? '#3182ce' : '#ebf8ff'};
+    background-color: ${props => props.$active ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
   }
+`;
+
+const FloatingIcon = styled.div`
+  position: absolute;
+  font-size: 3rem;
+  color: rgba(255, 255, 255, 0.3);
+  animation: ${float} 6s ease-in-out infinite;
+  z-index: 1;
+
+  &:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+  &:nth-child(2) { top: 60%; right: 10%; animation-delay: 2s; }
+  &:nth-child(3) { bottom: 10%; left: 20%; animation-delay: 4s; }
 `;
 
 const Pricing = () => {
@@ -203,15 +286,18 @@ const Pricing = () => {
   const [showMonthly, setShowMonthly] = useState(true);
 
   useEffect(() => {
-    document.title = "Propertilico Pricing - Choose Your Perfect Plan";
-    document.querySelector('meta[name="description"]')?.setAttribute("content", "Explore Propertilico's flexible pricing plans. Choose between Standard and Plus to find the perfect fit for your property management needs.");
+    document.title = "Propertilico Pricing - Revolutionary Property Management Plans";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute("content", "Discover Propertilico's innovative pricing plans. Choose between Standard and Plus to revolutionize your property management experience.");
+    }
   }, []);
 
-  const handleStartFreeTrial = (plan) => {
+  const handleStartFreeTrial = useCallback((plan) => {
     navigate(`/payment?plan=${plan}`);
-  };
+  }, [navigate]);
 
-  const plans = [
+  const plans = useMemo(() => [
     {
       name: "Standard",
       monthlyPrice: 19.5,
@@ -230,6 +316,7 @@ const Pricing = () => {
         { name: 'AI-Powered Market Insights', included: false },
         { name: 'Multi-Property Portfolio Management', included: false },
       ],
+      featured: true,
     },
     {
       name: "Plus",
@@ -249,48 +336,57 @@ const Pricing = () => {
         { name: 'AI-Powered Market Insights', included: true },
         { name: 'Multi-Property Portfolio Management', included: true },
       ],
-      featured: true,
     },
-  ];
+  ], []);
 
   return (
     <PricingContainer>
-      <Header>Choose Your Perfect Plan</Header>
-      <Description>
-        Unlock the full potential of your property portfolio with our flexible plans. 
-        Start your 30-day free trial today and experience the Propertilico advantage.
-      </Description>
-      <ComparisonToggle>
-        <ToggleButton active={showMonthly} onClick={() => setShowMonthly(true)}>Monthly</ToggleButton>
-        <ToggleButton active={!showMonthly} onClick={() => setShowMonthly(false)}>Yearly</ToggleButton>
-      </ComparisonToggle>
-      <PlansWrapper>
-        {plans.map((plan, index) => (
-          <PlanCard key={index} featured={plan.featured}>
-            {plan.featured && <PopularLabel><FaCrown /> Most Popular</PopularLabel>}
-            <DiscountLabel>35% OFF</DiscountLabel>
-            <PlanHeader>{plan.name}</PlanHeader>
-            <PriceContainer>
-              <OriginalPrice>${showMonthly ? plan.originalMonthlyPrice : plan.originalYearlyPrice}/month</OriginalPrice>
-              <DiscountedPrice>${showMonthly ? plan.monthlyPrice.toFixed(2) : plan.yearlyPrice.toFixed(2)}/month</DiscountedPrice>
-            </PriceContainer>
-            <FeatureList>
-              {plan.features.map((feature, featureIndex) => (
-                <Feature key={featureIndex} included={feature.included}>
-                  <FeatureIcon included={feature.included}>
-                    {feature.included ? <FaCheck /> : <FaTimes />}
-                  </FeatureIcon>
-                  {feature.name}
-                </Feature>
-              ))}
-            </FeatureList>
-            <CTAButton onClick={() => handleStartFreeTrial(plan.name.toLowerCase())}>
-              Start {plan.featured ? 'Premium' : 'Free'} Trial
-            </CTAButton>
-            <TrialText>No credit card required for trial</TrialText>
-          </PlanCard>
-        ))}
-      </PlansWrapper>
+      <GlassPanes />
+      <FloatingIcon><FaRegLightbulb /></FloatingIcon>
+      <FloatingIcon><FaRocket /></FloatingIcon>
+      <FloatingIcon><FaCrown /></FloatingIcon>
+      <ContentWrapper>
+        <Header>Revolutionary Property Management</Header>
+        <Description>
+          Experience the future of property management with our innovative plans. 
+          Start your 30-day free trial and transform your property portfolio today.
+        </Description>
+        <ComparisonToggle>
+          <ToggleButton $active={showMonthly} onClick={() => setShowMonthly(true)}>Monthly</ToggleButton>
+          <ToggleButton $active={!showMonthly} onClick={() => setShowMonthly(false)}>Yearly</ToggleButton>
+        </ComparisonToggle>
+        <PlansWrapper>
+          {plans.map((plan, index) => (
+            <PlanCard key={index} $featured={plan.featured}>
+              {plan.featured && <PopularLabel><FaCrown /> Most Popular</PopularLabel>}
+              <DiscountLabel>35% OFF</DiscountLabel>
+              <div>
+                <PlanHeader>{plan.name}</PlanHeader>
+                <PriceContainer>
+                  <OriginalPrice>${showMonthly ? plan.originalMonthlyPrice : plan.originalYearlyPrice}/month</OriginalPrice>
+                  <DiscountedPrice>${showMonthly ? plan.monthlyPrice.toFixed(2) : plan.yearlyPrice.toFixed(2)}/month</DiscountedPrice>
+                </PriceContainer>
+                <FeatureList>
+                  {plan.features.map((feature, featureIndex) => (
+                    <Feature key={featureIndex} $included={feature.included}>
+                      <FeatureIcon $included={feature.included}>
+                        {feature.included ? <FaCheck /> : <FaTimes />}
+                      </FeatureIcon>
+                      {feature.name}
+                    </Feature>
+                  ))}
+                </FeatureList>
+              </div>
+              <div>
+                <CTAButton onClick={() => handleStartFreeTrial(plan.name.toLowerCase())}>
+                  Start Free Trial
+                </CTAButton>
+                <TrialText>No credit card required for trial</TrialText>
+              </div>
+            </PlanCard>
+          ))}
+        </PlansWrapper>
+      </ContentWrapper>
     </PricingContainer>
   );
 };

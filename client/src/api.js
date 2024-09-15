@@ -38,10 +38,9 @@ export const getProtectedData = async () => {
   }
 };
 
-
 export const extendSubscription = async () => {
   try {
-    const response = await axiosInstance.post('/protected/extend-subscription');
+    const response = await axiosInstance.post('/api/protected/extend-subscription');
     return response.data;
   } catch (error) {
     console.error('Error extending subscription:', error.response?.data?.message || error.message);
@@ -51,7 +50,7 @@ export const extendSubscription = async () => {
 
 export const reduceSubscription = async () => {
   try {
-    const response = await axiosInstance.post('/protected/reduce-subscription');
+    const response = await axiosInstance.post('/api/protected/reduce-subscription');
     return response.data;
   } catch (error) {
     console.error('Error reducing subscription:', error.response?.data?.message || error.message);
@@ -104,7 +103,6 @@ export const updateFeedback = async (feedbackId, updateData) => {
   }
 };
 
-
 export const checkFeedbackLimit = async () => {
   try {
     const response = await axiosInstance.get('/api/feedback/check-limit');
@@ -125,7 +123,7 @@ export const logout = () => {
 
 export const checkAuthStatus = async () => {
   try {
-    const response = await axiosInstance.get('/auth/status');
+    const response = await axiosInstance.get('/api/auth/status');
     return response.data.isAuthenticated;
   } catch (error) {
     console.error('Error checking auth status:', error.response?.data?.message || error.message);
@@ -135,7 +133,7 @@ export const checkAuthStatus = async () => {
 
 export const updateUserProfile = async (userData) => {
   try {
-    const response = await axiosInstance.put('/protected/user', userData);
+    const response = await axiosInstance.put('/api/protected/user', userData);
     return response.data;
   } catch (error) {
     console.error('Error updating user profile:', error.response?.data?.message || error.message);
@@ -145,7 +143,7 @@ export const updateUserProfile = async (userData) => {
 
 export const getSubscriptionDetails = async () => {
   try {
-    const response = await axiosInstance.get('/protected/subscription');
+    const response = await axiosInstance.get('/api/protected/subscription');
     return response.data;
   } catch (error) {
     console.error('Error fetching subscription details:', error.response?.data?.message || error.message);
@@ -155,7 +153,7 @@ export const getSubscriptionDetails = async () => {
 
 export const requestPasswordReset = async (email) => {
   try {
-    const response = await axiosInstance.post('/auth/request-password-reset', { email });
+    const response = await axiosInstance.post('/api/auth/request-password-reset', { email });
     return response.data;
   } catch (error) {
     console.error('Error requesting password reset:', error.response?.data?.message || error.message);
@@ -165,7 +163,7 @@ export const requestPasswordReset = async (email) => {
 
 export const resetPassword = async (token, newPassword) => {
   try {
-    const response = await axiosInstance.post('/auth/reset-password', { token, newPassword });
+    const response = await axiosInstance.post('/api/auth/reset-password', { token, newPassword });
     return response.data;
   } catch (error) {
     console.error('Error resetting password:', error.response?.data?.message || error.message);
@@ -175,7 +173,7 @@ export const resetPassword = async (token, newPassword) => {
 
 export const getNotifications = async () => {
   try {
-    const response = await axiosInstance.get('/protected/notifications');
+    const response = await axiosInstance.get('/api/protected/notifications');
     return response.data;
   } catch (error) {
     console.error('Error fetching notifications:', error.response?.data?.message || error.message);
@@ -185,10 +183,64 @@ export const getNotifications = async () => {
 
 export const markNotificationAsRead = async (notificationId) => {
   try {
-    const response = await axiosInstance.put(`/protected/notifications/${notificationId}/read`);
+    const response = await axiosInstance.put(`/api/protected/notifications/${notificationId}/read`);
     return response.data;
   } catch (error) {
     console.error('Error marking notification as read:', error.response?.data?.message || error.message);
     throw error.response?.data?.message || error.message || 'An error occurred while marking notification as read';
+  }
+};
+
+export const createTicket = async (ticketData) => {
+  try {
+    const response = await axiosInstance.post('/api/tickets', ticketData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const getTickets = async () => {
+  try {
+    const response = await axiosInstance.get('/api/tickets');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const getTicketById = async (id) => {
+  try {
+    const response = await axiosInstance.get(`/api/tickets/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const updateTicket = async (id, ticketData) => {
+  try {
+    const response = await axiosInstance.put(`/api/tickets/${id}`, ticketData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const deleteTicket = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/api/tickets/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const addNoteToTicket = async (id, noteContent) => {
+  try {
+    const response = await axiosInstance.post(`/api/tickets/${id}/notes`, { content: noteContent });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
   }
 };
