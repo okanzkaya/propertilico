@@ -1,8 +1,4 @@
-// In your server/controllers/contactController.js file:
-
 const Contact = require('../models/Contact');
-const fs = require('fs');
-const path = require('path');
 
 exports.getContacts = async (req, res) => {
   try {
@@ -18,51 +14,42 @@ exports.createContact = async (req, res) => {
     const newContact = new Contact({
       ...req.body,
       user: req.user._id,
-      avatar: req.file ? `/uploads/contacts/${req.file.filename}` : undefined
+      avatar: req.file ? req.file.path : undefined
     });
     const savedContact = await newContact.save();
     res.status(201).json(savedContact);
   } catch (error) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     res.status(400).json({ message: 'Error creating contact', error: error.message });
+  }
+};
+
+exports.getContactById = async (req, res) => {
+  try {
+    const contact = await Contact.findOne({ _id: req.params.id, user: req.user._id });
+    if (!contact) {
+      return res.status(404).json({ message: 'Contact not found' });
+    }
+    res.json(contact);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching contact', error: error.message });
   }
 };
 
 exports.updateContact = async (req, res) => {
   try {
-    let updateData = { ...req.body };
-    if (req.file) {
-      updateData.avatar = `/uploads/contacts/${req.file.filename}`;
-    }
-
     const updatedContact = await Contact.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      updateData,
-      { new: true, runValidators: true }
+      { 
+        ...req.body,
+        avatar: req.file ? req.file.path : undefined
+      },
+      { new: true }
     );
-
     if (!updatedContact) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       return res.status(404).json({ message: 'Contact not found' });
     }
-
-    // Remove old avatar if a new one is uploaded
-    if (req.file && updatedContact.avatar && updatedContact.avatar !== updateData.avatar) {
-      const oldAvatarPath = path.join(__dirname, '..', updatedContact.avatar);
-      if (fs.existsSync(oldAvatarPath)) {
-        fs.unlinkSync(oldAvatarPath);
-      }
-    }
-
     res.json(updatedContact);
   } catch (error) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     res.status(400).json({ message: 'Error updating contact', error: error.message });
   }
 };
@@ -73,15 +60,6 @@ exports.deleteContact = async (req, res) => {
     if (!deletedContact) {
       return res.status(404).json({ message: 'Contact not found' });
     }
-
-    // Remove avatar file if it exists
-    if (deletedContact.avatar) {
-      const avatarPath = path.join(__dirname, '..', deletedContact.avatar);
-      if (fs.existsSync(avatarPath)) {
-        fs.unlinkSync(avatarPath);
-      }
-    }
-
     res.json({ message: 'Contact deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting contact', error: error.message });

@@ -95,7 +95,7 @@ const menuItems = [
   { to: '/app/contacts', icon: <ContactsIcon />, text: 'Contacts' },
   { to: '/app/taxes', icon: <TaxesIcon />, text: 'Taxes' },
   { to: '/app/documents', icon: <DocumentsIcon />, text: 'Documents' },
-  { to: '/app/reports', icon: <ReportsIcon />, text: 'Reports' },
+  { to: '/app/reports', icon: <ReportsIcon />, text: 'Analytics & Reports' },
   { to: '/app/settings', icon: <SettingsIcon />, text: 'Settings' },
   { to: '/app/feedback', icon: <FeedbackIcon />, text: 'Feedback' },
 ];

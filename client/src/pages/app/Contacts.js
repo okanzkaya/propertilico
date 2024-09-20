@@ -4,13 +4,13 @@ import {
   TextField, Dialog, DialogTitle, DialogContent, DialogActions, Button, Chip,
   Snackbar, Alert, useTheme, Fab, Tooltip, CircularProgress, InputAdornment,
   Menu, MenuItem, FormControl, InputLabel, Select, Pagination, ListItemIcon,
-  ListItemText, Divider, useMediaQuery, styled
+  ListItemText, useMediaQuery, styled, Paper, Tabs, Tab
 } from '@mui/material';
 import {
   Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Phone as PhoneIcon,
   Email as EmailIcon, Work as WorkIcon, Save as SaveIcon, Search as SearchIcon,
   Sort as SortIcon, Clear as ClearIcon, MoreVert as MoreVertIcon,
-  Close as CloseIcon
+  Close as CloseIcon, Visibility as VisibilityIcon, GetApp as DownloadIcon
 } from '@mui/icons-material';
 import axiosInstance from '../../axiosSetup';
 
@@ -59,6 +59,7 @@ const Contacts = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [viewMode, setViewMode] = useState('grid');
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -158,6 +159,27 @@ const Contacts = () => {
 
   const pageCount = Math.ceil(filteredAndSortedContacts.length / contactsPerPage);
 
+  const handleDownloadVCard = useCallback((contact) => {
+    const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:${contact.name}
+TEL:${contact.phone}
+EMAIL:${contact.email}
+TITLE:${contact.role}
+ADR:${contact.address}
+NOTE:${contact.notes}
+END:VCARD`;
+
+    const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${contact.name}.vcf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
   const renderContactCard = useCallback((contact) => (
     <Grid item xs={12} sm={6} md={4} lg={3} key={contact._id}>
       <StyledCard onClick={() => handleOpenDetailDialog(contact)}>
@@ -182,6 +204,35 @@ const Contacts = () => {
       </StyledCard>
     </Grid>
   ), [handleOpenDialog, handleOpenDetailDialog]);
+
+  const renderContactList = useCallback(() => (
+    <Paper elevation={3}>
+      {paginatedContacts.map((contact) => (
+        <Box key={contact._id} sx={{ p: 2, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
+          <Grid container alignItems="center" spacing={2}>
+            <Grid item>
+              <Avatar src={`${process.env.REACT_APP_API_URL}${contact.avatar}`} alt={contact.name} />
+            </Grid>
+            <Grid item xs>
+              <Typography variant="subtitle1">{contact.name}</Typography>
+              <Typography variant="body2" color="textSecondary">{contact.role}</Typography>
+            </Grid>
+            <Grid item>
+              <IconButton onClick={() => handleOpenDetailDialog(contact)}>
+                <VisibilityIcon />
+              </IconButton>
+              <IconButton onClick={() => handleOpenDialog(contact)}>
+                <EditIcon />
+              </IconButton>
+              <IconButton onClick={(e) => { setCurrentContact(contact); setAnchorEl(e.currentTarget); }}>
+                <MoreVertIcon />
+              </IconButton>
+            </Grid>
+          </Grid>
+        </Box>
+      ))}
+    </Paper>
+  ), [paginatedContacts, handleOpenDetailDialog, handleOpenDialog]);
 
   return (
     <Box sx={{ p: 3, background: theme.palette.background.default, minHeight: '100vh' }}>
@@ -241,15 +292,23 @@ const Contacts = () => {
           </Tooltip>
         </Box>
       </Box>
+      <Tabs value={viewMode} onChange={(_, newValue) => setViewMode(newValue)} sx={{ mb: 2 }}>
+        <Tab label="Grid View" value="grid" />
+        <Tab label="List View" value="list" />
+      </Tabs>
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
           <CircularProgress />
         </Box>
       ) : (
         <>
-          <Grid container spacing={3}>
-            {paginatedContacts.map(renderContactCard)}
-          </Grid>
+          {viewMode === 'grid' ? (
+            <Grid container spacing={3}>
+              {paginatedContacts.map(renderContactCard)}
+            </Grid>
+          ) : (
+            renderContactList()
+          )}
           {pageCount > 1 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
               <Pagination
@@ -267,7 +326,7 @@ const Contacts = () => {
         <form onSubmit={handleSaveContact}>
           <DialogTitle>{currentContact ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2}>
+          <Grid container spacing={2}>
               <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                 <input
                   accept="image/*"
@@ -354,9 +413,6 @@ const Contacts = () => {
               <Grid item xs={12}>
                 <Typography variant="subtitle1" color="textSecondary">{currentContact.role}</Typography>
               </Grid>
-              <Grid item xs={12}>
-                <Divider />
-              </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="textSecondary">Email</Typography>
                 <Typography variant="body1">{currentContact.email}</Typography>
@@ -377,6 +433,9 @@ const Contacts = () => {
           )}
         </DialogContent>
         <DialogActions>
+          <Button onClick={() => handleDownloadVCard(currentContact)} startIcon={<DownloadIcon />}>
+            Download vCard
+          </Button>
           <Button onClick={() => { setDetailDialogOpen(false); handleOpenDialog(currentContact); }} color="primary">
             Edit
           </Button>
@@ -388,6 +447,24 @@ const Contacts = () => {
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
       >
+        <MenuItem onClick={() => { handleOpenDetailDialog(currentContact); setAnchorEl(null); }}>
+          <ListItemIcon>
+            <VisibilityIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="View Details" />
+        </MenuItem>
+        <MenuItem onClick={() => { handleOpenDialog(currentContact); setAnchorEl(null); }}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Edit" />
+        </MenuItem>
+        <MenuItem onClick={() => { handleDownloadVCard(currentContact); setAnchorEl(null); }}>
+          <ListItemIcon>
+            <DownloadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Download vCard" />
+        </MenuItem>
         <MenuItem onClick={() => { handleDeleteContact(currentContact?._id); setAnchorEl(null); }}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" />
