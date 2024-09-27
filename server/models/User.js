@@ -9,7 +9,21 @@ const userSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   adminId: { type: String, unique: true, sparse: true },
   properties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
-  maxProperties: { type: Number, default: 10 }
+  maxProperties: { type: Number, default: 10 },
+  language: { type: String, default: 'en' },
+  timeZone: { type: String, default: 'UTC' },
+  currency: { type: String, default: 'USD' },
+  dateFormat: { type: String, default: 'MM/DD/YYYY' },
+  measurementUnit: { type: String, default: 'metric' },
+  fontSize: { type: String, default: 'medium' },
+  twoFactorAuth: { type: Boolean, default: false },
+  loginAlerts: { type: Boolean, default: true },
+  lastPasswordChange: { type: Date },
+  lastEmailChange: { type: Date },
+  emailNotifications: { type: Boolean, default: true },
+  pushNotifications: { type: Boolean, default: true },
+  inAppNotifications: { type: Boolean, default: true },
+  avatar: { type: String },
 });
 
 userSchema.pre('save', async function (next) {

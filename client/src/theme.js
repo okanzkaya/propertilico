@@ -1,6 +1,66 @@
 import { createTheme } from '@mui/material/styles';
 
+const baseTheme = {
+  typography: {
+    fontFamily: 'Roboto, sans-serif',
+    fontSize: 16,
+    h1: { fontSize: '2.5rem' },
+    h2: { fontSize: '2rem' },
+    h3: { fontSize: '1.75rem' },
+    h4: { fontSize: '1.5rem' },
+    h5: { fontSize: '1.25rem' },
+    h6: { fontSize: '1rem' },
+    body1: { fontSize: '1rem' },
+    body2: { fontSize: '0.875rem' },
+    button: {
+      fontSize: '0.875rem',
+      textTransform: 'none',
+      fontWeight: 500,
+    },
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: '8px',
+          padding: '6px 16px',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: '8px',
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          borderRadius: '8px',
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          borderRadius: '8px',
+        },
+      },
+    },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: {
+          borderRadius: '4px',
+        },
+      },
+    },
+  },
+};
+
 export const lightTheme = createTheme({
+  ...baseTheme,
   palette: {
     mode: 'light',
     primary: {
@@ -21,34 +81,17 @@ export const lightTheme = createTheme({
     },
     divider: '#ADBBDA',
   },
-  typography: {
-    fontFamily: 'Roboto, sans-serif',
-    button: {
-      textTransform: 'none',
-      fontWeight: 500,
-    },
-  },
   components: {
+    ...baseTheme.components,
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: '8px',
-          padding: '6px 16px',
+          ...baseTheme.components.MuiButton.styleOverrides.root,
           backgroundColor: '#3D52A0',
           color: '#FFFFFF',
           '&:hover': {
             backgroundColor: '#7091E6',
-            color: '#FFFFFF',
           },
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#EDE8F5',
-          borderRadius: '8px',
-          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
         },
       },
     },
@@ -60,44 +103,16 @@ export const lightTheme = createTheme({
         },
       },
     },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          backgroundColor: '#EDE8F5',
-          borderRadius: '8px',
-        },
-      },
-    },
     MuiListItem: {
       styleOverrides: {
         root: {
-          borderRadius: '8px',
+          ...baseTheme.components.MuiListItem.styleOverrides.root,
           '&.Mui-selected': {
             backgroundColor: '#7091E6',
             color: '#FFFFFF',
           },
           '&.Mui-selected:hover': {
             backgroundColor: '#8697C4',
-            color: '#FFFFFF',
-          },
-        },
-      },
-    },
-    MuiTooltip: {
-      styleOverrides: {
-        tooltip: {
-          backgroundColor: '#444444',
-          color: '#FFFFFF',
-          borderRadius: '4px',
-        },
-      },
-    },
-    MuiTypography: {
-      styleOverrides: {
-        root: {
-          color: '#222222',
-          '&:hover': {
-            color: '#111111',
           },
         },
       },
@@ -106,6 +121,7 @@ export const lightTheme = createTheme({
 });
 
 export const darkTheme = createTheme({
+  ...baseTheme,
   palette: {
     mode: 'dark',
     primary: {
@@ -124,32 +140,17 @@ export const darkTheme = createTheme({
     },
     divider: '#3D3D4D',
   },
-  typography: {
-    fontFamily: 'Roboto, sans-serif',
-    button: {
-      textTransform: 'none',
-      fontWeight: 500,
-    },
-  },
   components: {
+    ...baseTheme.components,
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: '4px',
-          padding: '6px 16px',
+          ...baseTheme.components.MuiButton.styleOverrides.root,
           backgroundColor: '#4B70F5',
           color: '#FFFFFF',
           '&:hover': {
             backgroundColor: '#402E7A',
           },
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#2A283E',
-          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.3)',
         },
       },
     },
@@ -161,16 +162,10 @@ export const darkTheme = createTheme({
         },
       },
     },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          backgroundColor: '#2A283E',
-        },
-      },
-    },
     MuiListItem: {
       styleOverrides: {
         root: {
+          ...baseTheme.components.MuiListItem.styleOverrides.root,
           '&.Mui-selected': {
             backgroundColor: '#3D3D4D',
             color: '#FFFFFF',
@@ -181,18 +176,11 @@ export const darkTheme = createTheme({
         },
       },
     },
-    MuiTooltip: {
-      styleOverrides: {
-        tooltip: {
-          backgroundColor: '#3A3A3A',
-          color: '#FFFFFF',
-        },
-      },
-    },
   },
 });
 
 export const sidebarTheme = createTheme({
+  ...baseTheme,
   palette: {
     mode: 'dark',
     primary: {

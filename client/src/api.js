@@ -1,387 +1,145 @@
 import axiosInstance from './axiosSetup';
 
-export const registerUser = async (userData) => {
-  try {
-    const response = await axiosInstance.post('/api/auth/register', userData);
-    localStorage.setItem('token', response.data.token);
-    localStorage.setItem('refreshToken', response.data.refreshToken);
-    return response.data;
-  } catch (error) {
-    console.error('Error registering user:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred during registration';
+
+const handleApiError = (error) => {
+  console.error('API Error:', error);
+  if (error.response) {
+    throw new Error(error.response.data.message || 'An error occurred');
+  } else if (error.request) {
+    throw new Error('No response received from the server');
+  } else {
+    throw error;
   }
 };
 
-export const loginUser = async (userData) => {
+const apiCall = async (method, url, data = null, options = {}) => {
   try {
-    const response = await axiosInstance.post('/api/auth/login', userData);
-    localStorage.setItem('token', response.data.token);
-    localStorage.setItem('refreshToken', response.data.refreshToken);
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    };
+
+    const response = await axiosInstance[method](url, method === 'get' ? { params: data } : data, { ...options, headers });
     return response.data;
   } catch (error) {
-    console.error('Error logging in:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred during login';
+    handleApiError(error);
   }
 };
-
-export const getProtectedData = async () => {
-  try {
-    const response = await axiosInstance.get('/api/protected/user');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching protected data:', error.response?.data?.message || error.message);
-    if (error.response?.status === 401) {
-      // User is not authenticated
-      return null;
-    }
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching protected data';
-  }
-};
-
-export const extendSubscription = async () => {
-  try {
-    const response = await axiosInstance.post('/api/protected/extend-subscription');
-    return response.data;
-  } catch (error) {
-    console.error('Error extending subscription:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while extending the subscription';
-  }
-};
-
-export const reduceSubscription = async () => {
-  try {
-    const response = await axiosInstance.post('/api/protected/reduce-subscription');
-    return response.data;
-  } catch (error) {
-    console.error('Error reducing subscription:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while reducing the subscription';
-  }
-};
-
-export const sendFeedback = async (feedbackData) => {
-  try {
-    const response = await axiosInstance.post('/api/feedback', feedbackData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      timeout: 60000, // 60 seconds timeout for file uploads
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error sending feedback:', error.response?.data || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while sending feedback';
-  }
-};
-
-export const getFeedback = async () => {
-  try {
-    const response = await axiosInstance.get('/api/feedback');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching feedback:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching feedback';
-  }
-};
-
-export const deleteFeedback = async (feedbackId) => {
-  try {
-    const response = await axiosInstance.delete(`/api/feedback/${feedbackId}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting feedback:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while deleting feedback';
-  }
-};
-
-export const updateFeedback = async (feedbackId, updateData) => {
-  try {
-    const response = await axiosInstance.put(`/api/feedback/${feedbackId}`, updateData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating feedback:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while updating feedback';
-  }
-};
-
-export const checkFeedbackLimit = async () => {
-  try {
-    const response = await axiosInstance.get('/api/feedback/check-limit');
-    return response.data;
-  } catch (error) {
-    console.error('Error checking feedback limit:', error.response?.data || error.message);
-    console.error('Full error object:', error);
-    throw new Error(error.response?.data?.message || error.message || 'An error occurred while checking feedback limit');
-  }
-};
-
+// Auth API
+export const registerUser = (userData) => apiCall('post', '/api/auth/register', userData);
+export const loginUser = (userData) => apiCall('post', '/api/auth/login', userData);
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   sessionStorage.removeItem('token');
   sessionStorage.removeItem('refreshToken');
 };
+export const checkAuthStatus = () => apiCall('get', '/api/auth/status');
+export const requestPasswordReset = (email) => apiCall('post', '/api/auth/request-password-reset', { email });
+export const resetPassword = (token, newPassword) => apiCall('post', '/api/auth/reset-password', { token, newPassword });
+export const changePassword = (oldPassword, newPassword) => apiCall('post', '/api/user/change-password', JSON.stringify({ oldPassword, newPassword }), {
+  headers: { 'Content-Type': 'application/json' }
+});
 
-export const checkAuthStatus = async () => {
-  try {
-    const response = await axiosInstance.get('/api/auth/status');
-    return response.data.isAuthenticated;
-  } catch (error) {
-    console.error('Error checking auth status:', error.response?.data?.message || error.message);
-    return false;
-  }
-};
+export const changeEmail = (newEmail, password) => apiCall('post', '/api/user/change-email', JSON.stringify({ newEmail, password }), {
+  headers: { 'Content-Type': 'application/json' }
+});
 
-export const updateUserProfile = async (userData) => {
-  try {
-    const response = await axiosInstance.put('/api/protected/user', userData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating user profile:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while updating user profile';
-  }
-};
+// User API
+export const getProtectedData = () => apiCall('get', '/api/user');
+export const getUserProfile = () => apiCall('get', '/api/user');
+export const updateUserProfile = (userData) => apiCall('put', '/api/user', userData);
+export const getSubscriptionDetails = () => apiCall('get', '/api/user/subscription');
+export const extendSubscription = () => apiCall('post', '/api/user/extend-subscription');
+export const reduceSubscription = () => apiCall('post', '/api/user/reduce-subscription');
+export const getNotifications = () => apiCall('get', '/api/user/notifications');
+export const markNotificationAsRead = (notificationId) => apiCall('put', `/api/user/notifications/${notificationId}/read`);
+export const updateUserPreferences = (preferences) => apiCall('put', '/api/user/preferences', preferences);
+export const uploadAvatar = (formData) => apiCall('post', '/api/user/avatar', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
 
-export const getSubscriptionDetails = async () => {
-  try {
-    const response = await axiosInstance.get('/api/protected/subscription');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching subscription details:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching subscription details';
-  }
-};
+// Feedback API
+export const sendFeedback = (feedbackData) => apiCall('post', '/api/feedback', feedbackData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+  timeout: 60000,
+});
+export const getFeedback = () => apiCall('get', '/api/feedback');
+export const deleteFeedback = (feedbackId) => apiCall('delete', `/api/feedback/${feedbackId}`);
+export const updateFeedback = (feedbackId, updateData) => apiCall('put', `/api/feedback/${feedbackId}`, updateData);
+export const checkFeedbackLimit = () => apiCall('get', '/api/feedback/check-limit');
 
-export const requestPasswordReset = async (email) => {
-  try {
-    const response = await axiosInstance.post('/api/auth/request-password-reset', { email });
-    return response.data;
-  } catch (error) {
-    console.error('Error requesting password reset:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while requesting password reset';
-  }
-};
+// Ticket API
+export const createTicket = (ticketData) => apiCall('post', '/api/tickets', ticketData);
+export const getTickets = () => apiCall('get', '/api/tickets');
+export const getTicketById = (id) => apiCall('get', `/api/tickets/${id}`);
+export const updateTicket = (id, ticketData) => apiCall('put', `/api/tickets/${id}`, ticketData);
+export const deleteTicket = (id) => apiCall('delete', `/api/tickets/${id}`);
+export const addNoteToTicket = (id, noteContent) => apiCall('post', `/api/tickets/${id}/notes`, { content: noteContent });
 
-export const resetPassword = async (token, newPassword) => {
-  try {
-    const response = await axiosInstance.post('/api/auth/reset-password', { token, newPassword });
-    return response.data;
-  } catch (error) {
-    console.error('Error resetting password:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while resetting password';
-  }
-};
+// Finance API
+export const getTransactions = () => apiCall('get', '/api/finances/transactions');
+export const addTransaction = (transactionData) => apiCall('post', '/api/finances/transactions', transactionData);
+export const updateTransaction = (id, transactionData) => apiCall('put', `/api/finances/transactions/${id}`, transactionData);
+export const deleteTransaction = (id) => apiCall('delete', `/api/finances/transactions/${id}`);
+export const getFinancialSummary = () => apiCall('get', '/api/finances/summary');
 
-export const getNotifications = async () => {
-  try {
-    const response = await axiosInstance.get('/api/protected/notifications');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching notifications:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching notifications';
-  }
-};
+// Report API
+export const getReports = () => apiCall('get', '/api/reports');
+export const getReportData = (reportId) => apiCall('get', `/api/reports/${reportId}`);
+export const createReport = (reportData) => apiCall('post', '/api/reports', reportData);
+export const updateReport = ({ id, ...reportData }) => apiCall('put', `/api/reports/${id}`, reportData);
+export const deleteReport = (id) => apiCall('delete', `/api/reports/${id}`);
+export const getPropertyStats = () => apiCall('get', '/api/reports/properties/stats');
+export const getTicketStats = () => apiCall('get', '/api/reports/tickets/stats');
+export const getFinancialStats = () => apiCall('get', '/api/reports/finances/stats');
+export const getOccupancyStats = () => apiCall('get', '/api/reports/properties/occupancy');
 
-export const markNotificationAsRead = async (notificationId) => {
-  try {
-    const response = await axiosInstance.put(`/api/protected/notifications/${notificationId}/read`);
-    return response.data;
-  } catch (error) {
-    console.error('Error marking notification as read:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while marking notification as read';
-  }
-};
+// Property API
+export const getProperties = () => apiCall('get', '/api/properties');
 
-export const createTicket = async (ticketData) => {
-  try {
-    const response = await axiosInstance.post('/api/tickets', ticketData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
-  }
-};
+// Task API
+export const getTasks = () => apiCall('get', '/api/tasks');
+export const addTask = (taskData) => apiCall('post', '/api/tasks', taskData);
+export const updateTask = (id, taskData) => apiCall('put', `/api/tasks/${id}`, taskData);
+export const deleteTask = (id) => apiCall('delete', `/api/tasks/${id}`);
 
-export const getTickets = async () => {
-  try {
-    const response = await axiosInstance.get('/api/tickets');
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
-  }
-};
+// Contact API
+export const getContacts = () => apiCall('get', '/api/contacts');
+export const createContact = (contactData) => apiCall('post', '/api/contacts', contactData);
+export const getContactById = (id) => apiCall('get', `/api/contacts/${id}`);
+export const updateContact = (id, contactData) => apiCall('put', `/api/contacts/${id}`, contactData);
+export const deleteContact = (id) => apiCall('delete', `/api/contacts/${id}`);
 
-export const getTicketById = async (id) => {
-  try {
-    const response = await axiosInstance.get(`/api/tickets/${id}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
-  }
+// Grouped API objects
+export const authApi = { 
+  registerUser, 
+  loginUser, 
+  logout, 
+  checkAuthStatus, 
+  requestPasswordReset, 
+  resetPassword,
+  changePassword
 };
-
-export const updateTicket = async (id, ticketData) => {
-  try {
-    const response = await axiosInstance.put(`/api/tickets/${id}`, ticketData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
-  }
+export const userApi = { 
+  getProtectedData,
+  getUserProfile, 
+  updateUserProfile, 
+  getSubscriptionDetails, 
+  extendSubscription, 
+  reduceSubscription, 
+  getNotifications, 
+  markNotificationAsRead,
+  updateUserPreferences,
+  changeEmail,
+  uploadAvatar
 };
-
-export const deleteTicket = async (id) => {
-  try {
-    const response = await axiosInstance.delete(`/api/tickets/${id}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
-  }
-};
-
-export const addNoteToTicket = async (id, noteContent) => {
-  try {
-    const response = await axiosInstance.post(`/api/tickets/${id}/notes`, { content: noteContent });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
-  }
-};
-
-export const getTransactions = async () => {
-  try {
-    const response = await axiosInstance.get('/api/finances/transactions');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching transactions:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching transactions';
-  }
-};
-
-export const addTransaction = async (transactionData) => {
-  try {
-    const response = await axiosInstance.post('/api/finances/transactions', transactionData);
-    return response.data;
-  } catch (error) {
-    console.error('Error adding transaction:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while adding the transaction';
-  }
-};
-
-export const updateTransaction = async (id, transactionData) => {
-  try {
-    const { _id, ...dataToUpdate } = transactionData; // Remove _id from the data to update
-    const response = await axiosInstance.put(`/api/finances/transactions/${id}`, dataToUpdate);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating transaction:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while updating the transaction';
-  }
-};
-
-export const deleteTransaction = async (id) => {
-  try {
-    const response = await axiosInstance.delete(`/api/finances/transactions/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting transaction:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while deleting the transaction';
-  }
-};
-
-export const getFinancialSummary = async () => {
-  try {
-    const response = await axiosInstance.get('/api/finances/summary');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching financial summary:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching the financial summary';
-  }
-};
-
-export const getReports = async () => {
-  try {
-    const response = await axiosInstance.get('/api/reports');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching reports:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching reports';
-  }
-};
-
-export const getReportData = async (reportId) => {
-  try {
-    const response = await axiosInstance.get(`/api/reports/${reportId}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching report data:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching report data';
-  }
-};
-export const createReport = async (reportData) => {
-  try {
-    const response = await axiosInstance.post('/api/reports', reportData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating report:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while creating the report';
-  }
-};
-
-export const updateReport = async ({ id, ...reportData }) => {
-  try {
-    const response = await axiosInstance.put(`/api/reports/${id}`, reportData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating report:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while updating the report';
-  }
-};
-
-export const deleteReport = async (id) => {
-  try {
-    const response = await axiosInstance.delete(`/api/reports/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting report:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while deleting the report';
-  }
-};
-
-export const getPropertyStats = async () => {
-  try {
-    const response = await axiosInstance.get('/api/reports/properties/stats');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching property stats:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching property stats';
-  }
-};
-
-export const getTicketStats = async () => {
-  try {
-    const response = await axiosInstance.get('/api/reports/tickets/stats');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching ticket stats:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching ticket stats';
-  }
-};
-
-export const getFinancialStats = async () => {
-  try {
-    const response = await axiosInstance.get('/api/reports/finances/stats');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching financial stats:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching financial stats';
-  }
-};
-
-export const getOccupancyStats = async () => {
-  try {
-    const response = await axiosInstance.get('/api/reports/properties/occupancy');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching occupancy stats:', error.response?.data?.message || error.message);
-    throw error.response?.data?.message || error.message || 'An error occurred while fetching occupancy stats';
-  }
-};
-
+export const feedbackApi = { sendFeedback, getFeedback, deleteFeedback, updateFeedback, checkFeedbackLimit };
+export const ticketApi = { createTicket, getTickets, getTicketById, updateTicket, deleteTicket, addNoteToTicket };
+export const financeApi = { getTransactions, addTransaction, updateTransaction, deleteTransaction, getFinancialSummary };
+export const reportApi = { getReports, getReportData, createReport, updateReport, deleteReport, getPropertyStats, getTicketStats, getFinancialStats, getOccupancyStats };
+export const propertyApi = { getProperties };
+export const taskApi = { getTasks, addTask, updateTask, deleteTask };
+export const contactApi = { getContacts, createContact, getContactById, updateContact, deleteContact };

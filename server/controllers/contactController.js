@@ -1,5 +1,6 @@
 const Contact = require('../models/Contact');
 
+// Get all contacts
 exports.getContacts = async (req, res) => {
   try {
     const contacts = await Contact.find({ user: req.user._id });
@@ -9,6 +10,7 @@ exports.getContacts = async (req, res) => {
   }
 };
 
+// Create a new contact
 exports.createContact = async (req, res) => {
   try {
     const newContact = new Contact({
@@ -23,6 +25,7 @@ exports.createContact = async (req, res) => {
   }
 };
 
+// Get a single contact by ID
 exports.getContactById = async (req, res) => {
   try {
     const contact = await Contact.findOne({ _id: req.params.id, user: req.user._id });
@@ -35,6 +38,7 @@ exports.getContactById = async (req, res) => {
   }
 };
 
+// Update a contact
 exports.updateContact = async (req, res) => {
   try {
     const updatedContact = await Contact.findOneAndUpdate(
@@ -54,6 +58,7 @@ exports.updateContact = async (req, res) => {
   }
 };
 
+// Delete a contact
 exports.deleteContact = async (req, res) => {
   try {
     const deletedContact = await Contact.findOneAndDelete({ _id: req.params.id, user: req.user._id });

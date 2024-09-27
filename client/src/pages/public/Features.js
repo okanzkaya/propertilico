@@ -103,7 +103,6 @@ const FeatureItem = ({ feature, index }) => (
 const Features = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
   return (
     <Box
       component="section"

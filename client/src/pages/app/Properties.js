@@ -142,8 +142,6 @@ const Properties = () => {
         }
       });
       
-      console.log('Full API response:', response);
-      console.log('Fetched properties:', response.data);
 
       if (Array.isArray(response.data)) {
         setProperties(response.data);

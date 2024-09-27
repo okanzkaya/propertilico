@@ -6,6 +6,9 @@ const { protect, admin } = require('../middleware/authMiddleware');
 const { updateSubscriptionEndDate } = require('../utils/subscriptionUtils');
 const User = require('../models/User');
 const propertyController = require('../controllers/propertyController');
+const taskController = require('../controllers/taskController');
+const contactController = require('../controllers/contactController');
+const statsController = require('../controllers/statsController');
 
 // Apply protection middleware to all routes
 router.use(protect);
@@ -114,5 +117,24 @@ router.get('/properties', propertyController.getUserProperties);
 router.get('/properties/:id', propertyController.getPropertyById);
 router.put('/properties/:id', propertyController.updateProperty);
 router.delete('/properties/:id', propertyController.deleteProperty);
+
+// Task routes
+router.get('/tasks', taskController.getTasks);
+router.post('/tasks', taskController.createTask);
+router.put('/tasks/:id', taskController.updateTask);
+router.delete('/tasks/:id', taskController.deleteTask);
+
+// Contact routes
+router.get('/contacts', contactController.getContacts);
+router.post('/contacts', contactController.createContact);
+router.get('/contacts/:id', contactController.getContactById);
+router.put('/contacts/:id', contactController.updateContact);
+router.delete('/contacts/:id', contactController.deleteContact);
+
+// Stats routes
+router.get('/stats/properties', statsController.getPropertyStats);
+router.get('/stats/tickets', statsController.getTicketStats);
+router.get('/stats/finances', statsController.getFinancialStats);
+router.get('/stats/occupancy', statsController.getOccupancyStats);
 
 module.exports = router;

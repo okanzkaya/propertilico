@@ -1,80 +1,93 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-const generateToken = (id, expiresIn = '15m') => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn });
-const generateRefreshToken = (id) => jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+const generateTokens = (id) => ({
+  token: jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '15m' }),
+  refreshToken: jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' })
+});
 
-const registerUser = async (req, res) => {
+const handleResponse = (res, status, data) => res.status(status).json(data);
+
+const handleError = (res, error, defaultMessage) => {
+  console.error('Auth controller error:', error);
+  handleResponse(res, 500, { message: defaultMessage });
+};
+
+exports.registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (await User.findOne({ email })) return res.status(400).json({ message: 'User already exists' });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return handleResponse(res, 400, { message: 'User already exists' });
 
     const user = await User.create({
       name,
       email,
       password,
       subscriptionEndDate: new Date(Date.now() + 30*24*60*60*1000),
-      maxProperties: 5 // Default to 5 properties for new users
+      maxProperties: 5
     });
 
-    res.status(201).json({
+    const tokens = generateTokens(user._id);
+    handleResponse(res, 201, {
       _id: user._id,
       name: user.name,
       email: user.email,
-      token: generateToken(user._id),
-      refreshToken: generateRefreshToken(user._id),
+      ...tokens,
       subscriptionEndDate: user.subscriptionEndDate,
       maxProperties: user.maxProperties
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error during registration' });
+    handleError(res, error, 'Server error during registration');
   }
 };
 
-const authUser = async (req, res) => {
+exports.authUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
     if (user && await user.matchPassword(password)) {
-      return res.json({
+      const tokens = generateTokens(user._id);
+      return handleResponse(res, 200, {
         _id: user._id,
         name: user.name,
         email: user.email,
-        token: generateToken(user._id),
-        refreshToken: generateRefreshToken(user._id),
+        ...tokens,
         subscriptionEndDate: user.subscriptionEndDate,
         maxProperties: user.maxProperties
       });
     }
-    res.status(401).json({ message: 'Invalid email or password' });
+    handleResponse(res, 401, { message: 'Invalid email or password' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error during authentication' });
+    handleError(res, error, 'Server error during authentication');
   }
 };
 
-const refreshAccessToken = async (req, res) => {
+exports.refreshAccessToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) return res.status(401).json({ message: 'Refresh token required' });
+    if (!refreshToken) return handleResponse(res, 401, { message: 'Refresh token required' });
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const user = await User.findById(decoded.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) return handleResponse(res, 404, { message: 'User not found' });
 
-    const newAccessToken = generateToken(user._id);
-    res.json({ token: newAccessToken });
+    const newTokens = generateTokens(user._id);
+    handleResponse(res, 200, newTokens);
   } catch (error) {
-    res.status(403).json({ message: 'Invalid refresh token' });
+    if (error.name === 'JsonWebTokenError') {
+      return handleResponse(res, 403, { message: 'Invalid refresh token' });
+    }
+    handleError(res, error, 'Server error during token refresh');
   }
 };
 
-const getUserProfile = async (req, res) => {
+exports.getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json({
+    if (!user) return handleResponse(res, 404, { message: 'User not found' });
+    
+    handleResponse(res, 200, {
       _id: user._id,
       name: user.name,
       email: user.email,
@@ -83,27 +96,23 @@ const getUserProfile = async (req, res) => {
       maxProperties: user.maxProperties
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching user profile' });
+    handleError(res, error, 'Error fetching user profile');
   }
 };
 
-const updateUserProfile = async (req, res) => {
+exports.updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return handleResponse(res, 404, { message: 'User not found' });
 
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
-
     if (req.body.password) {
-      user.password = req.body.password;
+      user.password = await bcrypt.hash(req.body.password, 12);
     }
 
     const updatedUser = await user.save();
-
-    res.json({
+    handleResponse(res, 200, {
       _id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
@@ -112,14 +121,58 @@ const updateUserProfile = async (req, res) => {
       maxProperties: updatedUser.maxProperties
     });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update user profile' });
+    handleError(res, error, 'Failed to update user profile');
   }
 };
 
-module.exports = { 
-  registerUser, 
-  authUser, 
-  refreshAccessToken, 
-  getUserProfile, 
-  updateUserProfile 
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return handleResponse(res, 404, { message: 'User not found' });
+
+    if (!await user.matchPassword(oldPassword)) {
+      return handleResponse(res, 400, { message: 'Old password is incorrect' });
+    }
+
+    if (user.lastPasswordChange && (new Date() - user.lastPasswordChange) < 30 * 60 * 1000) {
+      return handleResponse(res, 400, { message: 'You can only change your password once every 30 minutes' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.lastPasswordChange = new Date();
+    await user.save();
+
+    handleResponse(res, 200, { message: 'Password changed successfully' });
+  } catch (error) {
+    handleError(res, error, 'Server error during password change');
+  }
+};
+
+exports.changeEmail = async (req, res) => {
+  try {
+    const { newEmail, password } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return handleResponse(res, 404, { message: 'User not found' });
+
+    if (!await user.matchPassword(password)) {
+      return handleResponse(res, 400, { message: 'Password is incorrect' });
+    }
+
+    if (user.lastEmailChange && (new Date() - user.lastEmailChange) < 24 * 60 * 60 * 1000) {
+      return handleResponse(res, 400, { message: 'You can only change your email once every 24 hours' });
+    }
+
+    if (await User.findOne({ email: newEmail })) {
+      return handleResponse(res, 400, { message: 'Email is already in use' });
+    }
+
+    user.email = newEmail;
+    user.lastEmailChange = new Date();
+    await user.save();
+
+    handleResponse(res, 200, { message: 'Email changed successfully' });
+  } catch (error) {
+    handleError(res, error, 'Server error during email change');
+  }
 };

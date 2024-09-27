@@ -20,11 +20,10 @@ connectDB();
 initializeReports();
 
 // Middleware
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
 app.use(compression());
-
 
 // Security HTTP headers
 app.use(helmet({
@@ -40,7 +39,8 @@ if (process.env.NODE_ENV === 'development') {
 // CORS configuration
 const corsOptions = {
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -52,15 +52,7 @@ const generalLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again in an hour!'
 });
 
-// More lenient rate limiter for report routes
-const reportLimiter = rateLimit({
-  max: 200,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  message: 'Too many report requests from this IP, please try again in an hour!'
-});
-
 app.use('/api', generalLimiter);
-app.use('/api/reports', reportLimiter);
 
 // Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
@@ -82,21 +74,30 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   }
 }));
 
-// ... (previous code remains the same)
-
 // Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/protected', protect, require('./routes/protectedRoutes'));
-app.use('/api/feedback', require('./routes/feedbackRoutes'));
-app.use('/api/blogs', require('./routes/blogRoutes'));
-app.use('/api/properties', require('./routes/propertyRoutes'));
-app.use('/api/tickets', require('./routes/ticketRoutes'));
-app.use('/api/contacts', require('./routes/contactRoutes'));
-app.use('/api/documents', require('./routes/documentRoutes'));
-app.use('/api/finances', require('./routes/financeRoutes'));
-app.use('/api/reports', require('./routes/reportRoutes'));
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const blogRoutes = require('./routes/blogRoutes');
+const propertyRoutes = require('./routes/propertyRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
+const contactRoutes = require('./routes/contactRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const financeRoutes = require('./routes/financeRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const taskRoutes = require('./routes/taskRoutes'); // Add this line
 
-// ... (rest of the code remains the same)
+app.use('/api/auth', authRoutes);
+app.use('/api/user', protect, userRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/blogs', blogRoutes);
+app.use('/api/properties', propertyRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/finances', financeRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/tasks', protect, taskRoutes); // Add this line
 
 // Health check route
 app.get('/health', (req, res) => {
