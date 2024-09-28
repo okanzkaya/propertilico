@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Grid, useTheme, useMediaQuery, Container } from '@mui/material';
+import { Box, Typography, Grid, Container } from '@mui/material';
 import { styled, keyframes } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import {
@@ -101,8 +101,6 @@ const FeatureItem = ({ feature, index }) => (
 );
 
 const Features = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   return (
     <Box
       component="section"

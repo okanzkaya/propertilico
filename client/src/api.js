@@ -56,6 +56,9 @@ export const loginUser = async (userData) => {
   try {
     const response = await axiosInstance.post('/api/auth/login', userData);
     if (response.data && response.data.token) {
+      const storage = userData.rememberMe ? localStorage : sessionStorage;
+      storage.setItem('token', response.data.token);
+      storage.setItem('refreshToken', response.data.refreshToken);
       return response.data;
     } else {
       throw new Error('Login failed: No token received from server');
@@ -72,6 +75,21 @@ export const loginUser = async (userData) => {
       console.error('Error setting up request:', error.message);
       throw error;
     }
+  }
+};
+
+export const googleLogin = async (tokenId) => {
+  try {
+    const response = await axiosInstance.post('/api/auth/google', { tokenId });
+    if (response.data && response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      return response.data;
+    } else {
+      throw new Error('Google login failed: No token received from server');
+    }
+  } catch (error) {
+    console.error('Google login API error:', error);
+    throw error;
   }
 };
 export const logout = () => {
@@ -180,7 +198,8 @@ export const authApi = {
   checkAuthStatus, 
   requestPasswordReset, 
   resetPassword,
-  changePassword
+  changePassword,
+  googleLogin
 };
 export const userApi = { 
   getProtectedData,

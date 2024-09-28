@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { FaGoogle, FaUser, FaLock } from 'react-icons/fa';
 import { registerUser } from '../../api';
+import { useUser } from '../../context/UserContext';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { 
   Typography, 
   TextField, 
@@ -11,10 +13,12 @@ import {
   Snackbar,
   IconButton,
   Paper,
-  InputAdornment
+  InputAdornment,
+  LinearProgress,
+  Box,
+  Alert
 } from '@mui/material';
-import { Close as CloseIcon, Email as EmailIcon } from '@mui/icons-material';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import { Email as EmailIcon, Visibility, VisibilityOff } from '@mui/icons-material';
 
 const SignUpContainer = styled.div`
   display: flex;
@@ -54,6 +58,42 @@ const GoogleButton = styled(Button)`
   }
 `;
 
+const PasswordStrengthBar = ({ password }) => {
+  const getStrength = () => {
+    if (password.length === 0) return 0;
+    if (password.length < 8) return 25;
+    if (password.length >= 8 && password.length < 12) return 50;
+    if (password.length >= 12 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password)) return 75;
+    if (password.length >= 12 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) return 100;
+    return 75;
+  };
+
+  const getColor = () => {
+    const strength = getStrength();
+    if (strength <= 25) return 'error';
+    if (strength <= 50) return 'warning';
+    if (strength <= 75) return 'info';
+    return 'success';
+  };
+
+  const getLabel = () => {
+    const strength = getStrength();
+    if (strength <= 25) return 'Weak';
+    if (strength <= 50) return 'OK';
+    if (strength <= 75) return 'Good';
+    return 'Strong';
+  };
+
+  return (
+    <Box sx={{ width: '100%', mt: 1 }}>
+      <LinearProgress variant="determinate" value={getStrength()} color={getColor()} />
+      <Typography variant="caption" align="right" display="block" sx={{ mt: 0.5 }}>
+        Password Strength: {getLabel()}
+      </Typography>
+    </Box>
+  );
+};
+
 const SignUp = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -64,19 +104,20 @@ const SignUp = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { executeRecaptcha } = useGoogleReCaptcha();
+  const { login } = useUser();
 
   const validateForm = useCallback(() => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
+    else if (!/^[a-zA-Z]+ [a-zA-Z]+$/.test(formData.name.trim())) newErrors.name = 'Please enter your full name (first & last name)';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters long';
-    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.password)) {
-      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
-    }
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -90,33 +131,44 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
     setIsLoading(true);
     try {
       if (!executeRecaptcha) {
         throw new Error('reCAPTCHA not available');
       }
-
+  
       const reCaptchaToken = await executeRecaptcha('signup');
-      await registerUser({ ...formData, reCaptchaToken });
-      setSnackbar({ open: true, message: 'Registration successful! Redirecting to sign in...', severity: 'success' });
-      setTimeout(() => navigate('/signin'), 3000);
+      const response = await registerUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        captcha: reCaptchaToken
+      });
+      
+      login(response);
+      setSnackbar({ open: true, message: 'Registration successful! Redirecting to dashboard...', severity: 'success' });
+      setTimeout(() => navigate('/app/dashboard'), 3000);
     } catch (error) {
-      setSnackbar({ open: true, message: error.message || 'An error occurred during registration', severity: 'error' });
+      console.error('Registration error:', error);
+      setSnackbar({ open: true, message: error.response?.data?.message || 'An error occurred during registration', severity: 'error' });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSignUp = () => {
-    setSnackbar({ open: true, message: 'Google Sign Up is not implemented yet', severity: 'info' });
+    setSnackbar({ open: true, message: 'Google Sign Up is not available yet', severity: 'info' });
   };
 
-  const handleSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setSnackbar({ ...snackbar, open: false });
+  const handleSnackbarClose = (_, reason) => {
+    if (reason === 'clickaway') return;
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const togglePasswordVisibility = (field) => {
+    if (field === 'password') setShowPassword(!showPassword);
+    if (field === 'confirmPassword') setShowConfirmPassword(!showConfirmPassword);
   };
 
   return (
@@ -163,7 +215,7 @@ const SignUp = () => {
           <TextField
             name="password"
             label="Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={formData.password}
             onChange={handleChange}
             error={!!errors.password}
@@ -175,12 +227,20 @@ const SignUp = () => {
                   <FaLock style={{ color: '#6e8efb' }} />
                 </InputAdornment>
               ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => togglePasswordVisibility('password')} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
           />
+          <PasswordStrengthBar password={formData.password} />
           <TextField
             name="confirmPassword"
             label="Confirm Password"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             value={formData.confirmPassword}
             onChange={handleChange}
             error={!!errors.confirmPassword}
@@ -190,6 +250,13 @@ const SignUp = () => {
               startAdornment: (
                 <InputAdornment position="start">
                   <FaLock style={{ color: '#6e8efb' }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => togglePasswordVisibility('confirmPassword')} edge="end">
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
                 </InputAdornment>
               ),
             }}
@@ -211,12 +278,12 @@ const SignUp = () => {
         </Form>
         <Typography variant="body2" sx={{ margin: '20px 0', color: '#666' }}>or</Typography>
         <GoogleButton
-          variant="contained"
           onClick={handleGoogleSignUp}
           fullWidth
-          sx={{ height: '48px' }}
+          sx={{ height: '48px', opacity: 0.5, cursor: 'not-allowed' }}
+          disabled
         >
-          <FaGoogle /> Sign up with Google
+          <FaGoogle /> Sign up with Google (Coming Soon)
         </GoogleButton>
         <Typography variant="body2" sx={{ marginTop: '20px', color: '#666' }}>
           Already have an account? <Link to="/signin" style={{ color: '#6e8efb', textDecoration: 'none' }}>Sign in</Link>
@@ -230,20 +297,11 @@ const SignUp = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        message={snackbar.message}
-        action={
-          <React.Fragment>
-            <IconButton
-              size="small"
-              aria-label="close"
-              color="inherit"
-              onClick={handleSnackbarClose}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </React.Fragment>
-        }
-      />
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </SignUpContainer>
   );
 };

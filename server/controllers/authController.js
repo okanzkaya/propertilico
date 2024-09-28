@@ -19,6 +19,32 @@ const handleError = (res, error) => {
   handleResponse(res, statusCode, { success: false, message });
 };
 
+const verifyGoogleToken = async (token) => {
+  const ticket = await client.verifyIdToken({
+    idToken: token,
+    audience: process.env.GOOGLE_CLIENT_ID
+  });
+  return ticket.getPayload();
+};
+
+const getUserInfo = (req) => {
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+  const parser = new UAParser(userAgent);
+  const geoData = geoip.lookup(ip);
+
+  return {
+    ip,
+    userAgent,
+    browser: parser.getBrowser().name,
+    os: parser.getOS().name,
+    device: parser.getDevice().type || 'desktop',
+    country: geoData ? geoData.country : 'Unknown',
+    city: geoData ? geoData.city : 'Unknown',
+    timestamp: new Date()
+  };
+};
+
 // Rate limiting
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -32,129 +58,116 @@ const registerLimiter = rateLimit({
   message: 'Too many accounts created from this IP, please try again after an hour'
 });
 
-exports.registerUser = [
-  registerLimiter,
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return handleResponse(res, 400, { success: false, errors: errors.array() });
-    }
-
-    try {
-      const { name, email, password, captcha } = req.body;
-
-      // Verify reCAPTCHA
-      const recaptchaVerification = await axios.post(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captcha}`
-      );
-
-      if (!recaptchaVerification.data.success) {
-        return handleResponse(res, 400, { success: false, message: 'Invalid captcha' });
-      }
-
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return handleResponse(res, 400, { success: false, message: 'User already exists' });
-      }
-
-      const user = await User.create({
-        name,
-        email,
-        password,
-        subscriptionEndDate: new Date(Date.now() + 30*24*60*60*1000),
-        maxProperties: 5
-      });
-
-      const tokens = generateTokens(user._id);
-      handleResponse(res, 201, {
-        success: true,
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          subscriptionEndDate: user.subscriptionEndDate,
-          maxProperties: user.maxProperties
-        },
-        ...tokens
-      });
-    } catch (error) {
-      handleError(res, error);
-    }
+exports.registerUser = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
   }
-];
+
+  try {
+    const { name, email, password, captcha } = req.body;
+
+    // Verify reCAPTCHA
+    const recaptchaVerification = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captcha}`
+    );
+
+    if (!recaptchaVerification.data.success) {
+      return res.status(400).json({ success: false, message: 'Invalid captcha' });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User already exists' });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      subscriptionEndDate: new Date(Date.now() + 30*24*60*60*1000),
+      maxProperties: 5
+    });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        subscriptionEndDate: user.subscriptionEndDate,
+        maxProperties: user.maxProperties
+      }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
 
 exports.authUser = async (req, res) => {
   try {
-    const { email, password, reCaptchaToken } = req.body;
-    console.log('Login attempt for email:', email);
-
-    // Verify reCAPTCHA
-    const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY;
-    if (!recaptchaSecretKey) {
-      console.error('RECAPTCHA_SECRET_KEY is not set in the environment variables');
-      return handleResponse(res, 500, { success: false, message: 'Server configuration error' });
-    }
-
-    try {
-      const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecretKey}&response=${reCaptchaToken}`;
-      const recaptchaResponse = await axios.post(recaptchaVerifyUrl);
-
-      if (!recaptchaResponse.data.success || recaptchaResponse.data.score < 0.5) {
-        console.log('reCAPTCHA verification failed', recaptchaResponse.data);
+    const { email, password, reCaptchaToken, googleToken, rememberMe } = req.body;
+    
+    // Verify reCAPTCHA for non-Google sign-ins
+    if (!googleToken) {
+      const recaptchaVerification = await verifyRecaptcha(reCaptchaToken);
+      if (!recaptchaVerification.success) {
         return handleResponse(res, 400, { success: false, message: 'reCAPTCHA verification failed' });
       }
-      console.log('reCAPTCHA verification passed');
-    } catch (recaptchaError) {
-      console.error('Error verifying reCAPTCHA:', recaptchaError);
-      return handleResponse(res, 400, { success: false, message: 'Error verifying reCAPTCHA' });
     }
 
-    // Find user
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) {
-      return handleResponse(res, 401, { success: false, message: 'Invalid email or password' });
+    let user;
+
+    if (googleToken) {
+      const googleUser = await verifyGoogleToken(googleToken);
+      user = await User.findOne({ email: googleUser.email });
+      if (!user) {
+        user = await User.create({
+          name: googleUser.name,
+          email: googleUser.email,
+          password: crypto.randomBytes(20).toString('hex'),
+          googleId: googleUser.sub
+        });
+      }
+    } else {
+      user = await User.findOne({ email }).select('+password');
+      if (!user || !(await user.matchPassword(password))) {
+        return handleResponse(res, 401, { success: false, message: 'Invalid email or password' });
+      }
     }
 
-    // Check if account is locked
-    if (user.isLocked) {
-      return handleResponse(res, 401, { success: false, message: 'Account is locked. Please try again later.' });
-    }
-
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      await user.incrementLoginAttempts();
-      return handleResponse(res, 401, { success: false, message: 'Invalid email or password' });
-    }
-
-    // Reset login attempts on successful login
-    user.loginAttempts = 0;
-    user.lockUntil = null;
+    // Log user information
+    const userInfo = getUserInfo(req);
+    user.loginHistory.push(userInfo);
     await user.save();
 
-    // Generate tokens
     const tokens = generateTokens(user._id);
-
-    // Prepare user data to send
-    const userData = {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-      subscriptionEndDate: user.subscriptionEndDate,
-      maxProperties: user.maxProperties
-    };
+    const expiresIn = rememberMe ? '30d' : '1d';
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn });
 
     handleResponse(res, 200, {
       success: true,
-      user: userData,
-      ...tokens
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin
+      },
+      token,
+      refreshToken: tokens.refreshToken
     });
   } catch (error) {
     console.error('Server error during authentication:', error);
     handleResponse(res, 500, { success: false, message: 'An unexpected error occurred' });
   }
 };
+
+
+
 
 exports.refreshAccessToken = async (req, res) => {
   try {

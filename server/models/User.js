@@ -47,7 +47,18 @@ const userSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  googleId: { type: String, unique: true, sparse: true },
+  loginHistory: [{
+    ip: String,
+    userAgent: String,
+    browser: String,
+    os: String,
+    device: String,
+    country: String,
+    city: String,
+    timestamp: Date
+  }]
 });
 
 userSchema.pre('save', async function (next) {

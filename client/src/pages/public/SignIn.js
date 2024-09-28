@@ -16,9 +16,10 @@ import {
   IconButton,
   Box,
   Paper,
-  InputAdornment
+  InputAdornment,
+  Alert
 } from '@mui/material';
-import { Close as CloseIcon, Email as EmailIcon } from '@mui/icons-material';
+import { Email as EmailIcon, Visibility, VisibilityOff } from '@mui/icons-material';
 
 const SignInContainer = styled.div`
   display: flex;
@@ -76,6 +77,7 @@ const SignIn = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login } = useUser();
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -117,12 +119,16 @@ const SignIn = () => {
   };
 
   const handleGoogleSignIn = () => {
-    setSnackbar({ open: true, message: 'Google Sign In is not implemented yet', severity: 'info' });
+    setSnackbar({ open: true, message: 'Google Sign In is not available yet', severity: 'info' });
   };
 
   const handleSnackbarClose = (event, reason) => {
     if (reason === 'clickaway') return;
     setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -153,7 +159,7 @@ const SignIn = () => {
           <TextField
             name="password"
             label="Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={formData.password}
             onChange={handleChange}
             error={!!errors.password}
@@ -163,6 +169,17 @@ const SignIn = () => {
               startAdornment: (
                 <InputAdornment position="start">
                   <FaLock style={{ color: '#6e8efb' }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={togglePasswordVisibility}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
                 </InputAdornment>
               ),
             }}
@@ -198,12 +215,12 @@ const SignIn = () => {
         </Form>
         <Typography variant="body2" sx={{ margin: '20px 0', color: '#666' }}>or</Typography>
         <GoogleButton
-          variant="contained"
           onClick={handleGoogleSignIn}
           fullWidth
-          sx={{ height: '48px' }}
+          sx={{ height: '48px', opacity: 0.5, cursor: 'not-allowed' }}
+          disabled
         >
-          <FaGoogle /> Sign in with Google
+          <FaGoogle /> Sign in with Google (Coming Soon)
         </GoogleButton>
         <Typography variant="body2" sx={{ marginTop: '20px', color: '#666' }}>
           Don't have an account? <Link to="/get-started" style={{ color: '#6e8efb', textDecoration: 'none' }}>Sign up</Link>
@@ -217,18 +234,11 @@ const SignIn = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        message={snackbar.message}
-        action={
-          <IconButton
-            size="small"
-            aria-label="close"
-            color="inherit"
-            onClick={handleSnackbarClose}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        }
-      />
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </SignInContainer>
   );
 };
