@@ -1,182 +1,235 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaGoogle } from 'react-icons/fa';
+import { FaGoogle, FaLock } from 'react-icons/fa';
 import { loginUser } from '../../api';
-import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import { 
+  Typography, 
+  TextField, 
+  Button, 
+  CircularProgress, 
+  Checkbox, 
+  FormControlLabel,
+  Snackbar,
+  IconButton,
+  Box,
+  Paper,
+  InputAdornment
+} from '@mui/material';
+import { Close as CloseIcon, Email as EmailIcon } from '@mui/icons-material';
 
-const Container = styled.div`
+const SignInContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background-color: #f0f2f5;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #6e8efb, #a777e3);
   padding: 20px;
 `;
 
-const Box = styled.div`
-  background-color: white;
-  padding: 30px;
+const SignInBox = styled(Paper)`
+  padding: 40px;
   border-radius: 15px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 400px;
   text-align: center;
-
-  @media (max-width: 768px) {
-    padding: 20px;
-  }
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 `;
 
-const Header = styled.h1`
-  font-size: 2em;
-  margin-bottom: 10px;
-  color: #007BFF;
-`;
-
-const Description = styled.p`
-  font-size: 1em;
-  margin-bottom: 20px;
-  color: #666;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 1em;
-`;
-
-const Button = styled.button`
-  width: 100%;
-  padding: 10px;
-  background-color: #007BFF;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 1.1em;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
-
-  &:hover {
-    background-color: #0056b3;
-    transform: scale(1.05);
-  }
-`;
-
-const RememberMeContainer = styled.div`
+const Form = styled.form`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-`;
-
-const Label = styled.label`
-  display: flex;
-  align-items: center;
-  font-size: 0.9em;
-  color: #666;
-`;
-
-const Checkbox = styled.input`
-  margin-right: 10px;
-`;
-
-const Link = styled.a`
-  font-size: 0.9em;
-  color: #007BFF;
-  text-decoration: none;
-  transition: color 0.3s;
-
-  &:hover {
-    color: #0056b3;
-  }
-`;
-
-const Divider = styled.div`
-  margin: 20px 0;
-  text-align: center;
-  font-size: 1em;
-  color: #999;
+  flex-direction: column;
+  gap: 20px;
 `;
 
 const GoogleButton = styled(Button)`
-  background-color: white;
-  color: #333;
-  border: 1px solid #ccc;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 10px;
-
+  gap: 10px;
+  background-color: #4285F4;
+  color: white;
   &:hover {
-    background-color: #f1f1f1;
-  }
-
-  svg {
-    margin-right: 10px;
+    background-color: #357ae8;
   }
 `;
 
-const Prompt = styled.div`
-  margin-top: 20px;
-  font-size: 0.9em;
-  color: #666;
+const ForgotPasswordLink = styled(Link)`
+  color: #6e8efb;
+  text-decoration: none;
+  font-size: 0.875rem;
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const SignIn = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const navigate = useNavigate();
+  const { login } = useUser();
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
-  useEffect(() => {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (token) navigate('/');
-  }, [navigate]);
+  const validateForm = useCallback(() => {
+    const newErrors = {};
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
+    if (!formData.password) newErrors.password = 'Password is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const handleChange = (e) => {
+    const { name, value, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: name === 'rememberMe' ? checked : value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Sign In button clicked'); // Debug log
-    try {
-      const response = await loginUser({ email, password });
-      console.log('API response:', response); // Debug log
-      if (rememberMe) localStorage.setItem('token', response.token);
-      else sessionStorage.setItem('token', response.token);
+    if (!validateForm()) return;
 
-      navigate('/');
-      window.location.reload();
+    setIsLoading(true);
+    try {
+      if (!executeRecaptcha) {
+        throw new Error('reCAPTCHA not available');
+      }
+
+      const reCaptchaToken = await executeRecaptcha('signin');
+      const response = await loginUser({ ...formData, reCaptchaToken });
+      login({ ...response, rememberMe: formData.rememberMe });
+      setSnackbar({ open: true, message: 'Sign in successful!', severity: 'success' });
+      setTimeout(() => navigate('/app/dashboard'), 1500);
     } catch (error) {
-      console.error('Error logging in:', error);
+      setSnackbar({ open: true, message: error.message || 'An error occurred during sign in', severity: 'error' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleGoogleSignIn = () => {
+    setSnackbar({ open: true, message: 'Google Sign In is not implemented yet', severity: 'info' });
+  };
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') return;
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   return (
-    <Container>
-      <Box>
-        <Header>Sign In</Header>
-        <Description>Sign in to your Propertilico account.</Description>
-        <form onSubmit={handleSubmit}>
-          <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <RememberMeContainer>
-            <Label>
-              <Checkbox type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} /> Remember Me
-            </Label>
-            <Link href="/forgot-password">Forgot Password?</Link>
-          </RememberMeContainer>
-          <Button type="submit">Sign In</Button>
-        </form>
-        <Divider>or</Divider>
-        <GoogleButton>
+    <SignInContainer>
+      <SignInBox elevation={3}>
+        <Typography variant="h4" gutterBottom sx={{ color: '#6e8efb', fontWeight: 'bold' }}>Sign In</Typography>
+        <Typography variant="body1" gutterBottom sx={{ color: '#666', marginBottom: '20px' }}>
+          Welcome back to Propertilico
+        </Typography>
+        <Form onSubmit={handleSubmit}>
+          <TextField
+            name="email"
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            error={!!errors.email}
+            helperText={errors.email}
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <EmailIcon sx={{ color: '#6e8efb' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <TextField
+            name="password"
+            label="Password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            error={!!errors.password}
+            helperText={errors.password}
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <FaLock style={{ color: '#6e8efb' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                  color="primary"
+                />
+              }
+              label="Remember Me"
+            />
+            <ForgotPasswordLink to="/forgot-password">Forgot Password?</ForgotPasswordLink>
+          </Box>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            disabled={isLoading}
+            sx={{ 
+              backgroundColor: '#6e8efb', 
+              '&:hover': { backgroundColor: '#5c7cfa' },
+              height: '48px'
+            }}
+          >
+            {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+          </Button>
+        </Form>
+        <Typography variant="body2" sx={{ margin: '20px 0', color: '#666' }}>or</Typography>
+        <GoogleButton
+          variant="contained"
+          onClick={handleGoogleSignIn}
+          fullWidth
+          sx={{ height: '48px' }}
+        >
           <FaGoogle /> Sign in with Google
         </GoogleButton>
-        <Prompt>
-          Don't have an account? <Link href="/get-started">Sign up</Link>
-        </Prompt>
-      </Box>
-    </Container>
+        <Typography variant="body2" sx={{ marginTop: '20px', color: '#666' }}>
+          Don't have an account? <Link to="/get-started" style={{ color: '#6e8efb', textDecoration: 'none' }}>Sign up</Link>
+        </Typography>
+      </SignInBox>
+      <Snackbar
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbar.message}
+        action={
+          <IconButton
+            size="small"
+            aria-label="close"
+            color="inherit"
+            onClick={handleSnackbarClose}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
+      />
+    </SignInContainer>
   );
 };
 

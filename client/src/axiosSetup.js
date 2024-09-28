@@ -22,9 +22,13 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
+const getRefreshToken = () => {
+  return localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+};
+
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -38,33 +42,34 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+    // Don't attempt to refresh the token for login or token refresh requests
+    if (error.response && error.response.status === 401 && !originalRequest._retry 
+        && !originalRequest.url.includes('/login') && !originalRequest.url.includes('/refresh-token')) {
       if (isRefreshing) {
-        try {
-          const token = await new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          });
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
           originalRequest.headers['Authorization'] = 'Bearer ' + token;
           return axiosInstance(originalRequest);
-        } catch (err) {
-          return Promise.reject(err);
-        }
+        }).catch(err => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        console.error('No refresh token available');
+        return Promise.reject(new Error('No refresh token available'));
+      }
 
+      try {
         const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/refresh-token`, { refreshToken });
         const { token, refreshToken: newRefreshToken } = data;
         
-        localStorage.setItem('token', token);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
+        storage.setItem('token', token);
+        storage.setItem('refreshToken', newRefreshToken);
         
         axiosInstance.defaults.headers.common['Authorization'] = 'Bearer ' + token;
         originalRequest.headers['Authorization'] = 'Bearer ' + token;
@@ -76,7 +81,8 @@ axiosInstance.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/signin';
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refreshToken');
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

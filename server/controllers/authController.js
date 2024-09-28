@@ -1,6 +1,10 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const { validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
+const axios = require('axios');
 
 const generateTokens = (id) => ({
   token: jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '15m' }),
@@ -9,119 +13,222 @@ const generateTokens = (id) => ({
 
 const handleResponse = (res, status, data) => res.status(status).json(data);
 
-const handleError = (res, error, defaultMessage) => {
-  console.error('Auth controller error:', error);
-  handleResponse(res, 500, { message: defaultMessage });
+const handleError = (res, error) => {
+  const statusCode = error.statusCode || 500;
+  const message = error.message || 'An unexpected error occurred';
+  handleResponse(res, statusCode, { success: false, message });
 };
 
-exports.registerUser = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return handleResponse(res, 400, { message: 'User already exists' });
+// Rate limiting
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: 'Too many login attempts, please try again later'
+});
 
-    const user = await User.create({
-      name,
-      email,
-      password,
-      subscriptionEndDate: new Date(Date.now() + 30*24*60*60*1000),
-      maxProperties: 5
-    });
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // limit each IP to 3 requests per windowMs
+  message: 'Too many accounts created from this IP, please try again after an hour'
+});
 
-    const tokens = generateTokens(user._id);
-    handleResponse(res, 201, {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      ...tokens,
-      subscriptionEndDate: user.subscriptionEndDate,
-      maxProperties: user.maxProperties
-    });
-  } catch (error) {
-    handleError(res, error, 'Server error during registration');
+exports.registerUser = [
+  registerLimiter,
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return handleResponse(res, 400, { success: false, errors: errors.array() });
+    }
+
+    try {
+      const { name, email, password, captcha } = req.body;
+
+      // Verify reCAPTCHA
+      const recaptchaVerification = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captcha}`
+      );
+
+      if (!recaptchaVerification.data.success) {
+        return handleResponse(res, 400, { success: false, message: 'Invalid captcha' });
+      }
+
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return handleResponse(res, 400, { success: false, message: 'User already exists' });
+      }
+
+      const user = await User.create({
+        name,
+        email,
+        password,
+        subscriptionEndDate: new Date(Date.now() + 30*24*60*60*1000),
+        maxProperties: 5
+      });
+
+      const tokens = generateTokens(user._id);
+      handleResponse(res, 201, {
+        success: true,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          subscriptionEndDate: user.subscriptionEndDate,
+          maxProperties: user.maxProperties
+        },
+        ...tokens
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
   }
-};
+];
 
 exports.authUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (user && await user.matchPassword(password)) {
-      const tokens = generateTokens(user._id);
-      return handleResponse(res, 200, {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        ...tokens,
-        subscriptionEndDate: user.subscriptionEndDate,
-        maxProperties: user.maxProperties
-      });
+    const { email, password, reCaptchaToken } = req.body;
+    console.log('Login attempt for email:', email);
+
+    // Verify reCAPTCHA
+    const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (!recaptchaSecretKey) {
+      console.error('RECAPTCHA_SECRET_KEY is not set in the environment variables');
+      return handleResponse(res, 500, { success: false, message: 'Server configuration error' });
     }
-    handleResponse(res, 401, { message: 'Invalid email or password' });
-  } catch (error) {
-    handleError(res, error, 'Server error during authentication');
-  }
-};
 
-exports.refreshAccessToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) return handleResponse(res, 401, { message: 'Refresh token required' });
+    try {
+      const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecretKey}&response=${reCaptchaToken}`;
+      const recaptchaResponse = await axios.post(recaptchaVerifyUrl);
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user) return handleResponse(res, 404, { message: 'User not found' });
-
-    const newTokens = generateTokens(user._id);
-    handleResponse(res, 200, newTokens);
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return handleResponse(res, 403, { message: 'Invalid refresh token' });
+      if (!recaptchaResponse.data.success || recaptchaResponse.data.score < 0.5) {
+        console.log('reCAPTCHA verification failed', recaptchaResponse.data);
+        return handleResponse(res, 400, { success: false, message: 'reCAPTCHA verification failed' });
+      }
+      console.log('reCAPTCHA verification passed');
+    } catch (recaptchaError) {
+      console.error('Error verifying reCAPTCHA:', recaptchaError);
+      return handleResponse(res, 400, { success: false, message: 'Error verifying reCAPTCHA' });
     }
-    handleError(res, error, 'Server error during token refresh');
-  }
-};
 
-exports.getUserProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select('-password');
-    if (!user) return handleResponse(res, 404, { message: 'User not found' });
-    
-    handleResponse(res, 200, {
+    // Find user
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return handleResponse(res, 401, { success: false, message: 'Invalid email or password' });
+    }
+
+    // Check if account is locked
+    if (user.isLocked) {
+      return handleResponse(res, 401, { success: false, message: 'Account is locked. Please try again later.' });
+    }
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      await user.incrementLoginAttempts();
+      return handleResponse(res, 401, { success: false, message: 'Invalid email or password' });
+    }
+
+    // Reset login attempts on successful login
+    user.loginAttempts = 0;
+    user.lockUntil = null;
+    await user.save();
+
+    // Generate tokens
+    const tokens = generateTokens(user._id);
+
+    // Prepare user data to send
+    const userData = {
       _id: user._id,
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
       subscriptionEndDate: user.subscriptionEndDate,
       maxProperties: user.maxProperties
+    };
+
+    handleResponse(res, 200, {
+      success: true,
+      user: userData,
+      ...tokens
     });
   } catch (error) {
-    handleError(res, error, 'Error fetching user profile');
+    console.error('Server error during authentication:', error);
+    handleResponse(res, 500, { success: false, message: 'An unexpected error occurred' });
   }
 };
 
-exports.updateUserProfile = async (req, res) => {
+exports.refreshAccessToken = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    if (!user) return handleResponse(res, 404, { message: 'User not found' });
+    const { refreshToken } = req.body;
+    if (!refreshToken) return handleResponse(res, 401, { success: false, message: 'Refresh token required' });
 
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-    if (req.body.password) {
-      user.password = await bcrypt.hash(req.body.password, 12);
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
+
+    const newTokens = generateTokens(user._id);
+    handleResponse(res, 200, { success: true, ...newTokens });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return handleResponse(res, 403, { success: false, message: 'Invalid refresh token' });
+    }
+    handleError(res, error);
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return handleResponse(res, 404, { success: false, message: 'User not found' });
     }
 
-    const updatedUser = await user.save();
-    handleResponse(res, 200, {
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      isAdmin: updatedUser.isAdmin,
-      subscriptionEndDate: updatedUser.subscriptionEndDate,
-      maxProperties: updatedUser.maxProperties
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    user.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    // TODO: Send email with reset token
+    // For development, we'll just return the token
+    handleResponse(res, 200, { 
+      success: true,
+      message: 'Password reset email sent',
+      resetToken // Remove this in production
     });
   } catch (error) {
-    handleError(res, error, 'Failed to update user profile');
+    handleError(res, error);
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return handleResponse(res, 400, { success: false, message: 'Invalid or expired token' });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    user.lastPasswordChange = new Date();
+    await user.save();
+
+    handleResponse(res, 200, { success: true, message: 'Password reset successful' });
+  } catch (error) {
+    handleError(res, error);
   }
 };
 
@@ -129,50 +236,96 @@ exports.changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const user = await User.findById(req.user._id);
-    if (!user) return handleResponse(res, 404, { message: 'User not found' });
+    if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
 
-    if (!await user.matchPassword(oldPassword)) {
-      return handleResponse(res, 400, { message: 'Old password is incorrect' });
+    const isMatch = await user.matchPassword(oldPassword);
+    if (!isMatch) {
+      return handleResponse(res, 400, { success: false, message: 'Old password is incorrect' });
     }
 
     if (user.lastPasswordChange && (new Date() - user.lastPasswordChange) < 30 * 60 * 1000) {
-      return handleResponse(res, 400, { message: 'You can only change your password once every 30 minutes' });
+      return handleResponse(res, 400, { success: false, message: 'You can only change your password once every 30 minutes' });
     }
 
-    user.password = await bcrypt.hash(newPassword, 12);
+    user.password = newPassword;
     user.lastPasswordChange = new Date();
     await user.save();
 
-    handleResponse(res, 200, { message: 'Password changed successfully' });
+    handleResponse(res, 200, { success: true, message: 'Password changed successfully' });
   } catch (error) {
-    handleError(res, error, 'Server error during password change');
+    handleError(res, error);
   }
 };
 
-exports.changeEmail = async (req, res) => {
+exports.getUserProfile = async (req, res) => {
   try {
-    const { newEmail, password } = req.body;
-    const user = await User.findById(req.user._id);
-    if (!user) return handleResponse(res, 404, { message: 'User not found' });
-
-    if (!await user.matchPassword(password)) {
-      return handleResponse(res, 400, { message: 'Password is incorrect' });
-    }
-
-    if (user.lastEmailChange && (new Date() - user.lastEmailChange) < 24 * 60 * 60 * 1000) {
-      return handleResponse(res, 400, { message: 'You can only change your email once every 24 hours' });
-    }
-
-    if (await User.findOne({ email: newEmail })) {
-      return handleResponse(res, 400, { message: 'Email is already in use' });
-    }
-
-    user.email = newEmail;
-    user.lastEmailChange = new Date();
-    await user.save();
-
-    handleResponse(res, 200, { message: 'Email changed successfully' });
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
+    
+    handleResponse(res, 200, {
+      success: true,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        subscriptionEndDate: user.subscriptionEndDate,
+        maxProperties: user.maxProperties
+      }
+    });
   } catch (error) {
-    handleError(res, error, 'Server error during email change');
+    handleError(res, error);
   }
 };
+
+exports.updateUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
+
+    const { name, email } = req.body;
+    if (name) user.name = name;
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return handleResponse(res, 400, { success: false, message: 'Email already in use' });
+      }
+      user.email = email;
+    }
+
+    const updatedUser = await user.save();
+    handleResponse(res, 200, {
+      success: true,
+      user: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        isAdmin: updatedUser.isAdmin,
+        subscriptionEndDate: updatedUser.subscriptionEndDate,
+        maxProperties: updatedUser.maxProperties
+      }
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+exports.checkAuthStatus = async (req, res) => {
+  try {
+    handleResponse(res, 200, { success: true, isAuthenticated: true, user: req.user });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    // In a stateless JWT setup, we don't need to do anything server-side
+    // The client should remove the token from storage
+    handleResponse(res, 200, { success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+module.exports = exports;

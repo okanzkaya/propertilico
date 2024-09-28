@@ -9,7 +9,7 @@ export const UserProvider = ({ children }) => {
 
   const fetchUser = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (!token) {
         setUser(null);
         setLoading(false);
@@ -32,8 +32,15 @@ export const UserProvider = ({ children }) => {
 
   const login = useCallback((userData) => {
     setUser(userData);
-    localStorage.setItem('token', userData.token);
-    localStorage.setItem('refreshToken', userData.refreshToken);
+    const storage = userData.rememberMe ? localStorage : sessionStorage;
+    storage.setItem('token', userData.token);
+    if (userData.refreshToken) {
+      storage.setItem('refreshToken', userData.refreshToken);
+    } else {
+      console.warn('No refresh token received during login');
+    }
+    // Store the entire user data
+    storage.setItem('user', JSON.stringify(userData));
   }, []);
 
   const logout = useCallback(() => {
@@ -43,6 +50,7 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem('userSettings');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('user');
   }, []);
 
   const updateUserSettings = useCallback(async (newSettings) => {

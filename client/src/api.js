@@ -28,15 +28,74 @@ const apiCall = async (method, url, data = null, options = {}) => {
   }
 };
 // Auth API
-export const registerUser = (userData) => apiCall('post', '/api/auth/register', userData);
-export const loginUser = (userData) => apiCall('post', '/api/auth/login', userData);
+export const registerUser = async (userData) => {
+  try {
+    console.log('Sending registration request with data:', {
+      name: userData.name,
+      email: userData.email,
+      passwordLength: userData.password.length
+    });
+    const response = await axiosInstance.post('/api/auth/register', userData);
+    console.log('Registration response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Registration API error:', error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+      throw new Error(error.response.data.message || 'Registration failed');
+    } else if (error.request) {
+      console.error('No response received');
+      throw new Error('No response received from the server');
+    } else {
+      console.error('Error setting up request:', error.message);
+      throw error;
+    }
+  }
+};
+export const loginUser = async (userData) => {
+  try {
+    const response = await axiosInstance.post('/api/auth/login', userData);
+    if (response.data && response.data.token) {
+      return response.data;
+    } else {
+      throw new Error('Login failed: No token received from server');
+    }
+  } catch (error) {
+    console.error('Login API error:', error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+      throw new Error(error.response.data.message || 'Invalid email or password');
+    } else if (error.request) {
+      console.error('No response received');
+      throw new Error('No response received from the server');
+    } else {
+      console.error('Error setting up request:', error.message);
+      throw error;
+    }
+  }
+};
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   sessionStorage.removeItem('token');
   sessionStorage.removeItem('refreshToken');
 };
-export const checkAuthStatus = () => apiCall('get', '/api/auth/status');
+export const checkAuthStatus = async () => {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) {
+      console.warn('No token found, user is not authenticated');
+      return false;
+    }
+    const response = await apiCall('get', '/api/auth/status');
+    console.log('Auth status response:', response); // Debug log
+    return response.isAuthenticated;
+  } catch (error) {
+    console.error('Auth status check error:', error);
+    return false;
+  }
+};
+
 export const requestPasswordReset = (email) => apiCall('post', '/api/auth/request-password-reset', { email });
 export const resetPassword = (token, newPassword) => apiCall('post', '/api/auth/reset-password', { token, newPassword });
 export const changePassword = (oldPassword, newPassword) => apiCall('post', '/api/user/change-password', JSON.stringify({ oldPassword, newPassword }), {

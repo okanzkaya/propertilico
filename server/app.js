@@ -45,19 +45,24 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Limit requests from same IP
+// Rate limiting
 const generalLimiter = rateLimit({
-  max: 100,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  message: 'Too many requests from this IP, please try again in an hour!'
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later'
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // limit each IP to 50 requests per windowMs
+  message: 'Too many authentication attempts, please try again later'
 });
 
 app.use('/api', generalLimiter);
+app.use('/api/auth', authLimiter);
 
-// Data sanitization against NoSQL query injection
+// Data sanitization
 app.use(mongoSanitize());
-
-// Data sanitization against XSS
 app.use(xss());
 
 // Prevent parameter pollution
@@ -85,7 +90,7 @@ const contactRoutes = require('./routes/contactRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const reportRoutes = require('./routes/reportRoutes');
-const taskRoutes = require('./routes/taskRoutes'); // Add this line
+const taskRoutes = require('./routes/taskRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', protect, userRoutes);
@@ -97,7 +102,7 @@ app.use('/api/contacts', contactRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/finances', financeRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/tasks', protect, taskRoutes); // Add this line
+app.use('/api/tasks', protect, taskRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

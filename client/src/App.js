@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, Box, CircularProgress } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import PublicHeader from './components/public/Header';
 import PublicFooter from './components/public/Footer';
 import Sidebar from './components/app/Sidebar';
@@ -12,7 +13,14 @@ import { lightTheme, darkTheme } from './theme';
 import { useUser } from './context/UserContext';
 import FontSizeWrapper from './components/app/FontSizeWrapper';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+    },
+  },
+});
 
 // Lazy load components
 const lazyLoad = (path) => lazy(() => import(`./pages/${path}`));
@@ -47,12 +55,16 @@ const LoadingFallback = () => (
 );
 
 const App = () => {
-  const { user, updateUserSettings } = useUser();
+  const { user, updateUserSettings, fetchUser } = useUser();
   const [themeMode, setThemeMode] = useState(() => ({
     app: user?.theme || localStorage.getItem('appTheme') || 'light',
     public: localStorage.getItem('publicTheme') || 'light'
   }));
   const [fontSize, setFontSize] = useState(() => user?.fontSize || localStorage.getItem('fontSize') || 'medium');
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   useEffect(() => {
     if (user?.theme) {
@@ -62,10 +74,6 @@ const App = () => {
       setFontSize(user.fontSize);
     }
   }, [user?.theme, user?.fontSize]);
-
-  useEffect(() => {
-    document.documentElement.style.fontSize = fontSize === 'small' ? '14px' : fontSize === 'large' ? '18px' : '16px';
-  }, [fontSize]);
 
   const toggleTheme = useCallback((key) => {
     setThemeMode(prev => {
@@ -89,8 +97,16 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <FontSizeWrapper fontSize={fontSize}>
+      <GoogleReCaptchaProvider
+        reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
+        scriptProps={{
+          async: false,
+          defer: false,
+          appendTo: 'head',
+          nonce: undefined,
+        }}
+      >
+        <BrowserRouter>
           <AppContent
             appTheme={appTheme}
             publicTheme={publicTheme}
@@ -99,8 +115,8 @@ const App = () => {
             fontSize={fontSize}
             changeFontSize={changeFontSize}
           />
-        </FontSizeWrapper>
-      </BrowserRouter>
+        </BrowserRouter>
+      </GoogleReCaptchaProvider>
     </QueryClientProvider>
   );
 };
@@ -143,28 +159,30 @@ const AppContent = ({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, c
         } />
         <Route path="/app/*" element={
           <ProtectedRoute>
-            <AppLayout 
-              theme={appTheme} 
-              toggleTheme={() => toggleTheme('app')} 
-              themeMode={themeMode.app}
-              fontSize={fontSize}
-              changeFontSize={changeFontSize}
-            >
-              <Routes>
-                <Route index element={<Navigate to="/app/dashboard" replace />} />
-                {appRoutes.map(({ path, element: Element }) => (
-                  <Route key={path} path={path} element={
-                    <Element 
-                      toggleTheme={() => toggleTheme('app')} 
-                      fontSize={fontSize} 
-                      changeFontSize={changeFontSize}
-                      themeMode={themeMode.app}
-                    />
-                  } />
-                ))}
-                <Route path="admin-feedback" element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/app/dashboard" replace />} />
-              </Routes>
-            </AppLayout>
+            <FontSizeWrapper fontSize={fontSize}>
+              <AppLayout
+                theme={appTheme}
+                toggleTheme={() => toggleTheme('app')}
+                themeMode={themeMode.app}
+                fontSize={fontSize}
+                changeFontSize={changeFontSize}
+              >
+                <Routes>
+                  <Route index element={<Navigate to="/app/dashboard" replace />} />
+                  {appRoutes.map(({ path, element: Element }) => (
+                    <Route key={path} path={path} element={
+                      <Element
+                        toggleTheme={() => toggleTheme('app')}
+                        fontSize={fontSize}
+                        changeFontSize={changeFontSize}
+                        themeMode={themeMode.app}
+                      />
+                    } />
+                  ))}
+                  <Route path="admin-feedback" element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/app/dashboard" replace />} />
+                </Routes>
+              </AppLayout>
+            </FontSizeWrapper>
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -190,9 +208,7 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <Sidebar themeMode={themeMode} toggleTheme={toggleTheme} />
       <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, mt: '64px', overflow: 'auto' }}>
-        {React.Children.map(children, child =>
-          React.cloneElement(child, { toggleTheme, fontSize, changeFontSize, themeMode })
-        )}
+        {children}
       </Box>
     </Box>
   </ThemeProvider>
