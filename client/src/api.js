@@ -1,32 +1,41 @@
 import axiosInstance from './axiosSetup';
 
-
-const handleApiError = (error) => {
-  console.error('API Error:', error);
-  if (error.response) {
-    throw new Error(error.response.data.message || 'An error occurred');
-  } else if (error.request) {
-    throw new Error('No response received from the server');
-  } else {
-    throw error;
-  }
-};
-
 const apiCall = async (method, url, data = null, options = {}) => {
   try {
-    const token = localStorage.getItem('token');
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    };
+    console.log(`Making ${method.toUpperCase()} request to ${url}`);
+    const response = await axiosInstance({
+      method,
+      url,
+      data: method !== 'get' ? data : undefined,
+      params: method === 'get' ? data : undefined,
+      ...options,
+    });
 
-    const response = await axiosInstance[method](url, method === 'get' ? { params: data } : data, { ...options, headers });
+    console.log('Response:', response.data);
     return response.data;
   } catch (error) {
-    handleApiError(error);
+    console.error('API call error:', error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+      console.error('Error status:', error.response.status);
+      console.error('Error headers:', error.response.headers);
+      
+      if (error.response.status === 403 && error.response.data.redirect === '/my-plan') {
+        window.location.href = '/my-plan';
+        throw new Error('Subscription required');
+      }
+      
+      throw new Error(error.response.data.message || 'An error occurred');
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      throw new Error('No response received from the server');
+    } else {
+      console.error('Error setting up request:', error.message);
+      throw error;
+    }
   }
 };
+
 // Auth API
 export const registerUser = async (userData) => {
   try {
@@ -54,25 +63,32 @@ export const registerUser = async (userData) => {
 };
 export const loginUser = async (userData) => {
   try {
+    if (!userData.email || !userData.password) {
+      console.error('Login error: Email and password are required');
+      throw new Error('Email and password are required');
+    }
+
+    console.log('API: Sending login request');
     const response = await axiosInstance.post('/api/auth/login', userData);
+    console.log('API: Login response received', response.data);
+    
     if (response.data && response.data.token) {
-      const storage = userData.rememberMe ? localStorage : sessionStorage;
-      storage.setItem('token', response.data.token);
-      storage.setItem('refreshToken', response.data.refreshToken);
       return response.data;
     } else {
+      console.error('API: Login failed - No token received');
       throw new Error('Login failed: No token received from server');
     }
   } catch (error) {
-    console.error('Login API error:', error);
+    console.error('API: Login error:', error);
     if (error.response) {
-      console.error('Error response:', error.response.data);
+      console.error('API: Error response:', error.response.data);
+      console.error('API: Error status:', error.response.status);
       throw new Error(error.response.data.message || 'Invalid email or password');
     } else if (error.request) {
-      console.error('No response received');
+      console.error('API: No response received:', error.request);
       throw new Error('No response received from the server');
     } else {
-      console.error('Error setting up request:', error.message);
+      console.error('API: Error setting up request:', error.message);
       throw error;
     }
   }
@@ -100,17 +116,11 @@ export const logout = () => {
 };
 export const checkAuthStatus = async () => {
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (!token) {
-      console.warn('No token found, user is not authenticated');
-      return false;
-    }
-    const response = await apiCall('get', '/api/auth/status');
-    console.log('Auth status response:', response); // Debug log
-    return response.isAuthenticated;
+    const response = await axiosInstance.get('/api/auth/status');
+    return response.data;
   } catch (error) {
-    console.error('Auth status check error:', error);
-    return false;
+    console.error('Error checking auth status:', error);
+    throw error;
   }
 };
 
@@ -126,18 +136,36 @@ export const changeEmail = (newEmail, password) => apiCall('post', '/api/user/ch
 
 // User API
 export const getProtectedData = () => apiCall('get', '/api/user');
-export const getUserProfile = () => apiCall('get', '/api/user');
+export const getUserProfile = async () => {
+  try {
+    const response = await axiosInstance.get('/api/user/profile');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+const handleSubscriptionAction = async (action) => {
+  try {
+    const response = await axiosInstance[action === 'extending' ? 'post' : 'put'](`/api/user/${action === 'extending' ? 'extend' : 'reduce'}-subscription`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error ${action} subscription:`, error);
+    throw new Error(error.response?.data?.message || `Failed to ${action} subscription`);
+  }
+};
+
 export const updateUserProfile = (userData) => apiCall('put', '/api/user', userData);
 export const getSubscriptionDetails = () => apiCall('get', '/api/user/subscription');
-export const extendSubscription = () => apiCall('post', '/api/user/extend-subscription');
-export const reduceSubscription = () => apiCall('post', '/api/user/reduce-subscription');
+export const extendSubscription = () => handleSubscriptionAction('extending');
+export const reduceSubscription = () => apiCall('post', '/api/user/reduce-subscription', {});
 export const getNotifications = () => apiCall('get', '/api/user/notifications');
 export const markNotificationAsRead = (notificationId) => apiCall('put', `/api/user/notifications/${notificationId}/read`);
 export const updateUserPreferences = (preferences) => apiCall('put', '/api/user/preferences', preferences);
 export const uploadAvatar = (formData) => apiCall('post', '/api/user/avatar', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
-
+export const getOneMonthSubscription = () => apiCall('post', '/api/user/get-one-month-subscription', {});
 // Feedback API
 export const sendFeedback = (feedbackData) => apiCall('post', '/api/feedback', feedbackData, {
   headers: { 'Content-Type': 'multipart/form-data' },
@@ -212,7 +240,8 @@ export const userApi = {
   markNotificationAsRead,
   updateUserPreferences,
   changeEmail,
-  uploadAvatar
+  uploadAvatar,
+  getOneMonthSubscription
 };
 export const feedbackApi = { sendFeedback, getFeedback, deleteFeedback, updateFeedback, checkFeedbackLimit };
 export const ticketApi = { createTicket, getTickets, getTicketById, updateTicket, deleteTicket, addNoteToTicket };

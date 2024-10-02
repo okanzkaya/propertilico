@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaSearch, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUser } from '../../context/UserContext';
+import { ErrorBoundary } from 'react-error-boundary';
+import { useInView } from 'react-intersection-observer';
+import { debounce } from 'lodash';
 
 const BlogListContainer = styled(motion.div)`
   padding: 2rem;
@@ -61,13 +65,15 @@ const SearchIcon = styled(FaSearch)`
   font-size: 1.2rem;
 `;
 
-const SortingOptions = styled.div`
+const ControlsContainer = styled.div`
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
 
   @media (max-width: 768px) {
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
   }
 `;
 
@@ -78,7 +84,6 @@ const SortButton = styled.button`
   border-radius: 25px;
   cursor: pointer;
   font-size: 0.9rem;
-  margin-left: 0.5rem;
   display: flex;
   align-items: center;
   transition: all 0.3s;
@@ -96,6 +101,21 @@ const SortButton = styled.button`
 
   svg {
     margin-left: 0.5rem;
+  }
+
+  @media (max-width: 768px) {
+    margin-top: 1rem;
+  }
+`;
+
+const CreateButton = styled(SortButton)`
+  background: #28a745;
+  border-color: #28a745;
+  color: #fff;
+
+  &:hover {
+    background: #218838;
+    border-color: #1e7e34;
   }
 `;
 
@@ -181,106 +201,176 @@ const LoadingSpinner = styled.div`
   }
 `;
 
+const ActionButtons = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+`;
+
+const ActionButton = styled.button`
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-left: 1rem;
+  transition: color 0.3s;
+
+  &:hover {
+    color: #007bff;
+  }
+`;
+
+const ErrorFallback = ({ error, resetErrorBoundary }) => (
+  <ErrorMessage>
+    <p>Something went wrong:</p>
+    <pre>{error.message}</pre>
+    <button onClick={resetErrorBoundary}>Try again</button>
+  </ErrorMessage>
+);
+
 const BlogList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('newest');
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const { user } = useUser();
+  const navigate = useNavigate();
+  const [ref, inView] = useInView({
+    threshold: 0,
+  });
 
-  useEffect(() => {
-    document.title = 'Blog | Your Property Management Insights';
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', 'Explore our latest articles on property management tips, industry trends, and expert advice for property managers.');
-    }
-  }, []);
+  const debouncedSearch = useMemo(
+    () => debounce((value) => {
+      setSearchTerm(value);
+      setPage(1);
+    }, 300),
+    []
+  );
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setIsLoading(true);
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs`);
-        setPosts(response.data);
-        setIsLoading(false);
-      } catch (err) {
-        console.error('Failed to fetch blog posts:', err);
-        setError('Failed to load blog posts. Please try again later.');
-        setIsLoading(false);
-      }
-    };
-    fetchPosts();
-  }, []);
-
-  const filteredAndSortedPosts = useMemo(() => {
-    return posts
-      .filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      .sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return sortOption === 'newest' ? dateB - dateA : dateA - dateB;
+  const fetchPosts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs`, {
+        params: { page, limit: 10, search: searchTerm, sort: sortOption },
       });
-  }, [posts, searchTerm, sortOption]);
+      setPosts((prevPosts) => (page === 1 ? response.data : [...prevPosts, ...response.data]));
+      setHasMore(response.data.length === 10);
+    } catch (err) {
+      console.error('Failed to fetch blog posts:', err);
+      setError('Failed to load blog posts. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, searchTerm, sortOption]);
 
-  const handleSearchChange = useCallback((e) => {
-    setSearchTerm(e.target.value);
-  }, []);
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
+  useEffect(() => {
+    if (inView && hasMore) {
+      setPage((prevPage) => prevPage + 1);
+    }
+  }, [inView, hasMore]);
+
+  const handleSearchChange = (e) => {
+    debouncedSearch(e.target.value);
+  };
 
   const toggleSortOption = useCallback(() => {
-    setSortOption(prev => prev === 'newest' ? 'oldest' : 'newest');
+    setSortOption((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
+    setPage(1);
   }, []);
 
+  const handleCreateBlog = () => navigate('/create-blog');
+  const handleEditBlog = (id) => navigate(`/edit-blog/${id}`);
+
+  const handleDeleteBlog = async (id) => {
+    if (window.confirm('Are you sure you want to delete this blog post?')) {
+      try {
+        await axios.delete(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
+        setPosts((prevPosts) => prevPosts.filter((post) => post._id !== id));
+      } catch (err) {
+        console.error('Failed to delete blog post:', err);
+        setError('Failed to delete blog post. Please try again later.');
+      }
+    }
+  };
+
+  const renderPosts = () => (
+    <AnimatePresence>
+      {posts.map((post) => (
+        <PostCard
+          key={post._id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <PostTitle to={`/blog/${post._id}`}>{post.title}</PostTitle>
+          <PostMeta>
+            By {post.author} on {new Date(post.date).toLocaleDateString()}
+          </PostMeta>
+          <PostExcerpt>{post.excerpt}</PostExcerpt>
+          <TagList>
+            {post.tags.map((tag, index) => (
+              <Tag key={index}>{tag}</Tag>
+            ))}
+          </TagList>
+          {user && user.isBlogger && (
+            <ActionButtons>
+              <ActionButton onClick={() => handleEditBlog(post._id)} aria-label="Edit blog post">
+                <FaEdit />
+              </ActionButton>
+              <ActionButton onClick={() => handleDeleteBlog(post._id)} aria-label="Delete blog post">
+                <FaTrash />
+              </ActionButton>
+            </ActionButtons>
+          )}
+        </PostCard>
+      ))}
+    </AnimatePresence>
+  );
+
   return (
-    <BlogListContainer
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <Header>Property Management Insights</Header>
-      <SearchBarContainer>
-        <SearchBar
-          type="text"
-          placeholder="Search blog posts..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          aria-label="Search blog posts"
-        />
-        <SearchIcon aria-hidden="true" />
-      </SearchBarContainer>
-      <SortingOptions>
-        <SortButton onClick={toggleSortOption} aria-label={`Sort by ${sortOption === 'newest' ? 'oldest' : 'newest'}`}>
-          {sortOption === 'newest' ? 'Newest' : 'Oldest'}
-          {sortOption === 'newest' ? <FaSortAmountDown aria-hidden="true" /> : <FaSortAmountUp aria-hidden="true" />}
-        </SortButton>
-      </SortingOptions>
-      {isLoading && <LoadingSpinner />}
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-      <AnimatePresence>
-        {filteredAndSortedPosts.map((post) => (
-          <PostCard
-            key={post._id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <PostTitle to={`/blog/${post._id}`}>{post.title}</PostTitle>
-            <PostMeta>
-              By {post.author} on {new Date(post.date).toLocaleDateString()}
-            </PostMeta>
-            <PostExcerpt>{post.excerpt}</PostExcerpt>
-            <TagList>
-              {post.tags.map((tag, index) => (
-                <Tag key={index}>{tag}</Tag>
-              ))}
-            </TagList>
-          </PostCard>
-        ))}
-      </AnimatePresence>
-    </BlogListContainer>
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => setPage(1)}>
+      <BlogListContainer
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Header>Property Management Insights</Header>
+        <SearchBarContainer>
+          <SearchBar
+            type="text"
+            placeholder="Search blog posts..."
+            onChange={handleSearchChange}
+            aria-label="Search blog posts"
+          />
+          <SearchIcon aria-hidden="true" />
+        </SearchBarContainer>
+        <ControlsContainer>
+          <SortButton onClick={toggleSortOption} aria-label={`Sort by ${sortOption === 'newest' ? 'oldest' : 'newest'}`}>
+            {sortOption === 'newest' ? 'Newest' : 'Oldest'}
+            {sortOption === 'newest' ? <FaSortAmountDown aria-hidden="true" /> : <FaSortAmountUp aria-hidden="true" />}
+          </SortButton>
+          {user && user.isBlogger && (
+            <CreateButton onClick={handleCreateBlog}>
+              <FaPlus /> Create New Blog
+            </CreateButton>
+          )}
+        </ControlsContainer>
+        {isLoading && page === 1 && <LoadingSpinner />}
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {renderPosts()}
+        {isLoading && page > 1 && <LoadingSpinner />}
+        <div ref={ref} />
+      </BlogListContainer>
+    </ErrorBoundary>
   );
 };
 

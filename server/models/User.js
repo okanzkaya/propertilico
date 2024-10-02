@@ -23,11 +23,17 @@ const userSchema = new mongoose.Schema({
     minlength: [8, 'Password must be at least 8 characters'],
     select: false
   },
-  subscriptionEndDate: { type: Date, default: null },
+  subscriptionEndDate: { 
+    type: Date, 
+    default: () => new Date(+new Date() + 30*24*60*60*1000), // 30 days from now
+    set: function(value) {
+      return value === null ? null : new Date(value);
+    }
+  },
   isAdmin: { type: Boolean, default: false },
+  isBlogger: { type: Boolean, default: false },
   adminId: { type: String, unique: true, sparse: true },
   properties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
-  maxProperties: { type: Number, default: 10 },
   language: { type: String, default: 'en' },
   timeZone: { type: String, default: 'UTC' },
   currency: { type: String, default: 'USD' },
@@ -59,6 +65,28 @@ const userSchema = new mongoose.Schema({
     city: String,
     timestamp: Date
   }]
+});
+
+userSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    if (ret.subscriptionEndDate instanceof Date) {
+      ret.subscriptionEndDate = ret.subscriptionEndDate.toISOString();
+    } else {
+      ret.subscriptionEndDate = null;
+    }
+    return ret;
+  }
+});
+
+userSchema.set('toObject', {
+  transform: (doc, ret) => {
+    if (ret.subscriptionEndDate instanceof Date) {
+      ret.subscriptionEndDate = ret.subscriptionEndDate.toISOString();
+    } else {
+      ret.subscriptionEndDate = null;
+    }
+    return ret;
+  }
 });
 
 userSchema.pre('save', async function (next) {

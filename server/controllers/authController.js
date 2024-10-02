@@ -85,8 +85,7 @@ exports.registerUser = async (req, res) => {
       name,
       email,
       password,
-      subscriptionEndDate: new Date(Date.now() + 30*24*60*60*1000),
-      maxProperties: 5
+      // Removed: subscriptionEndDate and maxProperties
     });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -98,8 +97,7 @@ exports.registerUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        subscriptionEndDate: user.subscriptionEndDate,
-        maxProperties: user.maxProperties
+        // Removed: subscriptionEndDate and maxProperties from the response
       }
     });
   } catch (error) {
@@ -110,65 +108,63 @@ exports.registerUser = async (req, res) => {
 
 exports.authUser = async (req, res) => {
   try {
-    const { email, password, reCaptchaToken, googleToken, rememberMe } = req.body;
+    const { email, password, reCaptchaToken } = req.body;
+    console.log('authController - Login attempt for email:', email);
+    console.log('authController - reCAPTCHA token present:', !!reCaptchaToken);
+    console.log('authController - Request body:', req.body);
     
-    // Verify reCAPTCHA for non-Google sign-ins
-    if (!googleToken) {
-      const recaptchaVerification = await verifyRecaptcha(reCaptchaToken);
-      if (!recaptchaVerification.success) {
-        return handleResponse(res, 400, { success: false, message: 'reCAPTCHA verification failed' });
-      }
+    if (!email || !password) {
+      console.log('authController - Email or password missing');
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    let user;
+    try {
+      const recaptchaVerification = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${reCaptchaToken}`
+      );
+      console.log('authController - reCAPTCHA verification result:', recaptchaVerification.data);
 
-    if (googleToken) {
-      const googleUser = await verifyGoogleToken(googleToken);
-      user = await User.findOne({ email: googleUser.email });
-      if (!user) {
-        user = await User.create({
-          name: googleUser.name,
-          email: googleUser.email,
-          password: crypto.randomBytes(20).toString('hex'),
-          googleId: googleUser.sub
-        });
+      if (!recaptchaVerification.data.success) {
+        console.log('authController - reCAPTCHA verification failed');
+        return res.status(400).json({ success: false, message: 'reCAPTCHA verification failed' });
       }
-    } else {
-      user = await User.findOne({ email }).select('+password');
-      if (!user || !(await user.matchPassword(password))) {
-        return handleResponse(res, 401, { success: false, message: 'Invalid email or password' });
-      }
+    } catch (recaptchaError) {
+      console.error('authController - reCAPTCHA verification error:', recaptchaError);
+      return res.status(500).json({ success: false, message: 'Error verifying reCAPTCHA' });
     }
 
-    // Log user information
-    const userInfo = getUserInfo(req);
-    user.loginHistory.push(userInfo);
-    await user.save();
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      console.log('authController - User not found');
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
 
-    const tokens = generateTokens(user._id);
-    const expiresIn = rememberMe ? '30d' : '1d';
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn });
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      console.log('authController - Password does not match');
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
 
-    handleResponse(res, 200, {
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    console.log('authController - Login successful, sending response');
+    res.status(200).json({
       success: true,
+      token,
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
-        isAdmin: user.isAdmin
-      },
-      token,
-      refreshToken: tokens.refreshToken
+        isAdmin: user.isAdmin,
+        subscriptionEndDate: user.subscriptionEndDate,
+        maxProperties: user.maxProperties
+      }
     });
   } catch (error) {
-    console.error('Server error during authentication:', error);
-    handleResponse(res, 500, { success: false, message: 'An unexpected error occurred' });
+    console.error('authController - Server error during authentication:', error);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred', error: error.message });
   }
 };
-
-
-
-
 exports.refreshAccessToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
@@ -325,9 +321,26 @@ exports.updateUserProfile = async (req, res) => {
 
 exports.checkAuthStatus = async (req, res) => {
   try {
-    handleResponse(res, 200, { success: true, isAuthenticated: true, user: req.user });
+    console.log('Checking auth status for user:', req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      console.log('User not found in database');
+      return res.status(401).json({ isAuthenticated: false });
+    }
+    console.log('User found:', user.email);
+    res.json({ 
+      isAuthenticated: true, 
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        subscriptionEndDate: user.subscriptionEndDate
+      } 
+    });
   } catch (error) {
-    handleError(res, error);
+    console.error('Error checking auth status:', error);
+    res.status(500).json({ isAuthenticated: false, message: 'Server error' });
   }
 };
 

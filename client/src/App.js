@@ -4,6 +4,7 @@ import { CssBaseline, Box, CircularProgress } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import { ErrorBoundary } from 'react-error-boundary';
 import PublicHeader from './components/public/Header';
 import PublicFooter from './components/public/Footer';
 import Sidebar from './components/app/Sidebar';
@@ -18,34 +19,40 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: false,
+      staleTime: 5 * 60 * 1000,
     },
   },
 });
 
-// Lazy load components
 const lazyLoad = (path) => lazy(() => import(`./pages/${path}`));
 
-const Home = lazyLoad('public/Home');
-const Features = lazyLoad('public/Features');
-const FAQ = lazyLoad('public/FAQ');
-const ToS = lazyLoad('public/ToS');
-const PrivacyPolicy = lazyLoad('public/PrivacyPolicy');
-const Pricing = lazyLoad('public/Pricing');
-const BlogList = lazyLoad('public/BlogList');
-const BlogPost = lazyLoad('public/BlogPost');
+const publicRoutes = [
+  { path: "/", element: lazyLoad('public/Home') },
+  { path: "/features", element: lazyLoad('public/Features') },
+  { path: "/faq", element: lazyLoad('public/FAQ') },
+  { path: "/tos", element: lazyLoad('public/ToS') },
+  { path: "/privacy-policy", element: lazyLoad('public/PrivacyPolicy') },
+  { path: "/pricing", element: lazyLoad('public/Pricing') },
+  { path: "/blog", element: lazyLoad('public/BlogList') },
+  { path: "/blog/:id", element: lazyLoad('public/BlogPost') },
+];
+
+const appRoutes = [
+  { path: "dashboard", element: lazyLoad('app/Overview') },
+  { path: "finances", element: lazyLoad('app/Finances') },
+  { path: "properties", element: lazyLoad('app/Properties') },
+  { path: "tickets", element: lazyLoad('app/Tickets') },
+  { path: "contacts", element: lazyLoad('app/Contacts') },
+  { path: "taxes", element: lazyLoad('app/Taxes') },
+  { path: "documents", element: lazyLoad('app/Documents') },
+  { path: "reports", element: lazyLoad('app/Reports') },
+  { path: "settings", element: lazyLoad('app/Settings') },
+  { path: "feedback", element: lazyLoad('app/Feedback') },
+];
+
 const SignIn = lazyLoad('public/SignIn');
 const SignUp = lazyLoad('public/SignUp');
 const MyPlan = lazyLoad('public/MyPlan');
-const Dashboard = lazyLoad('app/Overview');
-const Finances = lazyLoad('app/Finances');
-const Properties = lazyLoad('app/Properties');
-const Tickets = lazyLoad('app/Tickets');
-const Contacts = lazyLoad('app/Contacts');
-const Taxes = lazyLoad('app/Taxes');
-const Documents = lazyLoad('app/Documents');
-const Reports = lazyLoad('app/Reports');
-const Settings = lazyLoad('app/Settings');
-const Feedback = lazyLoad('app/Feedback');
 const AdminFeedbackDashboard = lazyLoad('app/AdminFeedbackDashboard');
 
 const LoadingFallback = () => (
@@ -54,8 +61,15 @@ const LoadingFallback = () => (
   </Box>
 );
 
+const ErrorFallback = ({ error }) => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <h1>Oops! Something went wrong.</h1>
+    <pre>{error.message}</pre>
+  </Box>
+);
+
 const App = () => {
-  const { user, updateUserSettings, fetchUser } = useUser();
+  const { user, loading: userLoading, updateUserSettings, fetchUser, hasActiveSubscription } = useUser();
   const [themeMode, setThemeMode] = useState(() => ({
     app: user?.theme || localStorage.getItem('appTheme') || 'light',
     public: localStorage.getItem('publicTheme') || 'light'
@@ -67,21 +81,15 @@ const App = () => {
   }, [fetchUser]);
 
   useEffect(() => {
-    if (user?.theme) {
-      setThemeMode(prev => ({ ...prev, app: user.theme }));
-    }
-    if (user?.fontSize) {
-      setFontSize(user.fontSize);
-    }
+    if (user?.theme) setThemeMode(prev => ({ ...prev, app: user.theme }));
+    if (user?.fontSize) setFontSize(user.fontSize);
   }, [user?.theme, user?.fontSize]);
 
   const toggleTheme = useCallback((key) => {
     setThemeMode(prev => {
       const newTheme = prev[key] === 'light' ? 'dark' : 'light';
       localStorage.setItem(`${key}Theme`, newTheme);
-      if (key === 'app') {
-        updateUserSettings({ theme: newTheme });
-      }
+      if (key === 'app') updateUserSettings({ theme: newTheme });
       return { ...prev, [key]: newTheme };
     });
   }, [updateUserSettings]);
@@ -95,101 +103,97 @@ const App = () => {
   const appTheme = useMemo(() => themeMode.app === 'light' ? lightTheme : darkTheme, [themeMode.app]);
   const publicTheme = useMemo(() => themeMode.public === 'light' ? lightTheme : darkTheme, [themeMode.public]);
 
+  if (userLoading) return <LoadingFallback />;
+
   return (
     <QueryClientProvider client={queryClient}>
-      <GoogleReCaptchaProvider
-        reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
-        scriptProps={{
-          async: false,
-          defer: false,
-          appendTo: 'head',
-          nonce: undefined,
-        }}
-      >
-        <BrowserRouter>
-          <AppContent
-            appTheme={appTheme}
-            publicTheme={publicTheme}
-            toggleTheme={toggleTheme}
-            themeMode={themeMode}
-            fontSize={fontSize}
-            changeFontSize={changeFontSize}
-          />
-        </BrowserRouter>
+      <GoogleReCaptchaProvider reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY} scriptProps={{ async: true, defer: true, appendTo: 'head' }}>
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+          <BrowserRouter>
+            <AppContent
+              appTheme={appTheme}
+              publicTheme={publicTheme}
+              toggleTheme={toggleTheme}
+              themeMode={themeMode}
+              fontSize={fontSize}
+              changeFontSize={changeFontSize}
+              user={user}
+              hasActiveSubscription={hasActiveSubscription}
+            />
+          </BrowserRouter>
+        </ErrorBoundary>
       </GoogleReCaptchaProvider>
     </QueryClientProvider>
   );
 };
 
-const AppContent = ({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize }) => {
-  const { user, loading } = useUser();
-
-  if (loading) return <LoadingFallback />;
-
-  return (
-    <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        {publicRoutes.map(({ path, element: Element }) => (
-          <Route key={path} path={path} element={
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-              <Element />
-            </PublicLayout>
-          } />
-        ))}
-        <Route path="/signin" element={
-          <AuthenticatedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-              <SignIn />
-            </PublicLayout>
-          </AuthenticatedRoute>
+const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize, user, hasActiveSubscription }) => (
+  <Suspense fallback={<LoadingFallback />}>
+    <Routes>
+      {publicRoutes.map(({ path, element: Element }) => (
+        <Route key={path} path={path} element={
+          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <Element />
+          </PublicLayout>
         } />
-        <Route path="/get-started" element={
-          <AuthenticatedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-              <SignUp />
-            </PublicLayout>
-          </AuthenticatedRoute>
-        } />
-        <Route path="/my-plan" element={
-          <ProtectedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-              <MyPlan />
-            </PublicLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/app/*" element={
-          <ProtectedRoute>
-            <FontSizeWrapper fontSize={fontSize}>
-              <AppLayout
-                theme={appTheme}
-                toggleTheme={() => toggleTheme('app')}
-                themeMode={themeMode.app}
-                fontSize={fontSize}
-                changeFontSize={changeFontSize}
-              >
-                <Routes>
-                  <Route index element={<Navigate to="/app/dashboard" replace />} />
-                  {appRoutes.map(({ path, element: Element }) => (
-                    <Route key={path} path={path} element={
+      ))}
+      <Route path="/signin" element={
+        <AuthenticatedRoute>
+          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <SignIn />
+          </PublicLayout>
+        </AuthenticatedRoute>
+      } />
+      <Route path="/get-started" element={
+        <AuthenticatedRoute>
+          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <SignUp />
+          </PublicLayout>
+        </AuthenticatedRoute>
+      } />
+      <Route path="/my-plan" element={
+        <ProtectedRoute>
+          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <MyPlan />
+          </PublicLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/app/*" element={
+        <ProtectedRoute>
+          <FontSizeWrapper fontSize={fontSize}>
+            <AppLayout
+              theme={appTheme}
+              toggleTheme={() => toggleTheme('app')}
+              themeMode={themeMode.app}
+              fontSize={fontSize}
+              changeFontSize={changeFontSize}
+            >
+              <Routes>
+                <Route index element={<Navigate to="/app/dashboard" replace />} />
+                {appRoutes.map(({ path, element: Element }) => (
+                  <Route key={path} path={path} element={
+                    hasActiveSubscription() ? (
                       <Element
                         toggleTheme={() => toggleTheme('app')}
                         fontSize={fontSize}
                         changeFontSize={changeFontSize}
                         themeMode={themeMode.app}
                       />
-                    } />
-                  ))}
-                  <Route path="admin-feedback" element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/app/dashboard" replace />} />
-                </Routes>
-              </AppLayout>
-            </FontSizeWrapper>
-          </ProtectedRoute>
-        } />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
-  );
-};
+                    ) : (
+                      <Navigate to="/my-plan" replace />
+                    )
+                  } />
+                ))}
+                <Route path="admin-feedback" element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/" replace />} />
+              </Routes>
+            </AppLayout>
+          </FontSizeWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  </Suspense>
+));
 
 const PublicLayout = React.memo(({ children, toggleTheme, theme }) => (
   <ThemeProvider theme={theme}>
@@ -213,29 +217,5 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
     </Box>
   </ThemeProvider>
 ));
-
-const publicRoutes = [
-  { path: "/", element: Home },
-  { path: "/features", element: Features },
-  { path: "/faq", element: FAQ },
-  { path: "/tos", element: ToS },
-  { path: "/privacy-policy", element: PrivacyPolicy },
-  { path: "/pricing", element: Pricing },
-  { path: "/blog", element: BlogList },
-  { path: "/blog/:id", element: BlogPost },
-];
-
-const appRoutes = [
-  { path: "dashboard", element: Dashboard },
-  { path: "finances", element: Finances },
-  { path: "properties", element: Properties },
-  { path: "tickets", element: Tickets },
-  { path: "contacts", element: Contacts },
-  { path: "taxes", element: Taxes },
-  { path: "documents", element: Documents },
-  { path: "reports", element: Reports },
-  { path: "settings", element: Settings },
-  { path: "feedback", element: Feedback },
-];
 
 export default App;

@@ -1,55 +1,70 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getUserProfile, 
-  updateUserProfile, 
+const multer = require('multer');
+const path = require('path');
+const userController = require('../controllers/userController');
+const { protect, admin } = require('../middleware/authMiddleware');
+const {
+  getUserProfile,
+  updateUserProfile,
   changeEmail,
   changePassword,
   uploadAvatar,
   getSubscriptionDetails,
   extendSubscription,
   reduceSubscription,
+  getOneMonthSubscription,
   getNotifications,
   markNotificationAsRead,
   updateUserPreferences
-} = require('../controllers/userController');
-const { protect } = require('../middleware/authMiddleware');
-const multer = require('multer');
-const path = require('path');
+} = require('../controllers/userController'); 
 
+// Multer configuration
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/avatars/')
-  },
-  filename: function (req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`)
-  }
+  destination: (req, file, cb) => cb(null, 'uploads/avatars/'),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
 });
-
 const upload = multer({ storage: storage });
 
-// Add this logging middleware
+// Logging middleware
 router.use((req, res, next) => {
   console.log(`User route accessed: ${req.method} ${req.url}`);
   next();
 });
 
-// Wrap each route handler with a try-catch block
+// Error handling middleware
 const asyncHandler = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
 
-// Apply the protect middleware to all routes
+// Apply protect middleware to all routes
 router.use(protect);
 
-router.get('/', asyncHandler(getUserProfile));
-router.put('/', asyncHandler(updateUserProfile));
+// User profile routes
+router.route('/profile')
+  .get(asyncHandler(getUserProfile))
+  .put(asyncHandler(updateUserProfile));
+
+// User preferences route
 router.put('/preferences', asyncHandler(updateUserPreferences));
+
+// Authentication routes
 router.post('/change-email', asyncHandler(changeEmail));
 router.post('/change-password', asyncHandler(changePassword));
+
+// Avatar upload route
 router.post('/avatar', upload.single('avatar'), asyncHandler(uploadAvatar));
-router.get('/subscription', asyncHandler(getSubscriptionDetails));
-router.post('/extend-subscription', asyncHandler(extendSubscription));
-router.post('/reduce-subscription', asyncHandler(reduceSubscription));
+
+// Subscription routes
+router.get('/subscription', protect, userController.getSubscriptionDetails);
+router.post('/extend-subscription', protect, admin, extendSubscription);
+router.post('/reduce-subscription', protect, admin, reduceSubscription);
+router.post('/get-one-month-subscription', protect, admin, (req, res, next) => {
+  console.log('Route hit: get-one-month-subscription');
+  console.log('Request body:', req.body);
+  userController.getOneMonthSubscription(req, res, next);
+});
+
+// Notification routes
 router.get('/notifications', asyncHandler(getNotifications));
 router.put('/notifications/:id/read', asyncHandler(markNotificationAsRead));
 

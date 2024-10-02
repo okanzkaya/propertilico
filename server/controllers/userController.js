@@ -158,33 +158,126 @@ exports.uploadAvatar = async (req, res) => {
 };
 
 exports.getSubscriptionDetails = async (req, res) => {
-  const user = await User.findById(req.user.id).select('subscriptionEndDate maxProperties');
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+  try {
+    const user = await User.findById(req.user.id).select('subscriptionEndDate');
+    
+    let subscriptionEndDate = null;
+    if (user.subscriptionEndDate && user.subscriptionEndDate instanceof Date) {
+      subscriptionEndDate = user.subscriptionEndDate.toISOString();
+    }
+
+    const response = {
+      subscriptionEndDate,
+      planName: 'Premium',
+      maxProperties: 100
+    };
+
+    console.log('Sending subscription details:', JSON.stringify(response));
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching subscription details:', error);
+    res.status(500).json({ message: 'Error fetching subscription details' });
   }
-  res.json({ subscriptionEndDate: user.subscriptionEndDate, maxProperties: user.maxProperties });
 };
 
 exports.extendSubscription = async (req, res) => {
-  const user = await User.findById(req.user.id);
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const currentDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : new Date();
+    const newEndDate = new Date(currentDate.setDate(currentDate.getDate() + 7));
+
+    user.subscriptionEndDate = newEndDate;
+    await user.save();
+
+    // Fetch the user again to ensure we have the updated data
+    const updatedUser = await User.findById(req.user.id);
+
+    res.json({ 
+      success: true, 
+      message: 'Subscription extended successfully',
+      subscriptionEndDate: updatedUser.subscriptionEndDate instanceof Date 
+        ? updatedUser.subscriptionEndDate.toISOString() 
+        : updatedUser.subscriptionEndDate
+    });
+  } catch (error) {
+    console.error('Error extending subscription:', error);
+    res.status(500).json({ success: false, message: 'Error extending subscription', error: error.message });
   }
-  
-  user.subscriptionEndDate = new Date(user.subscriptionEndDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-  await user.save();
-  res.json({ message: 'Subscription extended successfully', newEndDate: user.subscriptionEndDate });
 };
 
 exports.reduceSubscription = async (req, res) => {
-  const user = await User.findById(req.user.id);
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const currentDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : new Date();
+    const newEndDate = new Date(currentDate.setDate(currentDate.getDate() - 7));
+
+    user.subscriptionEndDate = newEndDate;
+    await user.save();
+
+    // Fetch the user again to ensure we have the updated data
+    const updatedUser = await User.findById(req.user.id);
+
+    res.json({ 
+      success: true, 
+      message: 'Subscription reduced successfully',
+      subscriptionEndDate: updatedUser.subscriptionEndDate instanceof Date 
+        ? updatedUser.subscriptionEndDate.toISOString() 
+        : updatedUser.subscriptionEndDate
+    });
+  } catch (error) {
+    console.error('Error reducing subscription:', error);
+    res.status(500).json({ success: false, message: 'Error reducing subscription', error: error.message });
   }
-  
-  user.subscriptionEndDate = new Date(user.subscriptionEndDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-  await user.save();
-  res.json({ message: 'Subscription reduced successfully', newEndDate: user.subscriptionEndDate });
+};
+
+exports.getOneMonthSubscription = async (req, res, next) => {
+  console.log('getOneMonthSubscription called');
+  console.log('Request body:', req.body);
+  console.log('User object from req:', req.user);
+
+  try {
+    if (!req.user || !req.user.id) {
+      console.log('User not found in request');
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      console.log('User not found in database');
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    console.log('Current subscription end date:', user.subscriptionEndDate);
+
+    const oneMonthFromNow = new Date();
+    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+    user.subscriptionEndDate = oneMonthFromNow;
+    await user.save();
+
+    // Fetch the user again to ensure we have the updated data
+    const updatedUser = await User.findById(req.user.id);
+    console.log('New subscription end date:', updatedUser.subscriptionEndDate);
+
+    res.status(200).json({
+      success: true,
+      message: 'One month subscription activated successfully',
+      subscriptionEndDate: updatedUser.subscriptionEndDate instanceof Date 
+        ? updatedUser.subscriptionEndDate.toISOString() 
+        : updatedUser.subscriptionEndDate
+    });
+  } catch (error) {
+    console.error('Error in getOneMonthSubscription:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
 };
 
 exports.getNotifications = async (req, res) => {
