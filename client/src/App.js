@@ -107,22 +107,20 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GoogleReCaptchaProvider reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY} scriptProps={{ async: true, defer: true, appendTo: 'head' }}>
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <BrowserRouter>
-            <AppContent
-              appTheme={appTheme}
-              publicTheme={publicTheme}
-              toggleTheme={toggleTheme}
-              themeMode={themeMode}
-              fontSize={fontSize}
-              changeFontSize={changeFontSize}
-              user={user}
-              hasActiveSubscription={hasActiveSubscription}
-            />
-          </BrowserRouter>
-        </ErrorBoundary>
-      </GoogleReCaptchaProvider>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <BrowserRouter>
+          <AppContent
+            appTheme={appTheme}
+            publicTheme={publicTheme}
+            toggleTheme={toggleTheme}
+            themeMode={themeMode}
+            fontSize={fontSize}
+            changeFontSize={changeFontSize}
+            user={user}
+            hasActiveSubscription={hasActiveSubscription}
+          />
+        </BrowserRouter>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 };
@@ -139,9 +137,11 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
       ))}
       <Route path="/signin" element={
         <AuthenticatedRoute>
-          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-            <SignIn />
-          </PublicLayout>
+          <GoogleReCaptchaProvider reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY} scriptProps={{ async: true, defer: true, appendTo: 'head' }}>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+              <SignIn />
+            </PublicLayout>
+          </GoogleReCaptchaProvider>
         </AuthenticatedRoute>
       } />
       <Route path="/get-started" element={

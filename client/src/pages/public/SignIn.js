@@ -1,18 +1,19 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { useUser } from '../../context/UserContext';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { 
   Typography, TextField, Button, Checkbox, FormControlLabel, Snackbar, 
   IconButton, Box, Paper, InputAdornment, Alert, CircularProgress,
-  LinearProgress
+  Divider
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ErrorIcon from '@mui/icons-material/Error';
 import LockIcon from '@mui/icons-material/Lock';
+import GoogleIcon from '@mui/icons-material/Google';
 
 const SignInContainer = styled.div`
   display: flex;
@@ -48,8 +49,16 @@ const ErrorMessage = styled(Typography)`
   margin-top: 16px;
 `;
 
-const PasswordStrengthIndicator = styled(LinearProgress)`
-  margin-top: 8px;
+const GoogleButton = styled(Button)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #4285F4;
+  color: white;
+  &:hover {
+    background-color: #357ae8;
+  }
 `;
 
 const SignIn = () => {
@@ -58,7 +67,6 @@ const SignIn = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
   const { login, hasActiveSubscription } = useUser();
   const { executeRecaptcha } = useGoogleReCaptcha();
 
@@ -80,7 +88,7 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
     setIsLoading(true);
     try {
       const reCaptchaToken = await executeRecaptcha('signin');
@@ -99,14 +107,7 @@ const SignIn = () => {
         
         const hasSubscription = await hasActiveSubscription();
         console.log('Subscription status:', hasSubscription ? 'Active' : 'Inactive');
-        
-        if (hasSubscription) {
-          console.log('Redirecting to dashboard');
-          navigate('/app/dashboard');
-        } else {
-          console.log('Redirecting to my plan');
-          navigate('/my-plan');
-        }
+        handlePostLogin(hasSubscription);
       } else {
         throw new Error(loginResult.error || 'Login failed');
       }
@@ -118,18 +119,15 @@ const SignIn = () => {
       setIsLoading(false);
     }
   };
+  
+  const handlePostLogin = (hasSubscription) => {
+    console.log('Handling post-login actions');
+    // Add your post-login logic here
+  };
 
-  const passwordStrength = useMemo(() => {
-    const password = formData.password;
-    if (password.length === 0) return 0;
-    let strength = 0;
-    if (password.length > 6) strength += 20;
-    if (password.length > 10) strength += 20;
-    if (/[A-Z]/.test(password)) strength += 20;
-    if (/[0-9]/.test(password)) strength += 20;
-    if (/[^A-Za-z0-9]/.test(password)) strength += 20;
-    return strength;
-  }, [formData.password]);
+  const handleGoogleSignIn = () => {
+    setSnackbar({ open: true, message: 'Google Sign In is not available yet', severity: 'info' });
+  };
 
   return (
     <SignInContainer>
@@ -171,11 +169,6 @@ const SignIn = () => {
               ),
             }}
           />
-          <PasswordStrengthIndicator
-            variant="determinate"
-            value={passwordStrength}
-            color={passwordStrength > 60 ? "success" : passwordStrength > 30 ? "warning" : "error"}
-          />
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <FormControlLabel
               control={<Checkbox name="rememberMe" checked={formData.rememberMe} onChange={handleChange} color="primary" />}
@@ -203,6 +196,23 @@ const SignIn = () => {
             {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
           </Button>
         </Form>
+        <Divider sx={{ my: 2 }}>OR</Divider>
+        <GoogleButton
+          fullWidth
+          startIcon={<GoogleIcon />}
+          onClick={handleGoogleSignIn}
+          disabled
+          sx={{ 
+            height: '48px',
+            opacity: 0.7,
+            '&.Mui-disabled': {
+              color: 'white',
+              backgroundColor: '#4285F4',
+            }
+          }}
+        >
+          Sign in with Google (Coming Soon)
+        </GoogleButton>
         <Typography variant="body2" sx={{ mt: 2, color: '#666' }}>
           Don't have an account? <Link to="/get-started" style={{ color: '#6e8efb', textDecoration: 'none' }}>Sign up</Link>
         </Typography>
