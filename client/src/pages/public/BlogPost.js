@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Helmet } from 'react-helmet-async';
 import DOMPurify from 'dompurify';
 import { 
-  Typography, Box, Avatar, Chip, CircularProgress, Container, 
-  useTheme, useMediaQuery, Fade, Paper
+  Typography, Box, Chip, Container, Fade, Divider, 
+  Button, IconButton, Snackbar, Alert, Skeleton
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { CalendarToday, AccessTime, Person } from '@mui/icons-material';
+import { 
+  CalendarToday, AccessTime, Person, Facebook, Twitter, LinkedIn,
+  WhatsApp, Reddit, ContentCopy
+} from '@mui/icons-material';
 
 const PostContainer = styled(Container)(({ theme }) => ({
   maxWidth: '800px',
   padding: theme.spacing(3),
-  [theme.breakpoints.up('md')]: {
-    padding: theme.spacing(5),
-  },
+  [theme.breakpoints.up('md')]: { padding: theme.spacing(5) },
 }));
 
 const HeaderImage = styled('img')(({ theme }) => ({
@@ -23,16 +24,15 @@ const HeaderImage = styled('img')(({ theme }) => ({
   height: 'auto',
   borderRadius: theme.shape.borderRadius,
   marginBottom: theme.spacing(4),
+  boxShadow: theme.shadows[5],
 }));
 
 const PostTitle = styled(Typography)(({ theme }) => ({
   fontSize: '2.5rem',
-  fontWeight: 300,
+  fontWeight: 700,
   marginBottom: theme.spacing(2),
-  color: theme.palette.text.primary,
-  [theme.breakpoints.up('md')]: {
-    fontSize: '3rem',
-  },
+  color: theme.palette.primary.main,
+  [theme.breakpoints.up('md')]: { fontSize: '3rem' },
 }));
 
 const PostMeta = styled(Box)(({ theme }) => ({
@@ -62,68 +62,58 @@ const PostContent = styled('div')(({ theme }) => ({
     height: 'auto',
     borderRadius: theme.shape.borderRadius,
     marginBottom: theme.spacing(3),
+    boxShadow: theme.shadows[3],
   },
   '& h2': {
     fontSize: '2rem',
-    fontWeight: 400,
+    fontWeight: 600,
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(2),
+    color: theme.palette.primary.main,
   },
   '& h3': {
     fontSize: '1.5rem',
-    fontWeight: 400,
+    fontWeight: 500,
     marginTop: theme.spacing(3),
     marginBottom: theme.spacing(2),
+    color: theme.palette.secondary.main,
   },
-  '& p': {
-    marginBottom: theme.spacing(3),
-  },
+  '& p': { marginBottom: theme.spacing(3) },
   '& blockquote': {
     borderLeft: `4px solid ${theme.palette.primary.main}`,
-    paddingLeft: theme.spacing(2),
+    padding: theme.spacing(2),
     fontStyle: 'italic',
     margin: `${theme.spacing(3)} 0`,
     color: theme.palette.text.secondary,
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadows[1],
   },
 }));
 
 const TagsContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexWrap: 'wrap',
-  marginTop: theme.spacing(4),
-  marginBottom: theme.spacing(4),
+  margin: `${theme.spacing(4)} 0`,
 }));
 
 const StyledChip = styled(Chip)(({ theme }) => ({
   margin: theme.spacing(0.5),
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: theme.palette.background.paper,
   color: theme.palette.primary.main,
   '&:hover': {
     backgroundColor: theme.palette.primary.main,
     color: theme.palette.common.white,
   },
+  transition: theme.transitions.create(['background-color', 'color']),
 }));
 
-const AuthorSection = styled(Paper)(({ theme }) => ({
+const SocialShareContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
-  alignItems: 'center',
-  padding: theme.spacing(3),
-  marginTop: theme.spacing(6),
-  borderRadius: theme.shape.borderRadius,
-  boxShadow: 'none',
-  backgroundColor: theme.palette.background.default,
-}));
-
-const AuthorAvatar = styled(Avatar)(({ theme }) => ({
-  width: 60,
-  height: 60,
-  marginRight: theme.spacing(2),
-}));
-
-const ErrorMessage = styled(Typography)(({ theme }) => ({
-  color: theme.palette.error.main,
-  textAlign: 'center',
+  justifyContent: 'center',
+  flexWrap: 'wrap',
   marginTop: theme.spacing(4),
+  '& > *': { margin: theme.spacing(0, 1, 1, 1) },
 }));
 
 const BlogPost = () => {
@@ -131,36 +121,65 @@ const BlogPost = () => {
   const [post, setPost] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+
+  const fetchPost = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
+      setPost(response.data);
+    } catch (err) {
+      console.error('Error fetching blog post:', err);
+      setError('Failed to load the blog post. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        setIsLoading(true);
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
-        setPost(response.data);
-        setIsLoading(false);
-      } catch (err) {
-        console.error('Failed to fetch blog post:', err);
-        setError('Failed to load the blog post. Please try again later.');
-        setIsLoading(false);
-      }
-    };
-
     fetchPost();
-  }, [id]);
+  }, [fetchPost]);
+
+  const handleShare = useCallback((platform) => {
+    if (!post) return;
+    const url = window.location.href;
+    const text = `Check out this article: ${post.title}`;
+    const shareUrls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      linkedin: `https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${post.title}`,
+      whatsapp: `https://wa.me/?text=${text} ${url}`,
+      reddit: `https://reddit.com/submit?url=${url}&title=${post.title}`,
+    };
+    if (platform === 'copy') {
+      navigator.clipboard.writeText(url);
+      setSnackbar({ open: true, message: 'Link copied to clipboard!', severity: 'success' });
+    } else if (shareUrls[platform]) {
+      window.open(shareUrls[platform], '_blank');
+    }
+  }, [post]);
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress size={40} thickness={4} />
-      </Box>
+      <PostContainer>
+        <Skeleton variant="rectangular" width="100%" height={300} />
+        <Skeleton variant="text" width="80%" height={60} sx={{ mt: 2 }} />
+        <Skeleton variant="text" width="60%" height={30} sx={{ mt: 1 }} />
+        <Skeleton variant="text" width="100%" height={200} sx={{ mt: 2 }} />
+      </PostContainer>
     );
   }
 
   if (error) {
-    return <ErrorMessage variant="h6">{error}</ErrorMessage>;
+    return (
+      <PostContainer>
+        <Typography variant="h6" color="error" align="center" mt={4}>{error}</Typography>
+        <Button variant="contained" color="primary" onClick={fetchPost} sx={{ mt: 2 }}>
+          Try Again
+        </Button>
+      </PostContainer>
+    );
   }
 
   if (!post) return null;
@@ -174,20 +193,15 @@ const BlogPost = () => {
     "image": post.coverImage,
     "datePublished": post.date,
     "dateModified": post.lastModified || post.date,
-    "author": {
-      "@type": "Person",
-      "name": post.author?.name || "Unknown"
-    },
+    "author": { "@type": "Person", "name": post.author?.name || "Unknown" },
     "publisher": {
       "@type": "Organization",
       "name": "Your Property Management Blog",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://yourdomain.com/logo.png"
-      }
+      "logo": { "@type": "ImageObject", "url": "https://yourdomain.com/logo.png" }
     },
     "description": post.excerpt,
-    "keywords": post.tags.join(", ")
+    "keywords": post.tags.join(", "),
+    "mainEntityOfPage": { "@type": "WebPage", "@id": window.location.href }
   };
 
   return (
@@ -201,15 +215,18 @@ const BlogPost = () => {
         <meta property="og:description" content={post.excerpt} />
         <meta property="og:type" content="article" />
         <meta property="og:image" content={post.coverImage} />
+        <meta property="og:url" content={window.location.href} />
         <meta property="article:published_time" content={post.date} />
         <meta property="article:modified_time" content={post.lastModified || post.date} />
         <meta property="article:author" content={post.author?.name || "Unknown"} />
         {post.tags.map(tag => (
           <meta property="article:tag" content={tag} key={tag} />
         ))}
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
-        </script>
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={post.title} />
+        <meta name="twitter:description" content={post.excerpt} />
+        <meta name="twitter:image" content={post.coverImage} />
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
       <Fade in={true} timeout={1000}>
         <PostContainer component="article">
@@ -236,18 +253,35 @@ const BlogPost = () => {
           <PostContent dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
           <TagsContainer>
             {post.tags.map(tag => (
-              <StyledChip key={tag} label={tag} />
+              <StyledChip key={tag} label={tag} component={Link} to={`/blog/tag/${tag}`} clickable />
             ))}
           </TagsContainer>
-          <AuthorSection>
-            <AuthorAvatar src={post.author?.avatar || `https://i.pravatar.cc/300?u=${post.author?.name}`} alt={post.author?.name || "Author"} />
-            <Box>
-              <Typography variant="h6">{post.author?.name || "Unknown"}</Typography>
-              <Typography variant="body2" color="textSecondary">{post.author?.bio || "Author bio"}</Typography>
-            </Box>
-          </AuthorSection>
+          <Divider sx={{ my: 4 }} />
+          <Typography variant="h6" gutterBottom>Share this article</Typography>
+          <SocialShareContainer>
+            {['facebook', 'twitter', 'linkedin', 'whatsapp', 'reddit', 'copy'].map((platform) => (
+              <IconButton key={platform} onClick={() => handleShare(platform)} color="primary">
+                {platform === 'facebook' && <Facebook />}
+                {platform === 'twitter' && <Twitter />}
+                {platform === 'linkedin' && <LinkedIn />}
+                {platform === 'whatsapp' && <WhatsApp />}
+                {platform === 'reddit' && <Reddit />}
+                {platform === 'copy' && <ContentCopy />}
+              </IconButton>
+            ))}
+          </SocialShareContainer>
         </PostContainer>
       </Fade>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
