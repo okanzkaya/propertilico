@@ -8,26 +8,7 @@ exports.getUserProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-      subscriptionEndDate: user.subscriptionEndDate,
-      maxProperties: user.maxProperties,
-      language: user.language,
-      timeZone: user.timeZone,
-      currency: user.currency,
-      dateFormat: user.dateFormat,
-      measurementUnit: user.measurementUnit,
-      fontSize: user.fontSize,
-      theme: user.theme,
-      emailNotifications: user.emailNotifications,
-      pushNotifications: user.pushNotifications,
-      inAppNotifications: user.inAppNotifications,
-      twoFactorAuth: user.twoFactorAuth,
-      loginAlerts: user.loginAlerts
-    });
+    res.json(user.toJSON());
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ message: 'Server error' });
@@ -59,7 +40,7 @@ exports.updateUserProfile = async (req, res) => {
     if (loginAlerts !== undefined) user.loginAlerts = loginAlerts;
 
     const updatedUser = await user.save();
-    res.json(updatedUser);
+    res.json(updatedUser.toJSON());
   } catch (error) {
     console.error('Error updating user profile:', error);
     res.status(400).json({ message: 'Failed to update user profile' });
@@ -68,13 +49,13 @@ exports.updateUserProfile = async (req, res) => {
 
 exports.changeEmail = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('+password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
     const { newEmail, password } = req.body;
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid password' });
     }
@@ -105,13 +86,13 @@ exports.changeEmail = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('+password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
     const { oldPassword, newPassword } = req.body;
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    const isMatch = await user.matchPassword(oldPassword);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid old password' });
     }
@@ -193,15 +174,12 @@ exports.extendSubscription = async (req, res) => {
     user.subscriptionEndDate = newEndDate;
     await user.save();
 
-    // Fetch the user again to ensure we have the updated data
     const updatedUser = await User.findById(req.user.id);
 
     res.json({ 
       success: true, 
       message: 'Subscription extended successfully',
-      subscriptionEndDate: updatedUser.subscriptionEndDate instanceof Date 
-        ? updatedUser.subscriptionEndDate.toISOString() 
-        : updatedUser.subscriptionEndDate
+      subscriptionEndDate: updatedUser.subscriptionEndDate.toISOString()
     });
   } catch (error) {
     console.error('Error extending subscription:', error);
@@ -222,15 +200,12 @@ exports.reduceSubscription = async (req, res) => {
     user.subscriptionEndDate = newEndDate;
     await user.save();
 
-    // Fetch the user again to ensure we have the updated data
     const updatedUser = await User.findById(req.user.id);
 
     res.json({ 
       success: true, 
       message: 'Subscription reduced successfully',
-      subscriptionEndDate: updatedUser.subscriptionEndDate instanceof Date 
-        ? updatedUser.subscriptionEndDate.toISOString() 
-        : updatedUser.subscriptionEndDate
+      subscriptionEndDate: updatedUser.subscriptionEndDate.toISOString()
     });
   } catch (error) {
     console.error('Error reducing subscription:', error);
@@ -238,7 +213,7 @@ exports.reduceSubscription = async (req, res) => {
   }
 };
 
-exports.getOneMonthSubscription = async (req, res, next) => {
+exports.getOneMonthSubscription = async (req, res) => {
   console.log('getOneMonthSubscription called');
   console.log('Request body:', req.body);
   console.log('User object from req:', req.user);
@@ -263,16 +238,13 @@ exports.getOneMonthSubscription = async (req, res, next) => {
     user.subscriptionEndDate = oneMonthFromNow;
     await user.save();
 
-    // Fetch the user again to ensure we have the updated data
     const updatedUser = await User.findById(req.user.id);
     console.log('New subscription end date:', updatedUser.subscriptionEndDate);
 
     res.status(200).json({
       success: true,
       message: 'One month subscription activated successfully',
-      subscriptionEndDate: updatedUser.subscriptionEndDate instanceof Date 
-        ? updatedUser.subscriptionEndDate.toISOString() 
-        : updatedUser.subscriptionEndDate
+      subscriptionEndDate: updatedUser.subscriptionEndDate.toISOString()
     });
   } catch (error) {
     console.error('Error in getOneMonthSubscription:', error);
@@ -281,27 +253,37 @@ exports.getOneMonthSubscription = async (req, res, next) => {
 };
 
 exports.getNotifications = async (req, res) => {
-  const user = await User.findById(req.user.id).select('notifications');
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+  try {
+    const user = await User.findById(req.user.id).select('notifications');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user.notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-  res.json(user.notifications);
 };
 
 exports.markNotificationAsRead = async (req, res) => {
-  const user = await User.findById(req.user.id);
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const notification = user.notifications.id(req.params.id);
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+    
+    notification.read = true;
+    await user.save();
+    res.json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-  
-  const notification = user.notifications.id(req.params.id);
-  if (!notification) {
-    return res.status(404).json({ message: 'Notification not found' });
-  }
-  
-  notification.read = true;
-  await user.save();
-  res.json({ message: 'Notification marked as read' });
 };
 
 exports.updateUserPreferences = async (req, res) => {

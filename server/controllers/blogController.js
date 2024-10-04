@@ -1,9 +1,26 @@
 const Blog = require('../models/Blog');
+const User = require('../models/User');
 
 exports.getAllBlogs = async (req, res, next) => {
   try {
-    const blogs = await Blog.find().sort({ date: -1 });
-    res.json(blogs);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+    
+    const blogs = await Blog.find()
+      .sort({ date: -1 })
+      .skip(startIndex)
+      .limit(limit)
+      .populate('author', 'name');
+    
+    const total = await Blog.countDocuments();
+
+    res.json({
+      blogs,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalBlogs: total
+    });
   } catch (err) {
     next(new Error('Failed to fetch blog posts'));
   }
@@ -11,25 +28,23 @@ exports.getAllBlogs = async (req, res, next) => {
 
 exports.getBlogById = async (req, res, next) => {
   try {
-    const blog = await Blog.findById(req.params.id);
+    const blog = await Blog.findById(req.params.id).populate('author', 'name');
     if (!blog) {
-      const error = new Error('Blog post not found');
-      error.status = 404;
-      throw error;
+      return res.status(404).json({ message: 'Blog post not found' });
     }
     res.json(blog);
   } catch (err) {
-    next(err.status === 404 ? err : new Error('Failed to fetch blog post'));
+    next(new Error('Failed to fetch blog post'));
   }
 };
 
 exports.createBlog = async (req, res, next) => {
   try {
-    const newBlog = await Blog.create({
+    const newBlog = new Blog({
       ...req.body,
-      author: req.user.name,
-      userId: req.user._id
+      author: req.user._id
     });
+    await newBlog.save();
     res.status(201).json(newBlog);
   } catch (err) {
     next(new Error('Failed to create blog post'));
@@ -42,7 +57,7 @@ exports.updateBlog = async (req, res, next) => {
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
-    if (blog.userId.toString() !== req.user._id.toString()) {
+    if (blog.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to update this blog' });
     }
     const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -58,7 +73,7 @@ exports.deleteBlog = async (req, res, next) => {
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
-    if (blog.userId.toString() !== req.user._id.toString()) {
+    if (blog.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to delete this blog' });
     }
     await blog.remove();

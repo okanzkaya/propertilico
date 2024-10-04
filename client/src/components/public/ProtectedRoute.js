@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { CircularProgress, Box, Typography, Button } from '@mui/material';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading, checkAuthStatus, hasActiveSubscription } = useUser();
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
@@ -53,6 +53,10 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/signin" state={{ from: location }} replace />;
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return <Navigate to="/" replace />;
   }
 
   const isSubscriptionRoute = location.pathname === '/my-plan' || location.pathname.includes('/subscription');

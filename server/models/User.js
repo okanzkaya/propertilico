@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
     type: String, 
     required: [true, 'Please add an email'],
     unique: true,
+    lowercase: true,
+    trim: true,
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
       'Please add a valid email'
@@ -40,6 +42,7 @@ const userSchema = new mongoose.Schema({
   dateFormat: { type: String, default: 'MM/DD/YYYY' },
   measurementUnit: { type: String, default: 'metric' },
   fontSize: { type: String, default: 'medium' },
+  theme: { type: String, default: 'light' },
   twoFactorAuth: { type: Boolean, default: false },
   loginAlerts: { type: Boolean, default: true },
   lastPasswordChange: { type: Date },
@@ -65,6 +68,8 @@ const userSchema = new mongoose.Schema({
     city: String,
     timestamp: Date
   }]
+}, {
+  timestamps: true
 });
 
 userSchema.set('toJSON', {
@@ -74,6 +79,9 @@ userSchema.set('toJSON', {
     } else {
       ret.subscriptionEndDate = null;
     }
+    ret.isBlogger = doc.isBlogger;
+    delete ret.password;
+    delete ret.__v;
     return ret;
   }
 });
@@ -85,6 +93,9 @@ userSchema.set('toObject', {
     } else {
       ret.subscriptionEndDate = null;
     }
+    ret.isBlogger = doc.isBlogger;
+    delete ret.password;
+    delete ret.__v;
     return ret;
   }
 });
@@ -102,24 +113,12 @@ userSchema.pre('save', async function (next) {
 });
 
 userSchema.methods.matchPassword = async function(enteredPassword) {
-  console.log('Matching password');
-  console.log('Entered password:', enteredPassword ? 'Yes (length: ' + enteredPassword.length + ')' : 'No');
-  console.log('Stored password hash:', this.password ? 'Yes (length: ' + this.password.length + ')' : 'No');
-  
-  if (!enteredPassword) {
-    console.log('Entered password is undefined or null');
-    return false;
-  }
-  
-  if (!this.password) {
-    console.log('Stored password hash is undefined or null');
+  if (!enteredPassword || !this.password) {
     return false;
   }
   
   try {
-    const isMatch = await bcrypt.compare(enteredPassword, this.password);
-    console.log('Password match result:', isMatch);
-    return isMatch;
+    return await bcrypt.compare(enteredPassword, this.password);
   } catch (error) {
     console.error('Error in matchPassword:', error);
     return false;
@@ -127,16 +126,13 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
 };
 
 userSchema.methods.incrementLoginAttempts = function() {
-  // If we have a previous lock that has expired, restart at 1
   if (this.lockUntil && this.lockUntil < Date.now()) {
     return this.updateOne({
       $set: { loginAttempts: 1 },
       $unset: { lockUntil: 1 }
     });
   }
-  // Otherwise we're incrementing
   const updates = { $inc: { loginAttempts: 1 } };
-  // Lock the account if we've reached max attempts and it's not locked already
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
     updates.$set = { lockUntil: Date.now() + 15 * 60 * 1000 };
   }
@@ -144,7 +140,6 @@ userSchema.methods.incrementLoginAttempts = function() {
 };
 
 userSchema.virtual('isLocked').get(function() {
-  // Check for a future lockUntil timestamp
   return !!(this.lockUntil && this.lockUntil > Date.now());
 });
 

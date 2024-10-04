@@ -10,41 +10,51 @@ export const UserProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   const clearStoredData = useCallback(() => {
+    console.log('Clearing stored data...');
     ['token', 'refreshToken', 'userSettings', 'user', 'fontSize'].forEach(key => {
       localStorage.removeItem(key);
       sessionStorage.removeItem(key);
     });
     delete axiosInstance.defaults.headers.common['Authorization'];
+    console.log('Stored data cleared');
   }, []);
 
   const setAuthToken = useCallback((token, refreshToken, rememberMe) => {
+    console.log('Setting auth token...');
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem('token', token);
     if (refreshToken) {
       storage.setItem('refreshToken', refreshToken);
     }
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    console.log('Auth token set');
   }, []);
 
   const refreshToken = useCallback(async () => {
+    console.log('Attempting to refresh token...');
     const refreshToken = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
     if (!refreshToken) {
+      console.error('No refresh token available');
       throw new Error('No refresh token available');
     }
 
     try {
       const response = await userApi.refreshToken(refreshToken);
+      console.log('Token refreshed successfully');
       setAuthToken(response.token, response.refreshToken, true);
       return response.token;
     } catch (error) {
+      console.error('Error refreshing token:', error);
       clearStoredData();
       throw error;
     }
   }, [clearStoredData, setAuthToken]);
 
   const fetchUser = useCallback(async () => {
+    console.log('Fetching user data...');
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) {
+      console.log('No token found, clearing user data');
       setUser(null);
       setLoading(false);
       return;
@@ -52,23 +62,28 @@ export const UserProvider = ({ children }) => {
 
     try {
       const userData = await userApi.getUserProfile();
+      console.log('User data fetched:', userData);
       setUser(userData);
       localStorage.setItem('fontSize', userData.fontSize || 'medium');
       setError(null);
     } catch (error) {
       console.error('Failed to fetch user data:', error);
       if (error.response && error.response.status === 401) {
+        console.log('Token expired, attempting to refresh...');
         try {
           await refreshToken();
           const userData = await userApi.getUserProfile();
+          console.log('User data fetched after token refresh:', userData);
           setUser(userData);
           setError(null);
         } catch (refreshError) {
+          console.error('Failed to refresh token:', refreshError);
           setUser(null);
           setError('Session expired. Please log in again.');
           clearStoredData();
         }
       } else {
+        console.error('Error fetching user data:', error);
         setUser(null);
         setError('Failed to fetch user data. Please try logging in again.');
         clearStoredData();
@@ -83,8 +98,10 @@ export const UserProvider = ({ children }) => {
   }, [fetchUser]);
 
   const login = useCallback(async (credentials) => {
+    console.log('Attempting login...');
     try {
       const response = await loginUser(credentials);
+      console.log('Login successful');
       setAuthToken(response.token, response.refreshToken, credentials.rememberMe);
       setUser(response.user);
       setError(null);
@@ -98,8 +115,10 @@ export const UserProvider = ({ children }) => {
   }, [fetchUser, setAuthToken]);
 
   const register = useCallback(async (userData) => {
+    console.log('Attempting registration...');
     try {
       const response = await registerUser(userData);
+      console.log('Registration successful');
       setAuthToken(response.token, response.refreshToken, true);
       setUser(response.user);
       setError(null);
@@ -112,8 +131,10 @@ export const UserProvider = ({ children }) => {
   }, [setAuthToken]);
 
   const logout = useCallback(async () => {
+    console.log('Logging out...');
     try {
       await userApi.logout();
+      console.log('Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -123,8 +144,10 @@ export const UserProvider = ({ children }) => {
   }, [clearStoredData]);
 
   const updateUserSettings = useCallback(async (settings) => {
+    console.log('Updating user settings...');
     try {
       const updatedUser = await userApi.updateUserProfile(settings);
+      console.log('User settings updated:', updatedUser);
       setUser(prevUser => ({ ...prevUser, ...updatedUser }));
       if (settings.fontSize) {
         localStorage.setItem('fontSize', settings.fontSize);
@@ -138,8 +161,10 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   const checkAuthStatus = useCallback(async () => {
+    console.log('Checking auth status...');
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) {
+      console.log('No token found, user is not authenticated');
       setUser(null);
       setLoading(false);
       return false;
@@ -148,10 +173,12 @@ export const UserProvider = ({ children }) => {
     try {
       const response = await axiosInstance.get(`${process.env.REACT_APP_API_URL}/api/auth/status`);
       if (response.data.isAuthenticated) {
+        console.log('User is authenticated');
         setUser(response.data.user);
         setLoading(false);
         return true;
       } else {
+        console.log('User is not authenticated');
         setUser(null);
         clearStoredData();
         setLoading(false);
@@ -160,10 +187,12 @@ export const UserProvider = ({ children }) => {
     } catch (error) {
       console.error('Auth status check failed:', error);
       if (error.response && error.response.status === 401) {
+        console.log('Token expired, attempting to refresh...');
         try {
           await refreshToken();
           return await checkAuthStatus();
         } catch (refreshError) {
+          console.error('Failed to refresh token:', refreshError);
           setUser(null);
           clearStoredData();
           setLoading(false);
@@ -200,8 +229,10 @@ export const UserProvider = ({ children }) => {
   }, [user]);
 
   const updateSubscription = useCallback(async (action) => {
+    console.log(`Updating subscription: ${action}`);
     try {
       const response = await userApi[action === 'extend' ? 'extendSubscription' : 'reduceSubscription']();
+      console.log('Subscription updated:', response);
       setUser(prevUser => ({ ...prevUser, subscriptionEndDate: response.subscriptionEndDate }));
       return response;
     } catch (error) {

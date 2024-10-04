@@ -1,3 +1,4 @@
+// authMiddleware.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -57,16 +58,7 @@ const protect = async (req, res, next) => {
     }
 
     const hasActiveSubscription = checkSubscription(user);
-    const isExemptRoute = [
-      '/api/user/profile',
-      '/api/user/subscription',
-      '/api/auth/status',
-      '/api/user/extend-subscription',
-      '/api/user/reduce-subscription',
-      '/api/user/get-one-month-subscription'
-    ].some(route => req.originalUrl.includes(route));
-
-    if (!hasActiveSubscription && !isExemptRoute && req.originalUrl.startsWith('/api/')) {
+    if (!hasActiveSubscription && !isExemptRoute(req.originalUrl) && req.originalUrl.startsWith('/api/')) {
       console.log('User subscription check failed');
       return res.status(403).json({ message: 'Access denied. Active subscription required.', redirect: '/my-plan' });
     }
@@ -113,4 +105,4 @@ const isBlogger = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin, checkRole, isBlogger };
+module.exports = { protect, admin, checkRole, isBlogger, refreshToken };

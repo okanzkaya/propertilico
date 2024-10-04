@@ -233,67 +233,71 @@ const BlogList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('newest');
   const [posts, setPosts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const { user } = useUser();
   const navigate = useNavigate();
-  const [ref, inView] = useInView({
-    threshold: 0,
-  });
+  const [ref, inView] = useInView({ threshold: 0 });
+  const initialFetchDone = useRef(false);
 
-  const debouncedSearch = useMemo(
-    () => debounce((value) => {
-      setSearchTerm(value);
-      setPage(1);
-    }, 300),
-    []
-  );
+  const debouncedSearch = useMemo(() => debounce(setSearchTerm, 300), []);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (reset = false) => {
+    if (isLoading || (!hasMore && !reset)) return;
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs`, {
-        params: { page, limit: 10, search: searchTerm, sort: sortOption },
+      const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs`, {
+        params: { page: reset ? 1 : page, limit: 10, search: searchTerm, sort: sortOption },
       });
-      setPosts((prevPosts) => (page === 1 ? response.data : [...prevPosts, ...response.data]));
-      setHasMore(response.data.length === 10);
+      const newPosts = Array.isArray(data) ? data : data.blogs || [];
+      setPosts(prev => (reset ? newPosts : [...prev, ...newPosts]));
+      setHasMore(newPosts.length === 10);
+      setPage(prev => (reset ? 2 : prev + 1));
+      setError(null);
     } catch (err) {
       console.error('Failed to fetch blog posts:', err);
       setError('Failed to load blog posts. Please try again later.');
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchTerm, sortOption]);
+  }, [page, searchTerm, sortOption, isLoading, hasMore]);
 
   useEffect(() => {
-    fetchPosts();
+    if (!initialFetchDone.current) {
+      fetchPosts(true);
+      initialFetchDone.current = true;
+    }
   }, [fetchPosts]);
 
   useEffect(() => {
-    if (inView && hasMore) {
-      setPage((prevPage) => prevPage + 1);
+    if (searchTerm !== '' || sortOption !== 'newest') {
+      fetchPosts(true);
     }
-  }, [inView, hasMore]);
+  }, [searchTerm, sortOption, fetchPosts]);
 
-  const handleSearchChange = (e) => {
-    debouncedSearch(e.target.value);
+  useEffect(() => {
+    if (inView && hasMore && !isLoading && initialFetchDone.current) {
+      fetchPosts();
+    }
+  }, [inView, hasMore, isLoading, fetchPosts]);
+
+  const handleSearchChange = (e) => debouncedSearch(e.target.value);
+
+  const toggleSortOption = () => {
+    setSortOption(prev => prev === 'newest' ? 'oldest' : 'newest');
   };
 
-  const toggleSortOption = useCallback(() => {
-    setSortOption((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
-    setPage(1);
-  }, []);
-
   const handleCreateBlog = () => navigate('/create-blog');
+
   const handleEditBlog = (id) => navigate(`/edit-blog/${id}`);
 
   const handleDeleteBlog = async (id) => {
     if (window.confirm('Are you sure you want to delete this blog post?')) {
       try {
         await axios.delete(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
-        setPosts((prevPosts) => prevPosts.filter((post) => post._id !== id));
+        setPosts(prevPosts => prevPosts.filter(post => post._id !== id));
       } catch (err) {
         console.error('Failed to delete blog post:', err);
         setError('Failed to delete blog post. Please try again later.');
@@ -313,15 +317,15 @@ const BlogList = () => {
         >
           <PostTitle to={`/blog/${post._id}`}>{post.title}</PostTitle>
           <PostMeta>
-            By {post.author} on {new Date(post.date).toLocaleDateString()}
+            By {post.author?.name || 'Unknown'} on {new Date(post.date).toLocaleDateString()}
           </PostMeta>
           <PostExcerpt>{post.excerpt}</PostExcerpt>
           <TagList>
-            {post.tags.map((tag, index) => (
+            {post.tags?.map((tag, index) => (
               <Tag key={index}>{tag}</Tag>
             ))}
           </TagList>
-          {user && user.isBlogger && (
+          {user?.isBlogger && (
             <ActionButtons>
               <ActionButton onClick={() => handleEditBlog(post._id)} aria-label="Edit blog post">
                 <FaEdit />
@@ -337,7 +341,7 @@ const BlogList = () => {
   );
 
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => setPage(1)}>
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => { setPage(1); setPosts([]); setHasMore(true); fetchPosts(true); }}>
       <BlogListContainer
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -358,16 +362,15 @@ const BlogList = () => {
             {sortOption === 'newest' ? 'Newest' : 'Oldest'}
             {sortOption === 'newest' ? <FaSortAmountDown aria-hidden="true" /> : <FaSortAmountUp aria-hidden="true" />}
           </SortButton>
-          {user && user.isBlogger && (
+          {user?.isBlogger && (
             <CreateButton onClick={handleCreateBlog}>
               <FaPlus /> Create New Blog
             </CreateButton>
           )}
         </ControlsContainer>
-        {isLoading && page === 1 && <LoadingSpinner />}
         {error && <ErrorMessage>{error}</ErrorMessage>}
         {renderPosts()}
-        {isLoading && page > 1 && <LoadingSpinner />}
+        {isLoading && <LoadingSpinner />}
         <div ref={ref} />
       </BlogListContainer>
     </ErrorBoundary>

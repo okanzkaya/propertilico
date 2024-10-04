@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
+import { useUser } from '../../context/UserContext';
 
 const EditorContainer = styled.div`
   max-width: 800px;
@@ -38,10 +39,10 @@ const BlogEditor = () => {
   const [blog, setBlog] = useState({ title: '', content: '', excerpt: '', tags: '' });
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useUser(); // Use the useUser hook to get the current user
 
   useEffect(() => {
     if (id) {
-      // If we have an ID, we're editing an existing blog
       const fetchBlog = async () => {
         try {
           const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
@@ -61,16 +62,41 @@ const BlogEditor = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (id) {
-        await axios.put(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`, blog);
-      } else {
-        await axios.post(`${process.env.REACT_APP_API_URL}/api/blogs`, blog);
+      const token = localStorage.getItem('token'); // Get the token from localStorage
+      if (!token) {
+        throw new Error('No authentication token found');
       }
+
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+
+      let response;
+      if (id) {
+        response = await axios.put(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`, blog, config);
+      } else {
+        response = await axios.post(`${process.env.REACT_APP_API_URL}/api/blogs`, blog, config);
+      }
+      
+      console.log('Blog saved successfully:', response.data);
       navigate('/blog');
     } catch (error) {
       console.error('Error saving blog:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
     }
   };
+
+  // Check if user is a blogger
+  if (!user || !user.isBlogger) {
+    return <div>You do not have permission to access this page.</div>;
+  }
 
   return (
     <EditorContainer>

@@ -54,6 +54,7 @@ const SignIn = lazyLoad('public/SignIn');
 const SignUp = lazyLoad('public/SignUp');
 const MyPlan = lazyLoad('public/MyPlan');
 const AdminFeedbackDashboard = lazyLoad('app/AdminFeedbackDashboard');
+const BlogEditor = lazyLoad('public/BlogEditor');
 
 const LoadingFallback = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -155,6 +156,20 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
         <ProtectedRoute>
           <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
             <MyPlan />
+          </PublicLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/create-blog" element={
+        <ProtectedRoute>
+          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <BlogEditor />
+          </PublicLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/edit-blog/:id" element={
+        <ProtectedRoute>
+          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <BlogEditor />
           </PublicLayout>
         </ProtectedRoute>
       } />
