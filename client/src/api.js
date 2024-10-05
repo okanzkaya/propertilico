@@ -80,17 +80,7 @@ export const loginUser = async (userData) => {
     }
   } catch (error) {
     console.error('API: Login error:', error);
-    if (error.response) {
-      console.error('API: Error response:', error.response.data);
-      console.error('API: Error status:', error.response.status);
-      throw new Error(error.response.data.message || 'Invalid email or password');
-    } else if (error.request) {
-      console.error('API: No response received:', error.request);
-      throw new Error('No response received from the server');
-    } else {
-      console.error('API: Error setting up request:', error.message);
-      throw error;
-    }
+    throw error;
   }
 };
 

@@ -4,13 +4,13 @@ import axios from 'axios';
 import { Helmet } from 'react-helmet-async';
 import DOMPurify from 'dompurify';
 import { 
-  Typography, Box, Chip, Container, Fade, Divider, 
-  Button, IconButton, Snackbar, Alert, Skeleton
+  Typography, Box, Chip, Container, Fade, 
+  IconButton, Snackbar, Alert, Skeleton, Avatar, Card, CardContent
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { 
   CalendarToday, AccessTime, Person, Facebook, Twitter, LinkedIn,
-  WhatsApp, Reddit, ContentCopy
+  WhatsApp, Reddit, ContentCopy, ArrowBack
 } from '@mui/icons-material';
 
 const PostContainer = styled(Container)(({ theme }) => ({
@@ -21,7 +21,8 @@ const PostContainer = styled(Container)(({ theme }) => ({
 
 const HeaderImage = styled('img')(({ theme }) => ({
   width: '100%',
-  height: 'auto',
+  height: '400px',
+  objectFit: 'cover',
   borderRadius: theme.shape.borderRadius,
   marginBottom: theme.spacing(4),
   boxShadow: theme.shadows[5],
@@ -116,6 +117,31 @@ const SocialShareContainer = styled(Box)(({ theme }) => ({
   '& > *': { margin: theme.spacing(0, 1, 1, 1) },
 }));
 
+const AuthorCard = styled(Card)(({ theme }) => ({
+  marginTop: theme.spacing(6),
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.shadows[3],
+  borderRadius: theme.shape.borderRadius,
+}));
+
+const AuthorAvatar = styled(Avatar)(({ theme }) => ({
+  width: 80,
+  height: 80,
+  marginRight: theme.spacing(2),
+}));
+
+const BackButton = styled(IconButton)(({ theme }) => ({
+  position: 'fixed',
+  top: theme.spacing(2),
+  left: theme.spacing(2),
+  zIndex: 1000,
+  backgroundColor: theme.palette.background.paper,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.common.white,
+  },
+}));
+
 const BlogPost = () => {
   const { id } = useParams();
   const [post, setPost] = useState(null);
@@ -163,7 +189,7 @@ const BlogPost = () => {
   if (isLoading) {
     return (
       <PostContainer>
-        <Skeleton variant="rectangular" width="100%" height={300} />
+        <Skeleton variant="rectangular" width="100%" height={400} />
         <Skeleton variant="text" width="80%" height={60} sx={{ mt: 2 }} />
         <Skeleton variant="text" width="60%" height={30} sx={{ mt: 1 }} />
         <Skeleton variant="text" width="100%" height={200} sx={{ mt: 2 }} />
@@ -175,9 +201,6 @@ const BlogPost = () => {
     return (
       <PostContainer>
         <Typography variant="h6" color="error" align="center" mt={4}>{error}</Typography>
-        <Button variant="contained" color="primary" onClick={fetchPost} sx={{ mt: 2 }}>
-          Try Again
-        </Button>
       </PostContainer>
     );
   }
@@ -193,11 +216,15 @@ const BlogPost = () => {
     "image": post.coverImage,
     "datePublished": post.date,
     "dateModified": post.lastModified || post.date,
-    "author": { "@type": "Person", "name": post.author?.name || "Unknown" },
+    "author": { 
+      "@type": "Person", 
+      "name": post.author?.name || "Unknown",
+      "description": post.author?.bloggerDescription || ""
+    },
     "publisher": {
       "@type": "Organization",
-      "name": "Your Property Management Blog",
-      "logo": { "@type": "ImageObject", "url": "https://yourdomain.com/logo.png" }
+      "name": "Propertilico",
+      "logo": { "@type": "ImageObject", "url": "https://propertilico.com/logo.png" }
     },
     "description": post.excerpt,
     "keywords": post.tags.join(", "),
@@ -207,7 +234,7 @@ const BlogPost = () => {
   return (
     <>
       <Helmet>
-        <title>{post.title} | Your Property Management Blog</title>
+        <title>{post.title} | Propertilico Blog</title>
         <meta name="description" content={post.excerpt} />
         <meta name="author" content={post.author?.name || "Unknown"} />
         <meta name="keywords" content={post.tags.join(", ")} />
@@ -230,6 +257,9 @@ const BlogPost = () => {
       </Helmet>
       <Fade in={true} timeout={1000}>
         <PostContainer component="article">
+          <BackButton component={Link} to="/blog" aria-label="Back to blog list">
+            <ArrowBack />
+          </BackButton>
           {post.coverImage && <HeaderImage src={post.coverImage} alt={post.title} />}
           <PostTitle variant="h1">{post.title}</PostTitle>
           <PostMeta>
@@ -256,11 +286,9 @@ const BlogPost = () => {
               <StyledChip key={tag} label={tag} component={Link} to={`/blog/tag/${tag}`} clickable />
             ))}
           </TagsContainer>
-          <Divider sx={{ my: 4 }} />
-          <Typography variant="h6" gutterBottom>Share this article</Typography>
           <SocialShareContainer>
             {['facebook', 'twitter', 'linkedin', 'whatsapp', 'reddit', 'copy'].map((platform) => (
-              <IconButton key={platform} onClick={() => handleShare(platform)} color="primary">
+              <IconButton key={platform} onClick={() => handleShare(platform)} color="primary" aria-label={`Share on ${platform}`}>
                 {platform === 'facebook' && <Facebook />}
                 {platform === 'twitter' && <Twitter />}
                 {platform === 'linkedin' && <LinkedIn />}
@@ -270,6 +298,17 @@ const BlogPost = () => {
               </IconButton>
             ))}
           </SocialShareContainer>
+          <AuthorCard>
+            <CardContent sx={{ display: 'flex', alignItems: 'center' }}>
+              <AuthorAvatar src={post.author?.avatar || '/default-avatar.png'} alt={post.author?.name} />
+              <Box>
+                <Typography variant="h6">{post.author?.name}</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {post.author?.bloggerDescription || "Property Management Expert"}
+                </Typography>
+              </Box>
+            </CardContent>
+          </AuthorCard>
         </PostContainer>
       </Fade>
       <Snackbar

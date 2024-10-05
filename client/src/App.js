@@ -147,9 +147,11 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
       } />
       <Route path="/get-started" element={
         <AuthenticatedRoute>
+          <GoogleReCaptchaProvider reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY} scriptProps={{ async: true, defer: true, appendTo: 'head' }}>
           <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
             <SignUp />
           </PublicLayout>
+          </GoogleReCaptchaProvider>
         </AuthenticatedRoute>
       } />
       <Route path="/my-plan" element={

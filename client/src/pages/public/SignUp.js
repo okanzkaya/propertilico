@@ -1,24 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import styled from 'styled-components';
-import { FaGoogle, FaUser, FaLock } from 'react-icons/fa';
-import { registerUser } from '../../api';
 import { useUser } from '../../context/UserContext';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { 
-  Typography, 
-  TextField, 
-  Button, 
-  CircularProgress, 
-  Snackbar,
-  IconButton,
-  Paper,
-  InputAdornment,
-  LinearProgress,
-  Box,
-  Alert
+  Typography, TextField, Button, CircularProgress, Snackbar,
+  IconButton, Paper, InputAdornment, LinearProgress, Box, Alert,
+  Checkbox, FormControlLabel, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
-import { Email as EmailIcon, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Email as EmailIcon, Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
+import styled from 'styled-components';
 
 const SignUpContainer = styled.div`
   display: flex;
@@ -46,18 +36,6 @@ const Form = styled.form`
   gap: 20px;
 `;
 
-const GoogleButton = styled(Button)`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background-color: #4285F4;
-  color: white;
-  &:hover {
-    background-color: #357ae8;
-  }
-`;
-
 const PasswordStrengthBar = ({ password }) => {
   const getStrength = () => {
     if (password.length === 0) return 0;
@@ -68,60 +46,44 @@ const PasswordStrengthBar = ({ password }) => {
     return 75;
   };
 
-  const getColor = () => {
-    const strength = getStrength();
-    if (strength <= 25) return 'error';
-    if (strength <= 50) return 'warning';
-    if (strength <= 75) return 'info';
-    return 'success';
-  };
-
-  const getLabel = () => {
-    const strength = getStrength();
-    if (strength <= 25) return 'Weak';
-    if (strength <= 50) return 'OK';
-    if (strength <= 75) return 'Good';
-    return 'Strong';
-  };
+  const strength = getStrength();
+  const color = strength <= 25 ? 'error' : strength <= 50 ? 'warning' : strength <= 75 ? 'info' : 'success';
+  const label = strength <= 25 ? 'Weak' : strength <= 50 ? 'OK' : strength <= 75 ? 'Good' : 'Strong';
 
   return (
     <Box sx={{ width: '100%', mt: 1 }}>
-      <LinearProgress variant="determinate" value={getStrength()} color={getColor()} />
+      <LinearProgress variant="determinate" value={strength} color={color} />
       <Typography variant="caption" align="right" display="block" sx={{ mt: 0.5 }}>
-        Password Strength: {getLabel()}
+        Password Strength: {label}
       </Typography>
     </Box>
   );
 };
 
 const SignUp = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState({ password: false, confirmPassword: false });
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const navigate = useNavigate();
   const { executeRecaptcha } = useGoogleReCaptcha();
-  const { login } = useUser();
+  const { register } = useUser();
 
   const validateForm = useCallback(() => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
-    else if (!/^[a-zA-Z]+ [a-zA-Z]+$/.test(formData.name.trim())) newErrors.name = 'Please enter your full name (first & last name)';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters long';
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!agreedToTerms) newErrors.terms = 'You must agree to the terms and conditions';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  }, [formData, agreedToTerms]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -134,41 +96,35 @@ const SignUp = () => {
   
     setIsLoading(true);
     try {
-      if (!executeRecaptcha) {
-        throw new Error('reCAPTCHA not available');
-      }
-  
-      const reCaptchaToken = await executeRecaptcha('signup');
-      const response = await registerUser({
+      const reCaptchaToken = executeRecaptcha ? await executeRecaptcha('signup') : null;
+      const response = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         captcha: reCaptchaToken
       });
       
-      login(response);
-      setSnackbar({ open: true, message: 'Registration successful! Redirecting to dashboard...', severity: 'success' });
-      setTimeout(() => navigate('/app/dashboard'), 3000);
+      if (response.success) {
+        setSnackbar({ open: true, message: 'Registration successful! Redirecting to dashboard...', severity: 'success' });
+        setTimeout(() => navigate('/app/dashboard'), 3000);
+      } else {
+        throw new Error(response.error || 'Registration failed');
+      }
     } catch (error) {
       console.error('Registration error:', error);
-      setSnackbar({ open: true, message: error.response?.data?.message || 'An error occurred during registration', severity: 'error' });
+      setSnackbar({ open: true, message: error.message || 'An error occurred during registration', severity: 'error' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignUp = () => {
-    setSnackbar({ open: true, message: 'Google Sign Up is not available yet', severity: 'info' });
-  };
-
-  const handleSnackbarClose = (_, reason) => {
-    if (reason === 'clickaway') return;
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
-
   const togglePasswordVisibility = (field) => {
-    if (field === 'password') setShowPassword(!showPassword);
-    if (field === 'confirmPassword') setShowConfirmPassword(!showConfirmPassword);
+    setShowPassword(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handleTermsClick = (e) => {
+    e.preventDefault();
+    setShowTerms(true);
   };
 
   return (
@@ -190,7 +146,7 @@ const SignUp = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <FaUser style={{ color: '#6e8efb' }} />
+                  <Person sx={{ color: '#6e8efb' }} />
                 </InputAdornment>
               ),
             }}
@@ -215,7 +171,7 @@ const SignUp = () => {
           <TextField
             name="password"
             label="Password"
-            type={showPassword ? 'text' : 'password'}
+            type={showPassword.password ? 'text' : 'password'}
             value={formData.password}
             onChange={handleChange}
             error={!!errors.password}
@@ -224,13 +180,13 @@ const SignUp = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <FaLock style={{ color: '#6e8efb' }} />
+                  <Lock sx={{ color: '#6e8efb' }} />
                 </InputAdornment>
               ),
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={() => togglePasswordVisibility('password')} edge="end">
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                    {showPassword.password ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -240,7 +196,7 @@ const SignUp = () => {
           <TextField
             name="confirmPassword"
             label="Confirm Password"
-            type={showConfirmPassword ? 'text' : 'password'}
+            type={showPassword.confirmPassword ? 'text' : 'password'}
             value={formData.confirmPassword}
             onChange={handleChange}
             error={!!errors.confirmPassword}
@@ -249,22 +205,40 @@ const SignUp = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <FaLock style={{ color: '#6e8efb' }} />
+                  <Lock sx={{ color: '#6e8efb' }} />
                 </InputAdornment>
               ),
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={() => togglePasswordVisibility('confirmPassword')} edge="end">
-                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    {showPassword.confirmPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
               ),
             }}
           />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                color="primary"
+              />
+            }
+            label={
+              <Typography variant="body2">
+                I agree to the <Link href="#" onClick={handleTermsClick}>Terms and Conditions</Link>
+              </Typography>
+            }
+          />
+          {errors.terms && (
+            <Typography variant="caption" color="error">
+              {errors.terms}
+            </Typography>
+          )}
           <Button
             type="submit"
             variant="contained"
-            color="primary"
             fullWidth
             disabled={isLoading}
             sx={{ 
@@ -276,32 +250,49 @@ const SignUp = () => {
             {isLoading ? <CircularProgress size={24} /> : 'Sign Up'}
           </Button>
         </Form>
-        <Typography variant="body2" sx={{ margin: '20px 0', color: '#666' }}>or</Typography>
-        <GoogleButton
-          onClick={handleGoogleSignUp}
-          fullWidth
-          sx={{ height: '48px', opacity: 0.5, cursor: 'not-allowed' }}
-          disabled
-        >
-          <FaGoogle /> Sign up with Google (Coming Soon)
-        </GoogleButton>
         <Typography variant="body2" sx={{ marginTop: '20px', color: '#666' }}>
           Already have an account? <Link to="/signin" style={{ color: '#6e8efb', textDecoration: 'none' }}>Sign in</Link>
         </Typography>
       </SignUpBox>
       <Snackbar
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={handleSnackbarClose}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
       >
-        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Dialog open={showTerms} onClose={() => setShowTerms(false)}>
+        <DialogTitle>Terms and Conditions</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Welcome to Propertilico. By using our services, you agree to comply with and be bound by the following terms and conditions:
+
+            1. Acceptance of Terms: By accessing or using Propertilico, you agree to be bound by these Terms and Conditions.
+
+            2. User Responsibilities: You are responsible for maintaining the confidentiality of your account information and for all activities that occur under your account.
+
+            3. Privacy Policy: Your use of Propertilico is also governed by our Privacy Policy.
+
+            4. Intellectual Property: All content, features, and functionality of Propertilico are owned by us and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
+
+            5. Limitation of Liability: Propertilico and its affiliates will not be liable for any indirect, incidental, special, consequential or punitive damages resulting from your use of the service.
+
+            6. Termination: We reserve the right to terminate or suspend your account and access to Propertilico at our sole discretion, without notice, for conduct that we believe violates these Terms and Conditions or is harmful to other users, us, or third parties, or for any other reason.
+
+            7. Changes to Terms: We reserve the right to change these Terms and Conditions at any time. Your continued use of Propertilico after such changes constitutes your acceptance of the new Terms and Conditions.
+
+            8. Governing Law: These Terms and Conditions are governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of law principles.
+
+            By clicking "I agree" or by using Propertilico, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowTerms(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </SignUpContainer>
   );
 };

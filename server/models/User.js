@@ -34,6 +34,12 @@ const userSchema = new mongoose.Schema({
   },
   isAdmin: { type: Boolean, default: false },
   isBlogger: { type: Boolean, default: false },
+  bloggerDescription: { 
+    type: String, 
+    default: "Property Management Expert",
+    maxlength: [500, 'Blogger description cannot be more than 500 characters']
+  },
+  avatar: { type: String },
   adminId: { type: String, unique: true, sparse: true },
   properties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
   language: { type: String, default: 'en' },

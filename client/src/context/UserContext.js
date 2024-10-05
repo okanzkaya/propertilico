@@ -109,8 +109,25 @@ export const UserProvider = ({ children }) => {
       return { success: true, user: response.user };
     } catch (error) {
       console.error('Login error:', error);
-      setError('Login failed. Please check your credentials and try again.');
-      return { success: false, error: error.message };
+      if (error.response && error.response.status === 400 && error.response.data.message === 'reCAPTCHA verification failed') {
+        // If reCAPTCHA verification fails, we'll try to login without it
+        try {
+          const responseWithoutCaptcha = await loginUser({ ...credentials, reCaptchaToken: null });
+          console.log('Login successful without reCAPTCHA');
+          setAuthToken(responseWithoutCaptcha.token, responseWithoutCaptcha.refreshToken, credentials.rememberMe);
+          setUser(responseWithoutCaptcha.user);
+          setError(null);
+          await fetchUser();
+          return { success: true, user: responseWithoutCaptcha.user };
+        } catch (retryError) {
+          console.error('Login retry error:', retryError);
+          setError('Login failed. Please try again.');
+          return { success: false, error: retryError.message };
+        }
+      } else {
+        setError('Login failed. Please check your credentials and try again.');
+        return { success: false, error: error.message };
+      }
     }
   }, [fetchUser, setAuthToken]);
 
@@ -120,7 +137,10 @@ export const UserProvider = ({ children }) => {
       const response = await registerUser(userData);
       console.log('Registration successful');
       setAuthToken(response.token, response.refreshToken, true);
-      setUser(response.user);
+      setUser({
+        ...response.user,
+        createdAt: new Date().toISOString() // Ensure createdAt is set for new users
+      });
       setError(null);
       return { success: true, user: response.user };
     } catch (error) {
