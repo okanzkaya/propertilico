@@ -1,12 +1,14 @@
-const Property = require('../models/Property');
-const Ticket = require('../models/Ticket');
-const Transaction = require('../models/Transaction');
+const { Property } = require('../models/Property');
+const { Ticket } = require('../models/Ticket');
+const { Transaction } = require('../models/Transaction');
+const { sequelize } = require('../config/db');
+const { Op } = require('sequelize');
 
 exports.getPropertyStats = async (req, res) => {
   try {
-    const totalProperties = await Property.countDocuments({ owner: req.user._id });
-    const occupiedProperties = await Property.countDocuments({ owner: req.user._id, availableNow: false });
-    const vacantProperties = await Property.countDocuments({ owner: req.user._id, availableNow: true });
+    const totalProperties = await Property.count({ where: { ownerId: req.user.id } });
+    const occupiedProperties = await Property.count({ where: { ownerId: req.user.id, availableNow: false } });
+    const vacantProperties = await Property.count({ where: { ownerId: req.user.id, availableNow: true } });
 
     res.json({
       totalProperties,
@@ -20,9 +22,9 @@ exports.getPropertyStats = async (req, res) => {
 
 exports.getTicketStats = async (req, res) => {
   try {
-    const openTickets = await Ticket.countDocuments({ user: req.user._id, status: 'Open' });
-    const inProgressTickets = await Ticket.countDocuments({ user: req.user._id, status: 'In Progress' });
-    const closedTickets = await Ticket.countDocuments({ user: req.user._id, status: 'Closed' });
+    const openTickets = await Ticket.count({ where: { userId: req.user.id, status: 'Open' } });
+    const inProgressTickets = await Ticket.count({ where: { userId: req.user.id, status: 'In Progress' } });
+    const closedTickets = await Ticket.count({ where: { userId: req.user.id, status: 'Closed' } });
 
     res.json({
       openTickets,
@@ -36,23 +38,18 @@ exports.getTicketStats = async (req, res) => {
 
 exports.getFinancialStats = async (req, res) => {
   try {
-    const totalRevenue = await Transaction.aggregate([
-      { $match: { user: req.user._id, type: 'income' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+    const totalRevenue = await Transaction.sum('amount', {
+      where: { userId: req.user.id, type: 'income' }
+    });
 
-    const totalExpenses = await Transaction.aggregate([
-      { $match: { user: req.user._id, type: 'expense' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-
-    const revenue = totalRevenue[0]?.total || 0;
-    const expenses = totalExpenses[0]?.total || 0;
+    const totalExpenses = await Transaction.sum('amount', {
+      where: { userId: req.user.id, type: 'expense' }
+    });
 
     res.json({
-      totalRevenue: revenue,
-      totalExpenses: expenses,
-      totalProfit: revenue - expenses
+      totalRevenue: totalRevenue || 0,
+      totalExpenses: totalExpenses || 0,
+      totalProfit: (totalRevenue || 0) - (totalExpenses || 0)
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching financial stats', error: error.message });
@@ -61,13 +58,17 @@ exports.getFinancialStats = async (req, res) => {
 
 exports.getOccupancyStats = async (req, res) => {
   try {
-    const occupancyData = await Property.aggregate([
-      { $match: { owner: req.user._id } },
-      { $group: { _id: '$availableNow', count: { $sum: 1 } } }
-    ]);
+    const occupancyData = await Property.findAll({
+      attributes: [
+        'availableNow',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: { ownerId: req.user.id },
+      group: ['availableNow']
+    });
 
-    const occupiedCount = occupancyData.find(item => !item._id)?.count || 0;
-    const vacantCount = occupancyData.find(item => item._id)?.count || 0;
+    const occupiedCount = occupancyData.find(item => !item.availableNow)?.count || 0;
+    const vacantCount = occupancyData.find(item => item.availableNow)?.count || 0;
     const totalCount = occupiedCount + vacantCount;
 
     res.json([

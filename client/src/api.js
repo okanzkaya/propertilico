@@ -80,6 +80,9 @@ export const loginUser = async (userData) => {
     }
   } catch (error) {
     console.error('API: Login error:', error);
+    if (error.response && error.response.data) {
+      throw new Error(error.response.data.message || 'An error occurred during login');
+    }
     throw error;
   }
 };

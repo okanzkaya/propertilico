@@ -1,84 +1,122 @@
-const Blog = require('../models/Blog');
-const User = require('../models/User');
+const { Blog, User } = require('../config/db');
+const { Op } = require('sequelize');
 
 exports.getAllBlogs = async (req, res, next) => {
   try {
+    console.log('Fetching blogs with params:', req.query);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const startIndex = (page - 1) * limit;
-    
-    const blogs = await Blog.find()
-      .sort({ date: -1 })
-      .skip(startIndex)
-      .limit(limit)
-      .populate('author', 'name');
-    
-    const total = await Blog.countDocuments();
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+    const sort = req.query.sort || 'newest';
+
+    const order = sort === 'oldest' ? [['createdAt', 'ASC']] : [['createdAt', 'DESC']];
+
+    const { count, rows: blogs } = await Blog.findAndCountAll({
+      where: {
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${search}%` } },
+          { content: { [Op.iLike]: `%${search}%` } },
+          { excerpt: { [Op.iLike]: `%${search}%` } },
+        ]
+      },
+      order,
+      limit,
+      offset,
+      include: [{ model: User, as: 'author', attributes: ['id', 'name'] }]
+    });
+
+    console.log(`Found ${count} blogs`);
 
     res.json({
       blogs,
       currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalBlogs: total
+      totalPages: Math.ceil(count / limit),
+      totalBlogs: count
     });
   } catch (err) {
-    next(new Error('Failed to fetch blog posts'));
+    console.error('Error in getAllBlogs:', err);
+    next(err);
   }
 };
 
 exports.getBlogById = async (req, res, next) => {
   try {
-    const blog = await Blog.findById(req.params.id).populate('author', 'name');
+    const blog = await Blog.findByPk(req.params.id, {
+      include: [{ model: User, as: 'author', attributes: ['id', 'name'] }]
+    });
     if (!blog) {
       return res.status(404).json({ message: 'Blog post not found' });
     }
     res.json(blog);
   } catch (err) {
-    next(new Error('Failed to fetch blog post'));
+    next(err);
   }
 };
 
 exports.createBlog = async (req, res, next) => {
   try {
-    const newBlog = new Blog({
-      ...req.body,
-      author: req.user._id
+    const { title, content, excerpt, tags } = req.body;
+    
+    // Ensure tags is always an array
+    const processedTags = Array.isArray(tags) ? tags : tags ? [tags] : [];
+
+    const blog = await Blog.create({
+      title,
+      content,
+      excerpt,
+      tags: processedTags,
+      authorId: req.user.id
     });
-    await newBlog.save();
-    res.status(201).json(newBlog);
-  } catch (err) {
-    next(new Error('Failed to create blog post'));
+
+    res.status(201).json(blog);
+  } catch (error) {
+    console.error('Error in createBlog:', error);
+    next(error);
   }
 };
 
 exports.updateBlog = async (req, res, next) => {
   try {
-    const blog = await Blog.findById(req.params.id);
+    const blog = await Blog.findByPk(req.params.id);
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
-    if (blog.author.toString() !== req.user._id.toString()) {
+    if (blog.authorId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to update this blog' });
     }
-    const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedBlog = await blog.update(req.body);
     res.json(updatedBlog);
   } catch (err) {
-    next(new Error('Failed to update blog post'));
+    next(err);
   }
 };
 
 exports.deleteBlog = async (req, res, next) => {
   try {
-    const blog = await Blog.findById(req.params.id);
+    const blog = await Blog.findByPk(req.params.id);
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
-    if (blog.author.toString() !== req.user._id.toString()) {
+    if (blog.authorId !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to delete this blog' });
     }
-    await blog.remove();
+    await blog.destroy();
     res.json({ message: 'Blog removed' });
   } catch (err) {
-    next(new Error('Failed to delete blog post'));
+    next(err);
+  }
+};
+
+exports.getUserBlogs = async (req, res, next) => {
+  try {
+    const blogs = await Blog.findAll({
+      where: { authorId: req.user.id },
+      order: [['createdAt', 'DESC']],
+      include: [{ model: User, as: 'author', attributes: ['id', 'name'] }]
+    });
+    res.json(blogs);
+  } catch (err) {
+    next(err);
   }
 };

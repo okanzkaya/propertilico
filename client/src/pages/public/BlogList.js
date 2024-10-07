@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
@@ -6,7 +6,6 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { ErrorBoundary } from 'react-error-boundary';
-import { useInView } from 'react-intersection-observer';
 import { debounce } from 'lodash';
 
 const BlogListContainer = styled(motion.div)`
@@ -233,55 +232,32 @@ const BlogList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('newest');
   const [posts, setPosts] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const { user } = useUser();
   const navigate = useNavigate();
-  const [ref, inView] = useInView({ threshold: 0 });
-  const initialFetchDone = useRef(false);
 
   const debouncedSearch = useMemo(() => debounce(setSearchTerm, 300), []);
 
-  const fetchPosts = useCallback(async (reset = false) => {
-    if (isLoading || (!hasMore && !reset)) return;
+  const fetchPosts = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs`, {
-        params: { page: reset ? 1 : page, limit: 10, search: searchTerm, sort: sortOption },
+        params: { page: 1, limit: 10, search: searchTerm, sort: sortOption },
       });
-      const newPosts = Array.isArray(data) ? data : data.blogs || [];
-      setPosts(prev => (reset ? newPosts : [...prev, ...newPosts]));
-      setHasMore(newPosts.length === 10);
-      setPage(prev => (reset ? 2 : prev + 1));
+      setPosts(Array.isArray(data.blogs) ? data.blogs : []);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch blog posts:', err);
-      setError('Failed to load blog posts. Please try again later.');
+      setError(err.response?.data?.message || 'Failed to load blog posts. Please try again later.');
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchTerm, sortOption, isLoading, hasMore]);
+  }, [searchTerm, sortOption]);
 
   useEffect(() => {
-    if (!initialFetchDone.current) {
-      fetchPosts(true);
-      initialFetchDone.current = true;
-    }
+    fetchPosts();
   }, [fetchPosts]);
-
-  useEffect(() => {
-    if (searchTerm !== '' || sortOption !== 'newest') {
-      fetchPosts(true);
-    }
-  }, [searchTerm, sortOption, fetchPosts]);
-
-  useEffect(() => {
-    if (inView && hasMore && !isLoading && initialFetchDone.current) {
-      fetchPosts();
-    }
-  }, [inView, hasMore, isLoading, fetchPosts]);
 
   const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
@@ -296,8 +272,11 @@ const BlogList = () => {
   const handleDeleteBlog = async (id) => {
     if (window.confirm('Are you sure you want to delete this blog post?')) {
       try {
-        await axios.delete(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
-        setPosts(prevPosts => prevPosts.filter(post => post._id !== id));
+        const token = localStorage.getItem('token');
+        await axios.delete(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPosts(prevPosts => prevPosts.filter(post => post.id !== id));
       } catch (err) {
         console.error('Failed to delete blog post:', err);
         setError('Failed to delete blog post. Please try again later.');
@@ -305,43 +284,49 @@ const BlogList = () => {
     }
   };
 
-  const renderPosts = () => (
-    <AnimatePresence>
-      {posts.map((post) => (
-        <PostCard
-          key={post._id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <PostTitle to={`/blog/${post._id}`}>{post.title}</PostTitle>
-          <PostMeta>
-            By {post.author?.name || 'Unknown'} on {new Date(post.date).toLocaleDateString()}
-          </PostMeta>
-          <PostExcerpt>{post.excerpt}</PostExcerpt>
-          <TagList>
-            {post.tags?.map((tag, index) => (
-              <Tag key={index}>{tag}</Tag>
-            ))}
-          </TagList>
-          {user?.isBlogger && (
-            <ActionButtons>
-              <ActionButton onClick={() => handleEditBlog(post._id)} aria-label="Edit blog post">
-                <FaEdit />
-              </ActionButton>
-              <ActionButton onClick={() => handleDeleteBlog(post._id)} aria-label="Delete blog post">
-                <FaTrash />
-              </ActionButton>
-            </ActionButtons>
-          )}
-        </PostCard>
-      ))}
-    </AnimatePresence>
-  );
+  const renderPosts = () => {
+    if (posts.length === 0 && !isLoading) {
+      return <ErrorMessage>No blog posts found.</ErrorMessage>;
+    }
+
+    return (
+      <AnimatePresence>
+        {posts.map((post) => (
+          <PostCard
+            key={post.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <PostTitle to={`/blog/${post.id}`}>{post.title}</PostTitle>
+            <PostMeta>
+              By {post.author?.name || 'Unknown'} on {new Date(post.createdAt).toLocaleDateString()}
+            </PostMeta>
+            <PostExcerpt>{post.excerpt}</PostExcerpt>
+            <TagList>
+              {post.tags?.map((tag, index) => (
+                <Tag key={index}>{tag}</Tag>
+              ))}
+            </TagList>
+            {user?.isBlogger && (
+              <ActionButtons>
+                <ActionButton onClick={() => handleEditBlog(post.id)} aria-label="Edit blog post">
+                  <FaEdit />
+                </ActionButton>
+                <ActionButton onClick={() => handleDeleteBlog(post.id)} aria-label="Delete blog post">
+                  <FaTrash />
+                </ActionButton>
+              </ActionButtons>
+            )}
+          </PostCard>
+        ))}
+      </AnimatePresence>
+    );
+  };
 
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => { setPage(1); setPosts([]); setHasMore(true); fetchPosts(true); }}>
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={fetchPosts}>
       <BlogListContainer
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -369,9 +354,7 @@ const BlogList = () => {
           )}
         </ControlsContainer>
         {error && <ErrorMessage>{error}</ErrorMessage>}
-        {renderPosts()}
-        {isLoading && <LoadingSpinner />}
-        <div ref={ref} />
+        {isLoading ? <LoadingSpinner /> : renderPosts()}
       </BlogListContainer>
     </ErrorBoundary>
   );

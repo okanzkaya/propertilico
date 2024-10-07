@@ -1,28 +1,111 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const propertySchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: { type: String, required: true },
-  rentAmount: { type: Number, required: true },
-  propertyType: { type: String, required: true },
-  bedrooms: { type: Number, required: true },
-  bathrooms: { type: Number, required: true },
-  area: { type: Number, required: true },
-  furnished: { type: Boolean, default: false },
-  parking: { type: Boolean, default: false },
-  petFriendly: { type: Boolean, default: false },
-  availableNow: { type: Boolean, default: true },
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  location: {
-    type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], default: [0, 0] }
+const Property = sequelize.define('Property', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
-  images: [{
-    path: String,
-    isMain: { type: Boolean, default: false }
-  }]
-}, { timestamps: true });
+  name: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 255]
+    }
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
+  rentAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    validate: {
+      min: 0
+    }
+  },
+  propertyType: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
+  bedrooms: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 0
+    }
+  },
+  bathrooms: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 0
+    }
+  },
+  area: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    validate: {
+      min: 0
+    }
+  },
+  furnished: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  parking: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  petFriendly: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  availableNow: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  latitude: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+    validate: {
+      min: -90,
+      max: 90
+    }
+  },
+  longitude: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+    validate: {
+      min: -180,
+      max: 180
+    }
+  },
+  images: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  ownerId: {
+    type: DataTypes.UUID,
+    allowNull: false
+  }
+}, {
+  indexes: [
+    { fields: ['propertyType'] },
+    { fields: ['rentAmount'] },
+    { fields: ['bedrooms'] },
+    { fields: ['bathrooms'] },
+    { fields: ['area'] },
+    { fields: ['ownerId'] }
+  ]
+});
 
-propertySchema.index({ location: '2dsphere' });
-
-module.exports = mongoose.model('Property', propertySchema);
+module.exports = Property;

@@ -6,41 +6,38 @@ const fs = require('fs').promises;
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const Feedback = require('../models/Feedback');
+const User = require('../models/User');
 const { protect, admin } = require('../middleware/authMiddleware');
+const subscriptionMiddleware = require('../middleware/subscriptionMiddleware');
+const { validateFeedback } = require('../utils/validation');
 const crypto = require('crypto');
+const { Op } = require('sequelize');
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: 5,
   message: 'Too many feedback submissions, please try again later.'
 });
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads/feedbacks');
+const uploadsDir = path.join(__dirname, '..', 'uploads', 'feedbacks');
 fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    const fileExtension = path.extname(file.originalname);
-    cb(null, `${uuidv4()}-${uniqueSuffix}${fileExtension}`);
+    cb(null, `${uuidv4()}-${uniqueSuffix}${path.extname(file.originalname)}`);
   }
 });
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|heic|mp4|webm|ogg|mp3|wav/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
-
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Error: Only images (jpeg, jpg, png, gif, heic), videos (mp4, webm, ogg), and audio (mp3, wav) are allowed.'));
-  }
+  const isAllowed = allowedTypes.test(path.extname(file.originalname).toLowerCase()) && 
+                    allowedTypes.test(file.mimetype);
+  if (isAllowed) return cb(null, true);
+  cb(new Error('Only images, videos, and audio files are allowed.'));
 };
 
 const upload = multer({
@@ -49,49 +46,52 @@ const upload = multer({
   fileFilter: fileFilter
 }).single('attachment');
 
-// Helper function to generate a secure file name
 const generateSecureFileName = (originalName) => {
-  const fileExtension = path.extname(originalName);
-  const randomName = crypto.randomBytes(16).toString('hex');
-  return `${randomName}${fileExtension}`;
+  return `${crypto.randomBytes(16).toString('hex')}${path.extname(originalName)}`;
 };
 
 // Check feedback limit
-router.get('/check-limit', protect, async (req, res) => {
+router.get('/check-limit', protect, subscriptionMiddleware, async (req, res) => {
   try {
-    console.log('Checking feedback limit for user:', req.user._id);
-    const lastFeedback = await Feedback.findOne({ user: req.user._id }).sort({ createdAt: -1 });
-    console.log('Last feedback:', lastFeedback);
+    const lastFeedback = await Feedback.findOne({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
     
     const now = new Date();
     const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
     
     if (!lastFeedback || lastFeedback.createdAt < fiveMinutesAgo) {
-      console.log('User can submit feedback');
       res.json({ canSubmit: true, timeUntilNext: 0 });
     } else {
       const timeUntilNext = Math.ceil((lastFeedback.createdAt.getTime() + 5 * 60 * 1000 - now.getTime()) / 1000);
-      console.log('User must wait', timeUntilNext, 'seconds');
       res.json({ canSubmit: false, timeUntilNext });
     }
   } catch (error) {
     console.error('Error checking feedback limit:', error);
-    res.status(500).json({ message: 'Error checking feedback limit', error: error.toString() });
+    res.status(500).json({ message: 'Error checking feedback limit' });
   }
 });
 
 // Submit feedback
-router.post('/', protect, limiter, (req, res) => {
+router.post('/', protect, subscriptionMiddleware, limiter, (req, res) => {
   upload(req, res, async (err) => {
-    if (err) {
-      console.error('File upload error:', err);
+    if (err instanceof multer.MulterError) {
       return res.status(400).json({ message: err.message });
+    } else if (err) {
+      return res.status(500).json({ message: 'An error occurred while uploading the file' });
     }
 
     try {
       const { message, rating, feedbackType } = req.body;
-      let attachment = null;
+      
+      // Validate feedback
+      const { error } = validateFeedback({ message, rating, feedbackType });
+      if (error) {
+        return res.status(400).json({ message: error.details[0].message });
+      }
 
+      let attachment = null;
       if (req.file) {
         const secureFileName = generateSecureFileName(req.file.originalname);
         const newPath = path.join(uploadsDir, secureFileName);
@@ -99,19 +99,18 @@ router.post('/', protect, limiter, (req, res) => {
         attachment = `/uploads/feedbacks/${secureFileName}`;
       }
 
-      const newFeedback = new Feedback({
-        user: req.user._id,
+      const newFeedback = await Feedback.create({
+        userId: req.user.id,
         message,
         rating: rating || 0,
         feedbackType,
         attachment
       });
 
-      await newFeedback.save();
       res.status(201).json({ message: 'Feedback submitted successfully', feedback: newFeedback });
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      res.status(500).json({ message: 'Error submitting feedback', error: error.toString() });
+      res.status(500).json({ message: 'Error submitting feedback' });
     }
   });
 });
@@ -119,25 +118,29 @@ router.post('/', protect, limiter, (req, res) => {
 // Get all feedback (admin only)
 router.get('/', protect, admin, async (req, res) => {
   try {
-    const feedback = await Feedback.find().populate('user', 'name email');
+    const feedback = await Feedback.findAll({
+      include: [{ model: User, attributes: ['name', 'email'] }]
+    });
     res.json(feedback);
   } catch (error) {
     console.error('Error fetching feedback:', error);
-    res.status(500).json({ message: 'Error fetching feedback', error: error.toString() });
+    res.status(500).json({ message: 'Error fetching feedback' });
   }
 });
 
 // Get single feedback by ID (admin only)
 router.get('/:id', protect, admin, async (req, res) => {
   try {
-    const feedback = await Feedback.findById(req.params.id).populate('user', 'name email');
+    const feedback = await Feedback.findByPk(req.params.id, {
+      include: [{ model: User, attributes: ['name', 'email'] }]
+    });
     if (!feedback) {
       return res.status(404).json({ message: 'Feedback not found' });
     }
     res.json(feedback);
   } catch (error) {
     console.error('Error fetching feedback:', error);
-    res.status(500).json({ message: 'Error fetching feedback', error: error.toString() });
+    res.status(500).json({ message: 'Error fetching feedback' });
   }
 });
 
@@ -147,20 +150,20 @@ router.put('/:id', protect, admin, async (req, res) => {
     const { id } = req.params;
     const { isFavorite, isRead } = req.body;
 
-    const updatedFeedback = await Feedback.findByIdAndUpdate(
-      id,
+    const [updatedRows] = await Feedback.update(
       { isFavorite, isRead },
-      { new: true }
+      { where: { id } }
     );
 
-    if (!updatedFeedback) {
+    if (updatedRows === 0) {
       return res.status(404).json({ message: 'Feedback not found' });
     }
 
+    const updatedFeedback = await Feedback.findByPk(id);
     res.json(updatedFeedback);
   } catch (error) {
     console.error('Error updating feedback:', error);
-    res.status(500).json({ message: 'Error updating feedback', error: error.toString() });
+    res.status(500).json({ message: 'Error updating feedback' });
   }
 });
 
@@ -168,22 +171,22 @@ router.put('/:id', protect, admin, async (req, res) => {
 router.delete('/:id', protect, admin, async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedFeedback = await Feedback.findByIdAndDelete(id);
+    const feedback = await Feedback.findByPk(id);
 
-    if (!deletedFeedback) {
+    if (!feedback) {
       return res.status(404).json({ message: 'Feedback not found' });
     }
 
-    // Delete the associated file if it exists
-    if (deletedFeedback.attachment) {
-      const filePath = path.join(__dirname, '..', deletedFeedback.attachment);
-      await fs.unlink(filePath);
+    if (feedback.attachment) {
+      const filePath = path.join(__dirname, '..', feedback.attachment);
+      await fs.unlink(filePath).catch(console.error);
     }
 
+    await feedback.destroy();
     res.json({ message: 'Feedback deleted successfully' });
   } catch (error) {
     console.error('Error deleting feedback:', error);
-    res.status(500).json({ message: 'Error deleting feedback', error: error.toString() });
+    res.status(500).json({ message: 'Error deleting feedback' });
   }
 });
 

@@ -1,152 +1,179 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: [true, 'Please add a name'],
-    trim: true,
-    maxlength: [50, 'Name cannot be more than 50 characters']
-  },
-  email: { 
-    type: String, 
-    required: [true, 'Please add an email'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-      'Please add a valid email'
-    ]
-  },
-  password: { 
-    type: String, 
-    required: [true, 'Please add a password'],
-    minlength: [8, 'Password must be at least 8 characters'],
-    select: false
-  },
-  subscriptionEndDate: { 
-    type: Date, 
-    default: () => new Date(+new Date() + 30*24*60*60*1000), // 30 days from now
-    set: function(value) {
-      return value === null ? null : new Date(value);
+module.exports = (sequelize) => {
+  const User = sequelize.define('User', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
+    name: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      validate: { 
+        notEmpty: { msg: 'Name cannot be empty' },
+        len: { args: [1, 50], msg: 'Name must be between 1 and 50 characters' }
+      }
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: { isEmail: { msg: 'Please enter a valid email address' } }
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { len: { args: [8, 100], msg: 'Password must be between 8 and 100 characters' } }
+    },
+    subscriptionEndDate: {
+      type: DataTypes.DATE,
+      defaultValue: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    },
+    isAdmin: { 
+      type: DataTypes.BOOLEAN, 
+      defaultValue: false 
+    },
+    isBlogger: { 
+      type: DataTypes.BOOLEAN, 
+      defaultValue: false 
+    },
+    bloggerDescription: {
+      type: DataTypes.STRING(500),
+      defaultValue: "Property Management Expert"
+    },
+    avatar: DataTypes.STRING,
+    adminId: { 
+      type: DataTypes.STRING, 
+      unique: true 
+    },
+    language: { 
+      type: DataTypes.STRING, 
+      defaultValue: 'en' 
+    },
+    timeZone: { 
+      type: DataTypes.STRING, 
+      defaultValue: 'UTC' 
+    },
+    currency: { 
+      type: DataTypes.STRING, 
+      defaultValue: 'USD' 
+    },
+    dateFormat: { 
+      type: DataTypes.STRING, 
+      defaultValue: 'MM/DD/YYYY' 
+    },
+    measurementUnit: { 
+      type: DataTypes.STRING, 
+      defaultValue: 'metric' 
+    },
+    fontSize: { 
+      type: DataTypes.STRING, 
+      defaultValue: 'medium' 
+    },
+    theme: { 
+      type: DataTypes.STRING, 
+      defaultValue: 'light' 
+    },
+    twoFactorAuth: { 
+      type: DataTypes.BOOLEAN, 
+      defaultValue: false 
+    },
+    loginAlerts: { 
+      type: DataTypes.BOOLEAN, 
+      defaultValue: true 
+    },
+    lastPasswordChange: DataTypes.DATE,
+    lastEmailChange: DataTypes.DATE,
+    emailNotifications: { 
+      type: DataTypes.BOOLEAN, 
+      defaultValue: true 
+    },
+    pushNotifications: { 
+      type: DataTypes.BOOLEAN, 
+      defaultValue: true 
+    },
+    inAppNotifications: { 
+      type: DataTypes.BOOLEAN, 
+      defaultValue: true 
+    },
+    loginAttempts: { 
+      type: DataTypes.INTEGER, 
+      defaultValue: 0 
+    },
+    lockUntil: DataTypes.DATE,
+    resetPasswordToken: DataTypes.STRING,
+    resetPasswordExpire: DataTypes.DATE,
+    googleId: { 
+      type: DataTypes.STRING, 
+      unique: true 
+    },
+    notifications: {
+      type: DataTypes.JSONB,
+      defaultValue: []
+    },
+    lastLogin: DataTypes.DATE,
+    status: {
+      type: DataTypes.ENUM('active', 'inactive', 'suspended'),
+      defaultValue: 'active'
+    },
+    role: {
+      type: DataTypes.ENUM('user', 'blogger', 'admin'),
+      defaultValue: 'user'
     }
-  },
-  isAdmin: { type: Boolean, default: false },
-  isBlogger: { type: Boolean, default: false },
-  bloggerDescription: { 
-    type: String, 
-    default: "Property Management Expert",
-    maxlength: [500, 'Blogger description cannot be more than 500 characters']
-  },
-  avatar: { type: String },
-  adminId: { type: String, unique: true, sparse: true },
-  properties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
-  language: { type: String, default: 'en' },
-  timeZone: { type: String, default: 'UTC' },
-  currency: { type: String, default: 'USD' },
-  dateFormat: { type: String, default: 'MM/DD/YYYY' },
-  measurementUnit: { type: String, default: 'metric' },
-  fontSize: { type: String, default: 'medium' },
-  theme: { type: String, default: 'light' },
-  twoFactorAuth: { type: Boolean, default: false },
-  loginAlerts: { type: Boolean, default: true },
-  lastPasswordChange: { type: Date },
-  lastEmailChange: { type: Date },
-  emailNotifications: { type: Boolean, default: true },
-  pushNotifications: { type: Boolean, default: true },
-  inAppNotifications: { type: Boolean, default: true },
-  avatar: { type: String },
-  loginAttempts: { type: Number, default: 0 },
-  lockUntil: { type: Number },
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-  googleId: { type: String, unique: true, sparse: true },
-  loginHistory: [{
-    ip: String,
-    userAgent: String,
-    browser: String,
-    os: String,
-    device: String,
-    country: String,
-    city: String,
-    timestamp: Date
-  }]
-}, {
-  timestamps: true
-});
+  }, {
+    hooks: {
+      beforeSave: async (user) => {
+        if (user.changed('password')) {
+          user.password = await bcrypt.hash(user.password, 12);
+          user.lastPasswordChange = new Date();
+        }
+        if (user.changed('email')) {
+          user.lastEmailChange = new Date();
+        }
+      }
+    }
+  });
 
-userSchema.set('toJSON', {
-  transform: (doc, ret) => {
-    if (ret.subscriptionEndDate instanceof Date) {
-      ret.subscriptionEndDate = ret.subscriptionEndDate.toISOString();
+  User.prototype.matchPassword = async function(enteredPassword) {
+    console.log('Matching password for user:', this.email); // Add this log
+    const isMatch = await bcrypt.compare(enteredPassword, this.password);
+    console.log('Password match result:', isMatch); // Add this log
+    return isMatch;
+  };
+
+  User.prototype.incrementLoginAttempts = async function() {
+    if (this.lockUntil && this.lockUntil < Date.now()) {
+      this.loginAttempts = 1;
+      this.lockUntil = null;
     } else {
-      ret.subscriptionEndDate = null;
+      this.loginAttempts += 1;
+      if (this.loginAttempts >= 5 && !this.lockUntil) {
+        this.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+      }
     }
-    ret.isBlogger = doc.isBlogger;
-    delete ret.password;
-    delete ret.__v;
-    return ret;
-  }
-});
+    await this.save();
+  };
 
-userSchema.set('toObject', {
-  transform: (doc, ret) => {
-    if (ret.subscriptionEndDate instanceof Date) {
-      ret.subscriptionEndDate = ret.subscriptionEndDate.toISOString();
-    } else {
-      ret.subscriptionEndDate = null;
-    }
-    ret.isBlogger = doc.isBlogger;
-    delete ret.password;
-    delete ret.__v;
-    return ret;
-  }
-});
+  User.prototype.isLocked = function() {
+    return !!(this.lockUntil && this.lockUntil > Date.now());
+  };
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
+  User.prototype.resetLoginAttempts = async function() {
+    this.loginAttempts = 0;
+    this.lockUntil = null;
+    await this.save();
+  };
 
-userSchema.methods.matchPassword = async function(enteredPassword) {
-  if (!enteredPassword || !this.password) {
-    return false;
-  }
-  
-  try {
-    return await bcrypt.compare(enteredPassword, this.password);
-  } catch (error) {
-    console.error('Error in matchPassword:', error);
-    return false;
-  }
+  User.prototype.updateLastLogin = async function() {
+    this.lastLogin = new Date();
+    await this.save();
+  };
+
+  User.associate = (models) => {
+    User.hasMany(models.Blog, { foreignKey: 'authorId', as: 'blogs' });
+  };
+
+  return User;
 };
-
-userSchema.methods.incrementLoginAttempts = function() {
-  if (this.lockUntil && this.lockUntil < Date.now()) {
-    return this.updateOne({
-      $set: { loginAttempts: 1 },
-      $unset: { lockUntil: 1 }
-    });
-  }
-  const updates = { $inc: { loginAttempts: 1 } };
-  if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: Date.now() + 15 * 60 * 1000 };
-  }
-  return this.updateOne(updates);
-};
-
-userSchema.virtual('isLocked').get(function() {
-  return !!(this.lockUntil && this.lockUntil > Date.now());
-});
-
-module.exports = mongoose.model('User', userSchema);

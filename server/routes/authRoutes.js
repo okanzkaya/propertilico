@@ -19,28 +19,27 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 
 const validations = {
   register: [
-    check('name', 'Name is required').not().isEmpty(),
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Please enter a password with 8 or more characters').isLength({ min: 8 }),
-    check('captcha', 'CAPTCHA verification failed').not().isEmpty()
+    check('name', 'Name is required').notEmpty().trim(),
+    check('email', 'Please include a valid email').isEmail().normalizeEmail(),
+    check('password', 'Password must be at least 8 characters long').isLength({ min: 8 }),
+    check('captcha', 'CAPTCHA verification failed').notEmpty()
   ],
   login: [
-    check('email', 'Please include a valid email').isEmail().optional(),
-    check('password', 'Password is required').exists().optional(),
-    check('googleToken', 'Google token is required for Google Sign-In').optional(),
-    check('reCaptchaToken', 'reCAPTCHA token is required for non-Google Sign-In').optional(),
-    check('rememberMe', 'Remember me should be a boolean').isBoolean().optional()
+    check('email', 'Please include a valid email').isEmail().normalizeEmail(),
+    check('password', 'Password is required').notEmpty(),
+    check('reCaptchaToken', 'reCAPTCHA token is required').notEmpty(),
+    check('rememberMe', 'Remember me should be a boolean').optional().isBoolean()
   ],
   changePassword: [
-    check('oldPassword', 'Old password is required').exists(),
-    check('newPassword', 'Please enter a password with 8 or more characters').isLength({ min: 8 })
+    check('oldPassword', 'Old password is required').notEmpty(),
+    check('newPassword', 'New password must be at least 8 characters long').isLength({ min: 8 })
   ],
   forgotPassword: [
-    check('email', 'Please include a valid email').isEmail()
+    check('email', 'Please include a valid email').isEmail().normalizeEmail()
   ],
   resetPassword: [
-    check('token', 'Token is required').exists(),
-    check('newPassword', 'Please enter a password with 8 or more characters').isLength({ min: 8 })
+    check('token', 'Token is required').notEmpty(),
+    check('newPassword', 'New password must be at least 8 characters long').isLength({ min: 8 })
   ]
 };
 

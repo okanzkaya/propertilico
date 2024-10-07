@@ -1,49 +1,62 @@
 const Report = require('../models/Report');
 const { getPropertyStats, getTicketStats, getFinancialStats, getOccupancyStats } = require('./statsController');
+const AppError = require('../utils/appError');
 
-exports.getReports = async (req, res) => {
+exports.getReports = async (req, res, next) => {
   try {
-    const reports = await Report.find();
-    res.json(reports);
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Report.findAndCountAll({
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']],
+      ...req.query.active && { where: { isActive: true } }
+    });
+
+    res.json({
+      reports: rows,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalReports: count
+    });
   } catch (error) {
-    console.error('Error in getReports:', error);
-    res.status(500).json({ message: 'Error fetching reports', error: error.message });
+    next(new AppError('Error fetching reports', 500));
   }
 };
 
-exports.getReportData = async (req, res) => {
+exports.getReportData = async (req, res, next) => {
   try {
-    const report = await Report.findById(req.params.id);
+    const report = await Report.findByPk(req.params.id);
     if (!report) {
-      return res.status(404).json({ message: 'Report not found' });
+      return next(new AppError('Report not found', 404));
     }
 
     let data;
     switch (report.dataFetchFunction) {
       case 'getPropertyStats':
-        data = await getPropertyStats(req, res);
+        data = await getPropertyStats(req.user.id);
         break;
       case 'getTicketStats':
-        data = await getTicketStats(req, res);
+        data = await getTicketStats(req.user.id);
         break;
       case 'getFinancialStats':
-        data = await getFinancialStats(req, res);
+        data = await getFinancialStats(req.user.id);
         break;
       case 'getOccupancyStats':
-        data = await getOccupancyStats(req, res);
+        data = await getOccupancyStats(req.user.id);
         break;
       default:
-        return res.status(400).json({ message: 'Invalid data fetch function' });
+        return next(new AppError('Invalid data fetch function', 400));
     }
 
-    res.json({ ...report.toObject(), data });
+    res.json({ ...report.toJSON(), data });
   } catch (error) {
-    console.error('Error in getReportData:', error);
-    res.status(500).json({ message: 'Error fetching report data', error: error.message });
+    next(new AppError('Error fetching report data', 500));
   }
 };
 
-// Function to initialize pre-defined reports
 exports.initializeReports = async () => {
   const reports = [
     {
@@ -81,15 +94,15 @@ exports.initializeReports = async () => {
   ];
 
   try {
-    for (const report of reports) {
-      await Report.findOneAndUpdate(
-        { title: report.title },
-        report,
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-    }
+    await Promise.all(reports.map(report => 
+      Report.findOrCreate({
+        where: { title: report.title },
+        defaults: report
+      })
+    ));
     console.log('Pre-defined reports initialized successfully');
   } catch (error) {
     console.error('Error initializing pre-defined reports:', error);
+    throw error;
   }
 };

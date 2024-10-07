@@ -1,54 +1,85 @@
-// models/Document.js
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const mongoose = require('mongoose');
-
-const documentSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const Document = sequelize.define('Document', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
   name: {
-    type: String,
-    required: true
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 255]
+    }
   },
   type: {
-    type: String,
-    enum: ['file', 'folder'],
-    required: true
+    type: DataTypes.ENUM('file', 'folder'),
+    allowNull: false
   },
   category: {
-    type: String,
-    enum: ['document', 'image', 'video', 'other'],
-    required: true
+    type: DataTypes.ENUM('document', 'image', 'video', 'other'),
+    allowNull: false
   },
   mimeType: {
-    type: String
+    type: DataTypes.STRING(100),
+    allowNull: true
   },
   size: {
-    type: Number,
-    default: 0
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    validate: {
+      min: 0
+    }
   },
   content: {
-    type: Buffer
+    type: DataTypes.BLOB,
+    allowNull: true
   },
   isFavorite: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   isDeleted: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   path: {
-    type: String,
-    required: true
+    type: DataTypes.STRING(500),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
-  parent: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Document',
-    default: null
+  parentId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'Documents',
+      key: 'id'
+    }
   }
-}, { timestamps: true });
+}, {
+  indexes: [
+    { fields: ['type'] },
+    { fields: ['category'] },
+    { fields: ['path'] },
+    { fields: ['parentId'] }
+  ]
+});
 
-module.exports = mongoose.model('Document', documentSchema);
+// Define associations
+Document.associate = (models) => {
+  Document.belongsTo(models.User, { 
+    foreignKey: { 
+      name: 'userId', 
+      allowNull: false 
+    }
+  });
+  Document.belongsTo(Document, { as: 'parent', foreignKey: 'parentId' });
+  Document.hasMany(Document, { as: 'children', foreignKey: 'parentId' });
+};
+
+module.exports = Document;

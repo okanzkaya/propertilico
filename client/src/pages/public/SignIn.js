@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useUser } from '../../context/UserContext';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
@@ -69,6 +69,7 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login, hasActiveSubscription } = useUser();
   const { executeRecaptcha } = useGoogleReCaptcha();
+  const navigate = useNavigate();
 
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -100,6 +101,13 @@ const SignIn = () => {
         rememberMe: formData.rememberMe 
       };
       
+      console.log('Sending login request with data:', {
+        email: loginData.email,
+        passwordLength: loginData.password.length,
+        reCaptchaToken: !!loginData.reCaptchaToken,
+        rememberMe: loginData.rememberMe
+      });
+  
       const loginResult = await login(loginData);
       
       if (loginResult.success) {
@@ -113,16 +121,33 @@ const SignIn = () => {
       }
     } catch (error) {
       console.error('SignIn - Login error:', error);
-      setErrors(prev => ({ ...prev, general: error.message || 'An error occurred. Please try again.' }));
-      setSnackbar({ open: true, message: error.message || 'An error occurred. Please try again.', severity: 'error' });
+      handleLoginError(error);
     } finally {
       setIsLoading(false);
     }
   };
   
+  const handleLoginError = (error) => {
+    const errorMessage = error.response?.data?.message || error.message || 'An error occurred. Please try again.';
+    
+    if (errorMessage.includes('email')) {
+      setErrors(prev => ({ ...prev, email: errorMessage }));
+    } else if (errorMessage.includes('password')) {
+      setErrors(prev => ({ ...prev, password: errorMessage }));
+    } else {
+      setErrors(prev => ({ ...prev, general: errorMessage }));
+    }
+
+    setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+  };
+
   const handlePostLogin = (hasSubscription) => {
     console.log('Handling post-login actions');
-    // Add your post-login logic here
+    if (hasSubscription) {
+      navigate('/app/dashboard');
+    } else {
+      navigate('/my-plan');
+    }
   };
 
   const handleGoogleSignIn = () => {

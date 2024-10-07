@@ -1,29 +1,84 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const reportSchema = new mongoose.Schema({
+const Report = sequelize.define('Report', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
   title: {
-    type: String,
-    required: true
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    unique: true,
+    validate: {
+      notEmpty: { msg: 'Title cannot be empty' },
+      len: { args: [1, 255], msg: 'Title must be between 1 and 255 characters' }
+    }
   },
   description: {
-    type: String,
-    required: true
+    type: DataTypes.TEXT,
+    allowNull: false,
+    validate: {
+      notEmpty: { msg: 'Description cannot be empty' }
+    }
   },
   type: {
-    type: String,
-    enum: ['PropertyOverview', 'TicketSummary', 'FinancialOverview', 'OccupancyTrend'],
-    required: true
+    type: DataTypes.ENUM('PropertyOverview', 'TicketSummary', 'FinancialOverview', 'OccupancyTrend'),
+    allowNull: false
   },
   chartType: {
-    type: String,
-    enum: ['bar', 'line', 'pie'],
-    required: true
+    type: DataTypes.ENUM('bar', 'line', 'pie'),
+    allowNull: false
   },
   dataFetchFunction: {
-    type: String,
-    required: true
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      notEmpty: { msg: 'Data fetch function cannot be empty' }
+    }
   },
-  tags: [String]
+  tags: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    defaultValue: [],
+    get() {
+      const rawValue = this.getDataValue('tags');
+      return rawValue ? rawValue : [];
+    }
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  }
+}, {
+  indexes: [
+    { fields: ['type'] },
+    { fields: ['chartType'] },
+    { fields: ['tags'], using: 'gin' },
+    { fields: ['isActive'] }
+  ],
+  scopes: {
+    active: {
+      where: { isActive: true }
+    }
+  }
 });
 
-module.exports = mongoose.model('Report', reportSchema);
+// Instance method to update tags
+Report.prototype.updateTags = async function(newTags) {
+  this.tags = [...new Set([...this.tags, ...newTags])];
+  return this.save();
+};
+
+// Class method to find reports by tag
+Report.findByTag = function(tag) {
+  return this.findAll({
+    where: {
+      tags: {
+        [sequelize.Op.contains]: [tag]
+      }
+    }
+  });
+};
+
+module.exports = Report;

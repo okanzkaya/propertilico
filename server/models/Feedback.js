@@ -1,41 +1,59 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const feedbackSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const Feedback = sequelize.define('Feedback', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
   message: {
-    type: String,
-    required: true
+    type: DataTypes.TEXT,
+    allowNull: false,
+    validate: {
+      notEmpty: { msg: 'Message cannot be empty' }
+    }
   },
   rating: {
-    type: Number,
-    min: 0,
-    max: 5,
-    default: 0  // Set a default value of 0 for no rating
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    validate: {
+      min: { args: [0], msg: 'Rating must be at least 0' },
+      max: { args: [5], msg: 'Rating must be at most 5' }
+    }
   },
   feedbackType: {
-    type: String,
-    required: true,
-    enum: ['bug', 'feature', 'improvement', 'general']
+    type: DataTypes.ENUM('bug', 'feature', 'improvement', 'general'),
+    allowNull: false,
+    validate: {
+      isIn: {
+        args: [['bug', 'feature', 'improvement', 'general']],
+        msg: 'Invalid feedback type'
+      }
+    }
   },
   attachment: {
-    type: String
+    type: DataTypes.STRING(255),
+    allowNull: true
   },
   isFavorite: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   isRead: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false
   }
+}, {
+  indexes: [
+    { fields: ['feedbackType'] },
+    { fields: ['createdAt'] },
+    { fields: ['userId'] }
+  ]
 });
 
-module.exports = mongoose.model('Feedback', feedbackSchema);
+module.exports = Feedback;

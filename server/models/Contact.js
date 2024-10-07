@@ -1,52 +1,75 @@
-// server/models/Contact.js
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const mongoose = require('mongoose');
-
-const contactSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const Contact = sequelize.define('Contact', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
   name: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 100]
+    }
   },
   role: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 50]
+    }
   },
   email: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      isEmail: true,
+      notEmpty: true
+    }
   },
   phone: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 20]
+    }
   },
   address: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING(255),
+    allowNull: true
   },
   avatar: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING(255),
+    allowNull: true
   },
   notes: {
-    type: String,
-    trim: true
+    type: DataTypes.TEXT,
+    allowNull: true
   },
-  customFields: [{
-    key: String,
-    value: String
-  }]
+  customFields: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  }
 }, {
-  timestamps: true
+  indexes: [
+    { fields: ['email'] },
+    { fields: ['phone'] }
+  ]
 });
 
-module.exports = mongoose.model('Contact', contactSchema);
+// Define associations
+Contact.associate = (models) => {
+  Contact.belongsTo(models.User, { 
+    foreignKey: { 
+      name: 'userId', 
+      allowNull: false 
+    }
+  });
+};
+
+module.exports = Contact;
