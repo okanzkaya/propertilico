@@ -63,7 +63,10 @@ export const UserProvider = ({ children }) => {
     try {
       const userData = await userApi.getUserProfile();
       console.log('User data fetched:', userData);
-      setUser(userData);
+      setUser({
+        ...userData,
+        hasActiveSubscription: userData.subscriptionEndDate && new Date(userData.subscriptionEndDate) > new Date()
+      });
       localStorage.setItem('fontSize', userData.fontSize || 'medium');
       setError(null);
     } catch (error) {
@@ -74,7 +77,10 @@ export const UserProvider = ({ children }) => {
           await refreshToken();
           const userData = await userApi.getUserProfile();
           console.log('User data fetched after token refresh:', userData);
-          setUser(userData);
+          setUser({
+            ...userData,
+            hasActiveSubscription: userData.subscriptionEndDate && new Date(userData.subscriptionEndDate) > new Date()
+          });
           setError(null);
         } catch (refreshError) {
           console.error('Failed to refresh token:', refreshError);
@@ -109,25 +115,8 @@ export const UserProvider = ({ children }) => {
       return { success: true, user: response.user };
     } catch (error) {
       console.error('Login error:', error);
-      if (error.response && error.response.status === 400 && error.response.data.message === 'reCAPTCHA verification failed') {
-        // If reCAPTCHA verification fails, we'll try to login without it
-        try {
-          const responseWithoutCaptcha = await loginUser({ ...credentials, reCaptchaToken: null });
-          console.log('Login successful without reCAPTCHA');
-          setAuthToken(responseWithoutCaptcha.token, responseWithoutCaptcha.refreshToken, credentials.rememberMe);
-          setUser(responseWithoutCaptcha.user);
-          setError(null);
-          await fetchUser();
-          return { success: true, user: responseWithoutCaptcha.user };
-        } catch (retryError) {
-          console.error('Login retry error:', retryError);
-          setError('Login failed. Please try again.');
-          return { success: false, error: retryError.message };
-        }
-      } else {
-        setError('Login failed. Please check your credentials and try again.');
-        return { success: false, error: error.message };
-      }
+      setError('Login failed. Please check your credentials and try again.');
+      return { success: false, error: error.message };
     }
   }, [fetchUser, setAuthToken]);
 
@@ -139,7 +128,8 @@ export const UserProvider = ({ children }) => {
       setAuthToken(response.token, response.refreshToken, true);
       setUser({
         ...response.user,
-        createdAt: new Date().toISOString() // Ensure createdAt is set for new users
+        createdAt: new Date().toISOString(),
+        hasActiveSubscription: true
       });
       setError(null);
       return { success: true, user: response.user };
@@ -194,7 +184,10 @@ export const UserProvider = ({ children }) => {
       const response = await axiosInstance.get(`${process.env.REACT_APP_API_URL}/api/auth/status`);
       if (response.data.isAuthenticated) {
         console.log('User is authenticated');
-        setUser(response.data.user);
+        setUser({
+          ...response.data.user,
+          hasActiveSubscription: response.data.user.subscriptionEndDate && new Date(response.data.user.subscriptionEndDate) > new Date()
+        });
         setLoading(false);
         return true;
       } else {
@@ -206,30 +199,15 @@ export const UserProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Auth status check failed:', error);
-      if (error.response && error.response.status === 401) {
-        console.log('Token expired, attempting to refresh...');
-        try {
-          await refreshToken();
-          return await checkAuthStatus();
-        } catch (refreshError) {
-          console.error('Failed to refresh token:', refreshError);
-          setUser(null);
-          clearStoredData();
-          setLoading(false);
-          return false;
-        }
-      }
       setUser(null);
       clearStoredData();
       setLoading(false);
       return false;
     }
-  }, [clearStoredData, refreshToken]);
+  }, [clearStoredData]);
 
   const hasActiveSubscription = useCallback(() => {
-    if (!user || !user.subscriptionEndDate) return false;
-    const subscriptionEnd = new Date(user.subscriptionEndDate);
-    return subscriptionEnd > new Date();
+    return user?.hasActiveSubscription || false;
   }, [user]);
 
   const isSubscriptionExpiringSoon = useCallback(() => {
@@ -253,7 +231,11 @@ export const UserProvider = ({ children }) => {
     try {
       const response = await userApi[action === 'extend' ? 'extendSubscription' : 'reduceSubscription']();
       console.log('Subscription updated:', response);
-      setUser(prevUser => ({ ...prevUser, subscriptionEndDate: response.subscriptionEndDate }));
+      setUser(prevUser => ({ 
+        ...prevUser, 
+        subscriptionEndDate: response.subscriptionEndDate,
+        hasActiveSubscription: new Date(response.subscriptionEndDate) > new Date()
+      }));
       return response;
     } catch (error) {
       console.error(`Failed to ${action} subscription:`, error);

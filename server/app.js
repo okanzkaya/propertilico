@@ -31,7 +31,10 @@ app.use(express.json());
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(compression());
 app.use(helmet());
-app.use(cors({ origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_URL : 'http://localhost:3000', credentials: true }));
+app.use(cors({ 
+  origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_URL : 'http://localhost:3000', 
+  credentials: true 
+}));
 app.use(xss());
 app.use(hpp({ whitelist: ['duration', 'ratingsQuantity', 'ratingsAverage', 'maxGroupSize', 'difficulty', 'price'] }));
 
@@ -41,7 +44,12 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: sessionStore,
-  cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'strict' }
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production', 
+    httpOnly: true, 
+    maxAge: 30 * 24 * 60 * 60 * 1000, 
+    sameSite: 'strict' 
+  }
 }));
 sessionStore.sync();
 
@@ -63,13 +71,13 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/blogs', blogLimiter, require('./routes/blogRoutes'));
 app.use('/api/user', generalLimiter, protect, require('./routes/userRoutes'));
 app.use('/api/feedback', generalLimiter, protect, require('./routes/feedbackRoutes'));
-app.use('/api/property', generalLimiter, protect, require('./routes/propertyRoutes'));
-app.use('/api/ticket', generalLimiter, protect, require('./routes/ticketRoutes'));
-app.use('/api/contact', generalLimiter, protect, require('./routes/contactRoutes'));
-app.use('/api/document', generalLimiter, protect, require('./routes/documentRoutes'));
-app.use('/api/finance', generalLimiter, protect, require('./routes/financeRoutes'));
-app.use('/api/report', generalLimiter, protect, require('./routes/reportRoutes'));
-app.use('/api/task', generalLimiter, protect, require('./routes/taskRoutes'));
+app.use('/api/properties', generalLimiter, protect, require('./routes/propertyRoutes'));
+app.use('/api/tickets', generalLimiter, protect, require('./routes/ticketRoutes'));
+app.use('/api/contacts', generalLimiter, protect, require('./routes/contactRoutes'));
+app.use('/api/documents', generalLimiter, protect, require('./routes/documentRoutes'));
+app.use('/api/finances', generalLimiter, protect, require('./routes/financeRoutes'));
+app.use('/api/reports', generalLimiter, protect, require('./routes/reportRoutes'));
+app.use('/api/tasks', generalLimiter, protect, require('./routes/taskRoutes'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -1,24 +1,24 @@
-const Property = require('../models/Property');
-const User = require('../models/User');
+const { Property } = require('../models/Property');
+const { User } = require('../models/User');
+const { sequelize } = require('../config/db');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
 
-// Configure multer for file upload
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: async (req, file, cb) => {
     const dir = './uploads/properties';
-    fs.mkdirSync(dir, { recursive: true });
+    await fs.mkdir(dir, { recursive: true });
     cb(null, dir);
   },
-  filename: function (req, file, cb) {
+  filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -26,200 +26,197 @@ const upload = multer({
       cb(new Error('Not an image! Please upload only images.'), false);
     }
   }
-}).array('images', 5); // Allow up to 5 images
+}).array('images', 5);
 
 exports.createProperty = async (req, res) => {
-  upload(req, res, async function (err) {
-    if (err) {
-      return res.status(400).json({ message: err.message });
-    }
+  const t = await sequelize.transaction();
 
-    try {
-      const user = await User.findById(req.user._id);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      if (user.properties.length >= user.maxProperties) {
-        return res.status(403).json({ message: 'You have reached the maximum number of properties for your subscription' });
-      }
-
-      const newProperty = new Property({
-        name: req.body.name,
-        description: req.body.description,
-        rentAmount: req.body.rentAmount,
-        propertyType: req.body.propertyType,
-        bedrooms: req.body.bedrooms,
-        bathrooms: req.body.bathrooms,
-        area: req.body.area,
-        furnished: req.body.furnished === 'true',
-        parking: req.body.parking === 'true',
-        petFriendly: req.body.petFriendly === 'true',
-        availableNow: req.body.availableNow === 'true',
-        owner: req.user._id,
-        location: {
-          type: 'Point',
-          coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
-        },
-        images: req.files ? req.files.map((file, index) => ({
-          path: file.path.replace(/\\/g, '/'),
-          isMain: index.toString() === req.body.mainImageIndex
-        })) : []
+  try {
+    await new Promise((resolve, reject) => {
+      upload(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
       });
+    });
 
-      const savedProperty = await newProperty.save();
-      user.properties.push(savedProperty._id);
-      await user.save();
-
-      res.status(201).json(savedProperty);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      await t.rollback();
+      return res.status(404).json({ message: 'User not found' });
     }
-  });
+
+    if (user.properties.length >= user.maxProperties) {
+      await t.rollback();
+      return res.status(403).json({ message: 'You have reached the maximum number of properties for your subscription' });
+    }
+
+    const newProperty = await Property.create({
+      ...req.body,
+      ownerId: req.user.id,
+      furnished: req.body.furnished === 'true',
+      parking: req.body.parking === 'true',
+      petFriendly: req.body.petFriendly === 'true',
+      availableNow: req.body.availableNow === 'true',
+      location: sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', req.body.longitude, req.body.latitude), 4326),
+      images: req.files ? req.files.map((file, index) => ({
+        path: file.path.replace(/\\/g, '/'),
+        isMain: index.toString() === req.body.mainImageIndex
+      })) : []
+    }, { transaction: t });
+
+    await user.addProperty(newProperty, { transaction: t });
+
+    await t.commit();
+    res.status(201).json(newProperty);
+  } catch (error) {
+    await t.rollback();
+    console.error('Error creating property:', error);
+    res.status(500).json({ message: 'Error creating property' });
+  }
 };
 
 exports.getUserProperties = async (req, res) => {
-  console.log('Fetching properties for user:', req.user._id);
   try {
-    const properties = await Property.find({ owner: req.user._id });
-    console.log('Found properties:', properties);
+    const properties = await Property.findAll({
+      where: { ownerId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
     res.json(properties);
   } catch (error) {
     console.error('Error fetching user properties:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Error fetching properties' });
   }
 };
 
 exports.getPropertyById = async (req, res) => {
-  console.log('Fetching property by ID:', req.params.id);
   try {
-    const property = await Property.findOne({ _id: req.params.id, owner: req.user._id });
+    const property = await Property.findOne({
+      where: { id: req.params.id, ownerId: req.user.id }
+    });
     if (!property) {
-      console.log('Property not found');
       return res.status(404).json({ message: 'Property not found' });
     }
-    console.log('Found property:', property);
     res.json(property);
   } catch (error) {
     console.error('Error fetching property by ID:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Error fetching property' });
   }
 };
 
 exports.updateProperty = async (req, res) => {
-  console.log('Updating property:', req.params.id);
+  const t = await sequelize.transaction();
 
-  upload(req, res, async function (err) {
-    if (err instanceof multer.MulterError) {
-      console.error('Multer error:', err);
-      return res.status(400).json({ message: err.message });
-    } else if (err) {
-      console.error('Unknown error:', err);
-      return res.status(500).json({ message: 'An unknown error occurred when uploading.' });
+  try {
+    await new Promise((resolve, reject) => {
+      upload(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    let updateData = {
+      ...req.body,
+      furnished: req.body.furnished === 'true',
+      parking: req.body.parking === 'true',
+      petFriendly: req.body.petFriendly === 'true',
+      availableNow: req.body.availableNow === 'true',
+    };
+
+    if (req.body.longitude && req.body.latitude) {
+      updateData.location = sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', req.body.longitude, req.body.latitude), 4326);
     }
 
-    console.log('Update data:', req.body);
-    console.log('Updated files:', req.files);
-
-    try {
-      let updateData = {
-        ...req.body,
-        furnished: req.body.furnished === 'true',
-        parking: req.body.parking === 'true',
-        petFriendly: req.body.petFriendly === 'true',
-        availableNow: req.body.availableNow === 'true',
-      };
-
-      if (req.body.longitude && req.body.latitude) {
-        updateData.location = {
-          type: 'Point',
-          coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
-        };
-      }
-
-      if (req.files && req.files.length > 0) {
-        updateData.images = req.files.map((file, index) => ({
-          path: file.path.replace(/\\/g, '/'),
-          isMain: index.toString() === req.body.mainImageIndex
-        }));
-      }
-
-      const property = await Property.findOneAndUpdate(
-        { _id: req.params.id, owner: req.user._id },
-        updateData,
-        { new: true, runValidators: true }
-      );
-
-      if (!property) {
-        console.log('Property not found for update');
-        return res.status(404).json({ message: 'Property not found' });
-      }
-
-      console.log('Updated property:', property);
-      res.json(property);
-    } catch (error) {
-      console.error('Error updating property:', error);
-      res.status(400).json({ message: error.message });
+    if (req.files && req.files.length > 0) {
+      updateData.images = req.files.map((file, index) => ({
+        path: file.path.replace(/\\/g, '/'),
+        isMain: index.toString() === req.body.mainImageIndex
+      }));
     }
-  });
+
+    const [updatedRowsCount, updatedProperties] = await Property.update(
+      updateData,
+      {
+        where: { id: req.params.id, ownerId: req.user.id },
+        returning: true,
+        transaction: t
+      }
+    );
+
+    if (updatedRowsCount === 0) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Property not found' });
+    }
+
+    await t.commit();
+    res.json(updatedProperties[0]);
+  } catch (error) {
+    await t.rollback();
+    console.error('Error updating property:', error);
+    res.status(500).json({ message: 'Error updating property' });
+  }
 };
 
 exports.deleteProperty = async (req, res) => {
-  console.log('Deleting property:', req.params.id);
+  const t = await sequelize.transaction();
+
   try {
-    const property = await Property.findOneAndDelete({ _id: req.params.id, owner: req.user._id });
+    const property = await Property.findOne({
+      where: { id: req.params.id, ownerId: req.user.id },
+      transaction: t
+    });
+
     if (!property) {
-      console.log('Property not found for deletion');
+      await t.rollback();
       return res.status(404).json({ message: 'Property not found' });
     }
-    
+
     // Delete associated images
     if (property.images && property.images.length > 0) {
-      property.images.forEach(image => {
-        fs.unlink(image.path, (err) => {
-          if (err) console.error('Error deleting image file:', err);
-        });
-      });
+      for (const image of property.images) {
+        await fs.unlink(image.path).catch(console.error);
+      }
     }
 
-    const user = await User.findById(req.user._id);
-    user.properties = user.properties.filter(p => p.toString() !== req.params.id);
-    await user.save();
-    console.log('Updated user properties after deletion');
+    await property.destroy({ transaction: t });
 
+    await User.update(
+      { properties: sequelize.literal('"properties" - 1') },
+      { where: { id: req.user.id }, transaction: t }
+    );
+
+    await t.commit();
     res.json({ message: 'Property deleted successfully' });
   } catch (error) {
+    await t.rollback();
     console.error('Error deleting property:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Error deleting property' });
   }
 };
 
 exports.toggleFavorite = async (req, res) => {
-  console.log('Toggling favorite for property:', req.params.id);
+  const t = await sequelize.transaction();
+
   try {
-    const property = await Property.findById(req.params.id);
+    const property = await Property.findByPk(req.params.id, { transaction: t });
     if (!property) {
-      console.log('Property not found');
+      await t.rollback();
       return res.status(404).json({ message: 'Property not found' });
     }
 
-    const user = await User.findById(req.user._id);
-    const favoriteIndex = user.favoriteProperties.indexOf(property._id);
+    const user = await User.findByPk(req.user.id, { transaction: t });
+    const isFavorite = await user.hasFavoriteProperty(property, { transaction: t });
 
-    if (favoriteIndex > -1) {
-      // Remove from favorites
-      user.favoriteProperties.splice(favoriteIndex, 1);
-      console.log('Property removed from favorites');
+    if (isFavorite) {
+      await user.removeFavoriteProperty(property, { transaction: t });
     } else {
-      // Add to favorites
-      user.favoriteProperties.push(property._id);
-      console.log('Property added to favorites');
+      await user.addFavoriteProperty(property, { transaction: t });
     }
 
-    await user.save();
-    res.json({ isFavorite: favoriteIndex === -1 });
+    await t.commit();
+    res.json({ isFavorite: !isFavorite });
   } catch (error) {
+    await t.rollback();
     console.error('Error toggling favorite:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Error updating favorite status' });
   }
 };

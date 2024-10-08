@@ -1,5 +1,6 @@
-const Document = require('../models/Document');
+const { Document } = require('../models/Document');
 const crypto = require('crypto');
+const { Op } = require('sequelize');
 
 const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'utf8');
 if (ENCRYPTION_KEY.length !== 32) {
@@ -9,18 +10,20 @@ if (ENCRYPTION_KEY.length !== 32) {
 
 const IV_LENGTH = 16;
 
-function encrypt(buffer) {
+function encrypt(text) {
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
-  const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
-  return Buffer.concat([iv, encrypted]);
+  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
-function decrypt(buffer) {
-  const iv = buffer.slice(0, IV_LENGTH);
-  const encryptedContent = buffer.slice(IV_LENGTH);
+function decrypt(text) {
+  const textParts = text.split(':');
+  const iv = Buffer.from(textParts.shift(), 'hex');
+  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
   const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
-  return Buffer.concat([decipher.update(encryptedContent), decipher.final()]);
+  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
+  return decrypted.toString();
 }
 
 function categorizeFile(fileName) {
@@ -33,7 +36,11 @@ function categorizeFile(fileName) {
 
 exports.getDocuments = async (req, res) => {
   try {
-    const documents = await Document.find({ user: req.user._id, isDeleted: false }).select('-content');
+    const documents = await Document.findAll({
+      where: { userId: req.user.id, isDeleted: false },
+      attributes: { exclude: ['content'] },
+      order: [['createdAt', 'DESC']]
+    });
     res.json(documents);
   } catch (error) {
     console.error('Error fetching documents:', error);
@@ -54,18 +61,17 @@ exports.uploadFile = async (req, res) => {
       return res.status(400).json({ message: 'File size exceeds the limit (10MB)' });
     }
 
-    const newFile = new Document({
-      user: req.user._id,
+    const newFile = await Document.create({
+      userId: req.user.id,
       name: originalname,
       type: 'file',
       category,
       mimeType: mimetype,
       size,
-      content: encrypt(buffer),
+      content: encrypt(buffer.toString('base64')),
       path: `/${originalname}`
     });
 
-    await newFile.save();
     res.status(201).json({ message: 'File uploaded successfully', file: newFile });
   } catch (error) {
     console.error('Error uploading file:', error);
@@ -75,17 +81,21 @@ exports.uploadFile = async (req, res) => {
 
 exports.downloadFile = async (req, res) => {
   try {
-    const file = await Document.findOne({ _id: req.params.id, user: req.user._id, type: 'file' });
+    const file = await Document.findOne({
+      where: { id: req.params.id, userId: req.user.id, type: 'file' }
+    });
     if (!file) {
       return res.status(404).json({ message: 'File not found' });
     }
+
+    const decryptedContent = Buffer.from(decrypt(file.content), 'base64');
 
     res.set({
       'Content-Type': file.mimeType,
       'Content-Disposition': `attachment; filename="${file.name}"`
     });
 
-    res.send(decrypt(file.content));
+    res.send(decryptedContent);
   } catch (error) {
     console.error('Error downloading file:', error);
     res.status(500).json({ message: 'Error downloading file' });
@@ -94,13 +104,12 @@ exports.downloadFile = async (req, res) => {
 
 exports.deleteDocument = async (req, res) => {
   try {
-    const document = await Document.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
+    const [updatedRowsCount] = await Document.update(
       { isDeleted: true },
-      { new: true }
+      { where: { id: req.params.id, userId: req.user.id } }
     );
 
-    if (!document) {
+    if (updatedRowsCount === 0) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
@@ -114,17 +123,19 @@ exports.deleteDocument = async (req, res) => {
 exports.updateDocument = async (req, res) => {
   try {
     const { name } = req.body;
-    const document = await Document.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
+    const [updatedRowsCount, updatedDocuments] = await Document.update(
       { name },
-      { new: true }
+      {
+        where: { id: req.params.id, userId: req.user.id },
+        returning: true
+      }
     );
 
-    if (!document) {
+    if (updatedRowsCount === 0) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    res.json({ message: 'Document updated successfully', document });
+    res.json({ message: 'Document updated successfully', document: updatedDocuments[0] });
   } catch (error) {
     console.error('Error updating document:', error);
     res.status(500).json({ message: 'Error updating document' });
@@ -133,7 +144,9 @@ exports.updateDocument = async (req, res) => {
 
 exports.toggleFavorite = async (req, res) => {
   try {
-    const document = await Document.findOne({ _id: req.params.id, user: req.user._id });
+    const document = await Document.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
     }
@@ -148,15 +161,13 @@ exports.toggleFavorite = async (req, res) => {
 
 exports.getStorageInfo = async (req, res) => {
   try {
-    const totalSize = await Document.aggregate([
-      { $match: { user: req.user._id, isDeleted: false, type: 'file' } },
-      { $group: { _id: null, total: { $sum: '$size' } } }
-    ]);
+    const totalSize = await Document.sum('size', {
+      where: { userId: req.user.id, isDeleted: false, type: 'file' }
+    });
 
-    const used = totalSize.length > 0 ? totalSize[0].total : 0;
     const limit = 268435456; // 256 MB in bytes
 
-    res.json({ used, limit });
+    res.json({ used: totalSize || 0, limit });
   } catch (error) {
     console.error('Error fetching storage information:', error);
     res.status(500).json({ message: 'Error fetching storage information' });

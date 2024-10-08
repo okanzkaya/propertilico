@@ -1,72 +1,81 @@
-const Contact = require('../models/Contact');
+const { Contact } = require('../models/Contact');
+const { Op } = require('sequelize');
 
-// Get all contacts
 exports.getContacts = async (req, res) => {
   try {
-    const contacts = await Contact.find({ user: req.user._id });
+    const contacts = await Contact.findAll({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
     res.json(contacts);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching contacts', error: error.message });
+    console.error('Error fetching contacts:', error);
+    res.status(500).json({ message: 'Error fetching contacts' });
   }
 };
 
-// Create a new contact
 exports.createContact = async (req, res) => {
   try {
-    const newContact = new Contact({
+    const newContact = await Contact.create({
       ...req.body,
-      user: req.user._id,
-      avatar: req.file ? req.file.path : undefined
+      userId: req.user.id,
+      avatar: req.file ? req.file.path : null
     });
-    const savedContact = await newContact.save();
-    res.status(201).json(savedContact);
+    res.status(201).json(newContact);
   } catch (error) {
-    res.status(400).json({ message: 'Error creating contact', error: error.message });
+    console.error('Error creating contact:', error);
+    res.status(400).json({ message: 'Error creating contact' });
   }
 };
 
-// Get a single contact by ID
 exports.getContactById = async (req, res) => {
   try {
-    const contact = await Contact.findOne({ _id: req.params.id, user: req.user._id });
+    const contact = await Contact.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
     if (!contact) {
       return res.status(404).json({ message: 'Contact not found' });
     }
     res.json(contact);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching contact', error: error.message });
+    console.error('Error fetching contact:', error);
+    res.status(500).json({ message: 'Error fetching contact' });
   }
 };
 
-// Update a contact
 exports.updateContact = async (req, res) => {
   try {
-    const updatedContact = await Contact.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
-      { 
+    const [updatedRowsCount, updatedContacts] = await Contact.update(
+      {
         ...req.body,
         avatar: req.file ? req.file.path : undefined
       },
-      { new: true }
+      {
+        where: { id: req.params.id, userId: req.user.id },
+        returning: true
+      }
     );
-    if (!updatedContact) {
+    if (updatedRowsCount === 0) {
       return res.status(404).json({ message: 'Contact not found' });
     }
-    res.json(updatedContact);
+    res.json(updatedContacts[0]);
   } catch (error) {
-    res.status(400).json({ message: 'Error updating contact', error: error.message });
+    console.error('Error updating contact:', error);
+    res.status(400).json({ message: 'Error updating contact' });
   }
 };
 
-// Delete a contact
 exports.deleteContact = async (req, res) => {
   try {
-    const deletedContact = await Contact.findOneAndDelete({ _id: req.params.id, user: req.user._id });
-    if (!deletedContact) {
+    const deletedRowsCount = await Contact.destroy({
+      where: { id: req.params.id, userId: req.user.id }
+    });
+    if (deletedRowsCount === 0) {
       return res.status(404).json({ message: 'Contact not found' });
     }
     res.json({ message: 'Contact deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting contact', error: error.message });
+    console.error('Error deleting contact:', error);
+    res.status(500).json({ message: 'Error deleting contact' });
   }
 };

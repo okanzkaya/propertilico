@@ -26,7 +26,11 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized, no token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['password'] }
     });
@@ -35,13 +39,24 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
+    const hasActiveSubscription = checkSubscription(user);
+
+    if (!hasActiveSubscription && !isExemptRoute(req.originalUrl)) {
+      return res.status(403).json({ message: 'Subscription required', redirect: '/my-plan' });
+    }
+
     req.user = user;
+    req.user.hasActiveSubscription = hasActiveSubscription;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired', tokenExpired: true });
+    }
     res.status(401).json({ message: 'Not authorized, token failed' });
   }
 };
+
 const admin = (req, res, next) => req.user && req.user.isAdmin ? next() : res.status(403).json({ message: 'Not authorized as an admin' });
 
 const checkRole = roles => (req, res, next) => !req.user ? res.status(401).json({ message: 'Not authenticated' }) : roles.includes(req.user.role) ? next() : res.status(403).json({ message: 'Not authorized for this action' });

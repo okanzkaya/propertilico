@@ -1,87 +1,128 @@
-// server/controllers/ticketController.js
-
-const Ticket = require('../models/Ticket');
+const { Ticket } = require('../models/Ticket');
+const { sequelize } = require('../config/db');
 
 exports.createTicket = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const { title, description, status, priority, assignee, dueDate } = req.body;
-    const newTicket = new Ticket({
-      user: req.user._id,
+    const newTicket = await Ticket.create({
+      userId: req.user.id,
       title,
       description,
       status,
       priority,
       assignee,
       dueDate
-    });
-    const savedTicket = await newTicket.save();
-    res.status(201).json(savedTicket);
+    }, { transaction: t });
+
+    await t.commit();
+    res.status(201).json(newTicket);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    await t.rollback();
+    console.error('Error creating ticket:', error);
+    res.status(400).json({ message: 'Error creating ticket' });
   }
 };
 
 exports.getTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const tickets = await Ticket.findAll({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
     res.json(tickets);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching tickets:', error);
+    res.status(500).json({ message: 'Error fetching tickets' });
   }
 };
 
 exports.getTicketById = async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({ _id: req.params.id, user: req.user._id });
+    const ticket = await Ticket.findOne({
+      where: { id: req.params.id, userId: req.user.id }
+    });
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
     res.json(ticket);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching ticket:', error);
+    res.status(500).json({ message: 'Error fetching ticket' });
   }
 };
 
 exports.updateTicket = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
-    const updatedTicket = await Ticket.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!updatedTicket) {
+    const [updatedRowsCount, updatedTickets] = await Ticket.update(req.body, {
+      where: { id: req.params.id, userId: req.user.id },
+      returning: true,
+      transaction: t
+    });
+
+    if (updatedRowsCount === 0) {
+      await t.rollback();
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    res.json(updatedTicket);
+
+    await t.commit();
+    res.json(updatedTickets[0]);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    await t.rollback();
+    console.error('Error updating ticket:', error);
+    res.status(400).json({ message: 'Error updating ticket' });
   }
 };
 
 exports.deleteTicket = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
-    const ticket = await Ticket.findOneAndDelete({ _id: req.params.id, user: req.user._id });
-    if (!ticket) {
+    const deletedRowsCount = await Ticket.destroy({
+      where: { id: req.params.id, userId: req.user.id },
+      transaction: t
+    });
+
+    if (deletedRowsCount === 0) {
+      await t.rollback();
       return res.status(404).json({ message: 'Ticket not found' });
     }
+
+    await t.commit();
     res.json({ message: 'Ticket deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    await t.rollback();
+    console.error('Error deleting ticket:', error);
+    res.status(500).json({ message: 'Error deleting ticket' });
   }
 };
 
 exports.addNote = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
-    const ticket = await Ticket.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
-      { $push: { notes: req.body } },
-      { new: true }
-    );
+    const ticket = await Ticket.findOne({
+      where: { id: req.params.id, userId: req.user.id },
+      transaction: t
+    });
+
     if (!ticket) {
+      await t.rollback();
       return res.status(404).json({ message: 'Ticket not found' });
     }
+
+    ticket.notes = ticket.notes || [];
+    ticket.notes.push(req.body);
+    await ticket.save({ transaction: t });
+
+    await t.commit();
     res.json(ticket);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    await t.rollback();
+    console.error('Error adding note to ticket:', error);
+    res.status(400).json({ message: 'Error adding note to ticket' });
   }
 };

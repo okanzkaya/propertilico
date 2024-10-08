@@ -1,94 +1,117 @@
-// server/controllers/financeController.js
-
-const Transaction = require('../models/Transaction');
+const { Transaction } = require('../models/Transaction');
+const { sequelize } = require('../config/db');
 const { validateTransaction } = require('../utils/validation');
 
 exports.getTransactions = async (req, res) => {
   try {
-    const transactions = await Transaction.find({ user: req.user.id }).sort('-date');
+    const transactions = await Transaction.findAll({
+      where: { userId: req.user.id },
+      order: [['date', 'DESC']]
+    });
     res.json(transactions);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching transactions', error: error.message });
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ message: 'Error fetching transactions' });
   }
 };
 
 exports.addTransaction = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const { error } = validateTransaction(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    const newTransaction = new Transaction({
+    const newTransaction = await Transaction.create({
       ...req.body,
-      user: req.user.id
-    });
+      userId: req.user.id
+    }, { transaction: t });
 
-    const savedTransaction = await newTransaction.save();
-    res.status(201).json(savedTransaction);
+    await t.commit();
+    res.status(201).json(newTransaction);
   } catch (error) {
-    res.status(500).json({ message: 'Error adding transaction', error: error.message });
+    await t.rollback();
+    console.error('Error adding transaction:', error);
+    res.status(500).json({ message: 'Error adding transaction' });
   }
 };
 
 exports.updateTransaction = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const { type, category, amount, description, date } = req.body;
     const { error } = validateTransaction({ type, category, amount, description, date });
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    const updatedTransaction = await Transaction.findOneAndUpdate(
-      { _id: req.params.id, user: req.user.id },
+    const [updatedRowsCount, updatedTransactions] = await Transaction.update(
       { type, category, amount, description, date },
-      { new: true, runValidators: true }
+      {
+        where: { id: req.params.id, userId: req.user.id },
+        returning: true,
+        transaction: t
+      }
     );
 
-    if (!updatedTransaction) {
+    if (updatedRowsCount === 0) {
+      await t.rollback();
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    res.json(updatedTransaction);
+    await t.commit();
+    res.json(updatedTransactions[0]);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating transaction', error: error.message });
+    await t.rollback();
+    console.error('Error updating transaction:', error);
+    res.status(500).json({ message: 'Error updating transaction' });
   }
 };
 
 exports.deleteTransaction = async (req, res) => {
-  try {
-    const deletedTransaction = await Transaction.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+  const t = await sequelize.transaction();
 
-    if (!deletedTransaction) {
+  try {
+    const deletedRowsCount = await Transaction.destroy({
+      where: { id: req.params.id, userId: req.user.id },
+      transaction: t
+    });
+
+    if (deletedRowsCount === 0) {
+      await t.rollback();
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
+    await t.commit();
     res.json({ message: 'Transaction deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting transaction', error: error.message });
+    await t.rollback();
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ message: 'Error deleting transaction' });
   }
 };
 
 exports.getFinancialSummary = async (req, res) => {
   try {
-    const transactions = await Transaction.find({ user: req.user.id });
-    
-    // Calculate summary data here
-    const summary = {
-      totalIncome: 0,
-      totalExpense: 0,
-      balance: 0,
-      // Add more summary data as needed
-    };
-
-    transactions.forEach(transaction => {
-      if (transaction.type === 'income') {
-        summary.totalIncome += transaction.amount;
-      } else {
-        summary.totalExpense += transaction.amount;
-      }
+    const [results] = await sequelize.query(`
+      SELECT 
+        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpense
+      FROM "Transactions"
+      WHERE "userId" = :userId
+    `, {
+      replacements: { userId: req.user.id },
+      type: sequelize.QueryTypes.SELECT
     });
 
-    summary.balance = summary.totalIncome - summary.totalExpense;
+    const summary = {
+      totalIncome: results.totalincome || 0,
+      totalExpense: results.totalexpense || 0,
+      balance: (results.totalincome || 0) - (results.totalexpense || 0)
+    };
 
     res.json(summary);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching financial summary', error: error.message });
+    console.error('Error fetching financial summary:', error);
+    res.status(500).json({ message: 'Error fetching financial summary' });
   }
 };

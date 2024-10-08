@@ -1,43 +1,43 @@
 const { Sequelize } = require('sequelize');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
   host: process.env.DB_HOST,
   dialect: 'postgres',
-  logging: process.env.NODE_ENV === 'development' ? false : false,
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: { max: 5, min: 0, acquire: 30000, idle: 10000 }
 });
 
-const modelDefiners = [
-  require('../models/User'),
-  require('../models/Blog'),
-  // Add other model definers here
-];
+const models = {};
 
-// Initialize models
-for (const modelDefiner of modelDefiners) {
-  modelDefiner(sequelize);
+// Read all model files
+const modelFiles = fs.readdirSync(path.join(__dirname, '../models'))
+  .filter(file => file.endsWith('.js'));
+
+// Import models
+for (const file of modelFiles) {
+  const model = require(path.join(__dirname, '../models', file))(sequelize, Sequelize.DataTypes);
+  models[model.name] = model;
 }
 
-// Run `.associate` if it exists,
-// i.e. create relationships in the ORM
-Object.values(sequelize.models)
+// Run associations if they exist
+Object.values(models)
   .filter(model => typeof model.associate === "function")
-  .forEach(model => model.associate(sequelize.models));
+  .forEach(model => model.associate(models));
 
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log('PostgreSQL connected successfully');
     
-    // In development, you might want to use { force: true } to drop and recreate all tables
-    // In production, use { alter: true } to make safe changes to the database schema
-    if (process.env.NODE_ENV === 'developmentd') {
-      await sequelize.sync({ force: true });
-      console.log('All tables dropped and recreated.');
-    } else {
+    if (process.env.NODE_ENV === 'development') {
       await sequelize.sync({ alter: true });
       console.log('Database schema updated.');
+    } else {
+      await sequelize.sync();
+      console.log('Database synchronized.');
     }
     
     console.log('All models were synchronized successfully.');
@@ -47,4 +47,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = { sequelize, connectDB, ...sequelize.models };
+module.exports = { sequelize, models, connectDB };
