@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { validationResult } = require('express-validator');
 const axios = require('axios');
-const { User } = require('../config/db');
+const { models } = require('../config/db');
 const { Op } = require('sequelize');
 
 const generateTokens = (id) => ({
@@ -31,10 +31,10 @@ exports.registerUser = async (req, res) => {
       return handleResponse(res, 400, { success: false, message: 'Invalid captcha' });
     }
 
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await models.User.findOne({ where: { email } });
     if (existingUser) return handleResponse(res, 400, { success: false, message: 'User already exists' });
 
-    const user = await User.create({ name, email, password });
+    const user = await models.User.create({ name, email, password });
     const tokens = generateTokens(user.id);
 
     handleResponse(res, 201, {
@@ -55,13 +55,24 @@ exports.authUser = async (req, res) => {
       return handleResponse(res, 400, { success: false, message: 'Email and password are required' });
     }
 
-    if (!(await verifyRecaptcha(reCaptchaToken))) {
-      return handleResponse(res, 400, { success: false, message: 'reCAPTCHA verification failed' });
+    if (process.env.NODE_ENV === 'production') {
+      if (!reCaptchaToken) {
+        return handleResponse(res, 400, { success: false, message: 'reCAPTCHA verification is required' });
+      }
+
+      const recaptchaVerified = await verifyRecaptcha(reCaptchaToken);
+      if (!recaptchaVerified) {
+        console.log('reCAPTCHA verification failed');
+        return handleResponse(res, 400, { success: false, message: 'reCAPTCHA verification failed' });
+      }
+      console.log('reCAPTCHA verification successful');
+    } else {
+      console.log('Skipping reCAPTCHA verification in development mode');
     }
 
-    const user = await User.findOne({ where: { email } });
+    const user = await models.User.findOne({ where: { email } });
     if (!user) {
-      return handleResponse(res, 401, { success: false, message: 'Incorrect password or mail address' });
+      return handleResponse(res, 401, { success: false, message: 'Invalid credentials' });
     }
 
     if (!(await user.matchPassword(password))) {
@@ -69,7 +80,7 @@ exports.authUser = async (req, res) => {
       if (user.isLocked()) {
         return handleResponse(res, 401, { success: false, message: 'Account is locked. Try again later.' });
       }
-      return handleResponse(res, 401, { success: false, message: 'Incorrect password or mail address' });
+      return handleResponse(res, 401, { success: false, message: 'Invalid credentials' });
     }
 
     if (user.isLocked()) {
@@ -81,6 +92,8 @@ exports.authUser = async (req, res) => {
 
     const tokens = generateTokens(user.id);
 
+    const hasActiveSubscription = user.subscriptionEndDate && new Date(user.subscriptionEndDate) > new Date();
+
     handleResponse(res, 200, {
       success: true,
       ...tokens,
@@ -90,6 +103,7 @@ exports.authUser = async (req, res) => {
         email: user.email,
         isAdmin: user.isAdmin,
         subscriptionEndDate: user.subscriptionEndDate,
+        hasActiveSubscription
       }
     });
   } catch (error) {
@@ -104,7 +118,7 @@ exports.refreshAccessToken = async (req, res) => {
     if (!refreshToken) return handleResponse(res, 401, { success: false, message: 'Refresh token required' });
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findByPk(decoded.id);
+    const user = await models.User.findByPk(decoded.id);
     if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
 
     const newTokens = generateTokens(user.id);
@@ -120,7 +134,7 @@ exports.refreshAccessToken = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ where: { email } });
+    const user = await models.User.findOne({ where: { email } });
     if (!user) {
       return handleResponse(res, 404, { success: false, message: 'User not found' });
     }
@@ -146,7 +160,7 @@ exports.resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
     const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const user = await User.findOne({
+    const user = await models.User.findOne({
       where: {
         resetPasswordToken,
         resetPasswordExpire: { [Op.gt]: Date.now() }
@@ -172,7 +186,7 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const user = await User.findByPk(req.user.id);
+    const user = await models.User.findByPk(req.user.id);
     if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
 
     if (!(await user.matchPassword(oldPassword))) {
@@ -195,7 +209,7 @@ exports.changePassword = async (req, res) => {
 
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id, {
+    const user = await models.User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
     });
     if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
@@ -208,13 +222,13 @@ exports.getUserProfile = async (req, res) => {
 
 exports.updateUserProfile = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id);
+    const user = await models.User.findByPk(req.user.id);
     if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
 
     const { name, email } = req.body;
     if (name) user.name = name;
     if (email && email !== user.email) {
-      const emailExists = await User.findOne({ where: { email } });
+      const emailExists = await models.User.findOne({ where: { email } });
       if (emailExists) {
         return handleResponse(res, 400, { success: false, message: 'Email already in use' });
       }
@@ -230,7 +244,7 @@ exports.updateUserProfile = async (req, res) => {
 
 exports.checkAuthStatus = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id, {
+    const user = await models.User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
     });
     if (!user) {

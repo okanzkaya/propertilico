@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../config/db');
+const { models } = require('../config/db');
 
 const verifyToken = token => {
   try {
@@ -10,57 +10,104 @@ const verifyToken = token => {
   }
 };
 
-const checkSubscription = user => user.subscriptionEndDate && new Date(user.subscriptionEndDate) > new Date();
+const checkSubscription = user => {
+  if (!user.subscriptionEndDate) {
+    console.log('User has no subscription end date');
+    return false;
+  }
+  const isActive = new Date(user.subscriptionEndDate) > new Date();
+  console.log(`User subscription active: ${isActive}`);
+  return isActive;
+};
 
-const isExemptRoute = url => ['/api/user/profile', '/api/user/subscription', '/api/user/extend-subscription', '/api/user/reduce-subscription', '/api/user/get-one-month-subscription', '/api/auth/status'].some(route => url.includes(route));
-
-const refreshToken = user => jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+const isExemptRoute = url => {
+  const exemptRoutes = [
+    '/api/user/profile',
+    '/api/user/subscription',
+    '/api/user/extend-subscription',
+    '/api/user/reduce-subscription',
+    '/api/user/get-one-month-subscription',
+    '/api/auth/status'
+  ];
+  const isExempt = exemptRoutes.some(route => url.includes(route));
+  console.log(`Route ${url} is exempt: ${isExempt}`);
+  return isExempt;
+};
 
 const protect = async (req, res, next) => {
+  console.log(`Protecting route: ${req.originalUrl}`);
+  let token;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+    console.log('Token found in Authorization header');
+  }
+
+  if (!token) {
+    console.log('No token provided');
+    return res.status(401).json({ message: 'Not authorized, no token' });
+  }
+
   try {
-    const token = req.headers.authorization?.startsWith('Bearer') 
-      ? req.headers.authorization.split(' ')[1] 
-      : null;
-
-    if (!token) {
-      return res.status(401).json({ message: 'Not authorized, no token provided' });
-    }
-
     const decoded = verifyToken(token);
     if (!decoded) {
-      return res.status(401).json({ message: 'Invalid token' });
+      console.log('Invalid token');
+      return res.status(401).json({ message: 'Not authorized, invalid token' });
     }
 
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] }
-    });
+    const user = await models.User.findByPk(decoded.id, { attributes: { exclude: ['password'] } });
 
     if (!user) {
+      console.log('User not found');
       return res.status(401).json({ message: 'User not found' });
     }
 
-    const hasActiveSubscription = checkSubscription(user);
-
-    if (!hasActiveSubscription && !isExemptRoute(req.originalUrl)) {
+    if (!isExemptRoute(req.originalUrl) && !checkSubscription(user)) {
+      console.log('User subscription inactive');
       return res.status(403).json({ message: 'Subscription required', redirect: '/my-plan' });
     }
 
     req.user = user;
-    req.user.hasActiveSubscription = hasActiveSubscription;
+    console.log(`User authenticated: ${user.id}`);
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token expired', tokenExpired: true });
-    }
     res.status(401).json({ message: 'Not authorized, token failed' });
   }
 };
 
-const admin = (req, res, next) => req.user && req.user.isAdmin ? next() : res.status(403).json({ message: 'Not authorized as an admin' });
+const admin = (req, res, next) => {
+  if (req.user && req.user.isAdmin) {
+    console.log(`Admin access granted to user: ${req.user.id}`);
+    next();
+  } else {
+    console.log(`Admin access denied to user: ${req.user ? req.user.id : 'unknown'}`);
+    res.status(403).json({ message: 'Not authorized as an admin' });
+  }
+};
 
-const checkRole = roles => (req, res, next) => !req.user ? res.status(401).json({ message: 'Not authenticated' }) : roles.includes(req.user.role) ? next() : res.status(403).json({ message: 'Not authorized for this action' });
+const checkRole = roles => (req, res, next) => {
+  if (!req.user) {
+    console.log('User not authenticated for role check');
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  if (roles.includes(req.user.role)) {
+    console.log(`Role ${req.user.role} authorized for user: ${req.user.id}`);
+    next();
+  } else {
+    console.log(`Role ${req.user.role} not authorized for user: ${req.user.id}`);
+    res.status(403).json({ message: 'Not authorized for this action' });
+  }
+};
 
-const isBlogger = (req, res, next) => req.user && req.user.isBlogger ? next() : res.status(403).json({ message: 'Not authorized as a blogger' });
+const isBlogger = (req, res, next) => {
+  if (req.user && req.user.isBlogger) {
+    console.log(`Blogger access granted to user: ${req.user.id}`);
+    next();
+  } else {
+    console.log(`Blogger access denied to user: ${req.user ? req.user.id : 'unknown'}`);
+    res.status(403).json({ message: 'Not authorized as a blogger' });
+  }
+};
 
-module.exports = { protect, admin, checkRole, isBlogger, refreshToken };
+module.exports = { protect, admin, checkRole, isBlogger };

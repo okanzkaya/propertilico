@@ -67,7 +67,7 @@ const SignIn = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [showPassword, setShowPassword] = useState(false);
-  const { login, hasActiveSubscription } = useUser();
+  const { login } = useUser();
   const { executeRecaptcha } = useGoogleReCaptcha();
   const navigate = useNavigate();
 
@@ -101,21 +101,11 @@ const SignIn = () => {
         rememberMe: formData.rememberMe 
       };
       
-      console.log('Sending login request with data:', {
-        email: loginData.email,
-        passwordLength: loginData.password.length,
-        reCaptchaToken: !!loginData.reCaptchaToken,
-        rememberMe: loginData.rememberMe
-      });
-  
       const loginResult = await login(loginData);
       
       if (loginResult.success) {
         setSnackbar({ open: true, message: 'Successfully signed in!', severity: 'success' });
-        
-        const hasSubscription = await hasActiveSubscription();
-        console.log('Subscription status:', hasSubscription ? 'Active' : 'Inactive');
-        handlePostLogin(hasSubscription);
+        handlePostLogin(loginResult.user.hasActiveSubscription);
       } else {
         throw new Error(loginResult.error || 'Login failed');
       }
@@ -144,9 +134,9 @@ const SignIn = () => {
   const handlePostLogin = (hasSubscription) => {
     console.log('Handling post-login actions');
     if (hasSubscription) {
-      navigate('/app/dashboard');
+      navigate('/');
     } else {
-      navigate('/my-plan');
+      navigate('/');
     }
   };
 

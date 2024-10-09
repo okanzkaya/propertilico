@@ -1,7 +1,6 @@
-const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     id: {
       type: DataTypes.UUID,
@@ -137,9 +136,9 @@ module.exports = (sequelize) => {
   });
 
   User.prototype.matchPassword = async function(enteredPassword) {
-    console.log('Matching password for user:', this.email); // Add this log
+    console.log('Matching password for user:', this.email);
     const isMatch = await bcrypt.compare(enteredPassword, this.password);
-    console.log('Password match result:', isMatch); // Add this log
+    console.log('Password match result:', isMatch);
     return isMatch;
   };
 

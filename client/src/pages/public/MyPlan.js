@@ -99,9 +99,7 @@ const MyPlan = () => {
         reducing: userApi.reduceSubscription,
         gettingSubscription: userApi.getOneMonthSubscription,
       };
-      console.log('Calling action:', action);
       const data = await actionMap[action]();
-      console.log('Action response:', data);
       
       if (data.success) {
         setState(prev => ({
@@ -119,7 +117,6 @@ const MyPlan = () => {
       }
     } catch (error) {
       console.error('Action failed:', error);
-      console.error('Error details:', error.response?.data);
       setState(prev => ({
         ...prev,
         action: null,
@@ -158,14 +155,16 @@ const MyPlan = () => {
       <Typography variant="h6" gutterBottom>Subscription Details</Typography>
       <Grid container spacing={2} alignItems="center">
         <Grid item xs={12} sm={6}>
-          <Typography variant="body1">
-            Status:{' '}
+          <Box display="flex" alignItems="center">
+            <Typography variant="body1" component="span" mr={1}>
+              Status:
+            </Typography>
             <Chip
               label={subscriptionStatus.charAt(0).toUpperCase() + subscriptionStatus.slice(1)}
               color={subscriptionStatus === 'active' ? 'success' : subscriptionStatus === 'expiring' ? 'warning' : 'error'}
               size="small"
             />
-          </Typography>
+          </Box>
         </Grid>
         <Grid item xs={12} sm={6}>
           <Typography variant="body1">

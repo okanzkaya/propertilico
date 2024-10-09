@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { check } = require('express-validator');
+const { check, validationResult } = require('express-validator');
 const { 
   registerUser, 
   authUser, 
@@ -15,7 +15,13 @@ const {
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
-const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const handleErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+};
 
 const validations = {
   register: [
@@ -43,15 +49,44 @@ const validations = {
   ]
 };
 
-router.post('/register', validations.register, asyncHandler(registerUser));
-router.post('/login', validations.login, asyncHandler(authUser));
-router.post('/refresh-token', asyncHandler(refreshAccessToken));
-router.get('/profile', protect, asyncHandler(getUserProfile));
-router.put('/profile', protect, asyncHandler(updateUserProfile));
-router.post('/change-password', protect, validations.changePassword, asyncHandler(changePassword));
-router.post('/forgot-password', validations.forgotPassword, asyncHandler(forgotPassword));
-router.post('/reset-password', validations.resetPassword, asyncHandler(resetPassword));
-router.get('/status', protect, asyncHandler(checkAuthStatus));
-router.post('/logout', protect, asyncHandler(logout));
+router.post('/register', validations.register, handleErrors, (req, res, next) => {
+  registerUser(req, res).catch(next);
+});
+
+router.post('/login', validations.login, handleErrors, (req, res, next) => {
+  authUser(req, res).catch(next);
+});
+
+router.post('/refresh-token', (req, res, next) => {
+  refreshAccessToken(req, res).catch(next);
+});
+
+router.get('/profile', protect, (req, res, next) => {
+  getUserProfile(req, res).catch(next);
+});
+
+router.put('/profile', protect, (req, res, next) => {
+  updateUserProfile(req, res).catch(next);
+});
+
+router.post('/change-password', protect, validations.changePassword, handleErrors, (req, res, next) => {
+  changePassword(req, res).catch(next);
+});
+
+router.post('/forgot-password', validations.forgotPassword, handleErrors, (req, res, next) => {
+  forgotPassword(req, res).catch(next);
+});
+
+router.post('/reset-password', validations.resetPassword, handleErrors, (req, res, next) => {
+  resetPassword(req, res).catch(next);
+});
+
+router.get('/status', protect, (req, res, next) => {
+  checkAuthStatus(req, res).catch(next);
+});
+
+router.post('/logout', protect, (req, res, next) => {
+  logout(req, res).catch(next);
+});
 
 module.exports = router;

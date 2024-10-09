@@ -1,5 +1,5 @@
-import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { loginUser, registerUser, userApi } from '../api';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { loginUser, registerUser, userApi, authApi } from '../api';
 import axiosInstance from '../axiosSetup';
 
 const UserContext = createContext(null);
@@ -39,7 +39,7 @@ export const UserProvider = ({ children }) => {
     }
 
     try {
-      const response = await userApi.refreshToken(refreshToken);
+      const response = await authApi.refreshToken(refreshToken);
       console.log('Token refreshed successfully');
       setAuthToken(response.token, response.refreshToken, true);
       return response.token;
@@ -106,19 +106,21 @@ export const UserProvider = ({ children }) => {
   const login = useCallback(async (credentials) => {
     console.log('Attempting login...');
     try {
+      if (!credentials.reCaptchaToken) {
+        console.warn('Login attempt without reCAPTCHA token');
+      }
       const response = await loginUser(credentials);
       console.log('Login successful');
       setAuthToken(response.token, response.refreshToken, credentials.rememberMe);
       setUser(response.user);
       setError(null);
-      await fetchUser();
       return { success: true, user: response.user };
     } catch (error) {
       console.error('Login error:', error);
       setError('Login failed. Please check your credentials and try again.');
       return { success: false, error: error.message };
     }
-  }, [fetchUser, setAuthToken]);
+  }, [setAuthToken]);
 
   const register = useCallback(async (userData) => {
     console.log('Attempting registration...');
@@ -143,7 +145,7 @@ export const UserProvider = ({ children }) => {
   const logout = useCallback(async () => {
     console.log('Logging out...');
     try {
-      await userApi.logout();
+      await authApi.logout();
       console.log('Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
@@ -154,14 +156,9 @@ export const UserProvider = ({ children }) => {
   }, [clearStoredData]);
 
   const updateUserSettings = useCallback(async (settings) => {
-    console.log('Updating user settings...');
     try {
       const updatedUser = await userApi.updateUserProfile(settings);
-      console.log('User settings updated:', updatedUser);
       setUser(prevUser => ({ ...prevUser, ...updatedUser }));
-      if (settings.fontSize) {
-        localStorage.setItem('fontSize', settings.fontSize);
-      }
       return updatedUser;
     } catch (error) {
       console.error('Failed to update user settings:', error);
@@ -170,92 +167,7 @@ export const UserProvider = ({ children }) => {
     }
   }, []);
 
-  const checkAuthStatus = useCallback(async () => {
-    console.log('Checking auth status...');
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (!token) {
-      console.log('No token found, user is not authenticated');
-      setUser(null);
-      setLoading(false);
-      return false;
-    }
-
-    try {
-      const response = await axiosInstance.get(`${process.env.REACT_APP_API_URL}/api/auth/status`);
-      if (response.data.isAuthenticated) {
-        console.log('User is authenticated');
-        setUser({
-          ...response.data.user,
-          hasActiveSubscription: response.data.user.subscriptionEndDate && new Date(response.data.user.subscriptionEndDate) > new Date()
-        });
-        setLoading(false);
-        return true;
-      } else {
-        console.log('User is not authenticated');
-        setUser(null);
-        clearStoredData();
-        setLoading(false);
-        return false;
-      }
-    } catch (error) {
-      console.error('Auth status check failed:', error);
-      setUser(null);
-      clearStoredData();
-      setLoading(false);
-      return false;
-    }
-  }, [clearStoredData]);
-
-  const hasActiveSubscription = useCallback(() => {
-    return user?.hasActiveSubscription || false;
-  }, [user]);
-
-  const isSubscriptionExpiringSoon = useCallback(() => {
-    if (!user || !user.subscriptionEndDate) return false;
-    const subscriptionEnd = new Date(user.subscriptionEndDate);
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    return subscriptionEnd <= thirtyDaysFromNow && subscriptionEnd > new Date();
-  }, [user]);
-
-  const getRemainingSubscriptionDays = useCallback(() => {
-    if (!user || !user.subscriptionEndDate) return 0;
-    const subscriptionEnd = new Date(user.subscriptionEndDate);
-    const today = new Date();
-    const diffTime = Math.abs(subscriptionEnd - today);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }, [user]);
-
-  const updateSubscription = useCallback(async (action) => {
-    console.log(`Updating subscription: ${action}`);
-    try {
-      const response = await userApi[action === 'extend' ? 'extendSubscription' : 'reduceSubscription']();
-      console.log('Subscription updated:', response);
-      setUser(prevUser => ({ 
-        ...prevUser, 
-        subscriptionEndDate: response.subscriptionEndDate,
-        hasActiveSubscription: new Date(response.subscriptionEndDate) > new Date()
-      }));
-      return response;
-    } catch (error) {
-      console.error(`Failed to ${action} subscription:`, error);
-      setError(`Failed to ${action} subscription. Please try again.`);
-      throw error;
-    }
-  }, []);
-
-  const getSubscriptionStatus = useCallback(() => {
-    if (!user || !user.subscriptionEndDate) return 'inactive';
-    const subscriptionEnd = new Date(user.subscriptionEndDate);
-    const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    
-    if (subscriptionEnd <= now) return 'expired';
-    if (subscriptionEnd <= thirtyDaysFromNow) return 'expiring_soon';
-    return 'active';
-  }, [user]);
-
-  const value = useMemo(() => ({
+  const value = {
     user,
     loading,
     error,
@@ -264,31 +176,9 @@ export const UserProvider = ({ children }) => {
     register,
     fetchUser,
     updateUserSettings,
-    checkAuthStatus,
-    hasActiveSubscription,
-    isSubscriptionExpiringSoon,
-    getRemainingSubscriptionDays,
-    updateSubscription,
-    getSubscriptionStatus,
     setError,
     refreshToken
-  }), [
-    user,
-    loading,
-    error,
-    login,
-    logout,
-    register,
-    fetchUser,
-    updateUserSettings,
-    checkAuthStatus,
-    hasActiveSubscription,
-    isSubscriptionExpiringSoon,
-    getRemainingSubscriptionDays,
-    updateSubscription,
-    getSubscriptionStatus,
-    refreshToken
-  ]);
+  };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };

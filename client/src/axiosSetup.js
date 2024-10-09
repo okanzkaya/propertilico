@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { refreshToken } from './api';
 
 const axiosInstance = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
@@ -30,26 +31,25 @@ const handleCommonErrors = (error) => {
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (token) config.headers['Authorization'] = `Bearer ${token}`;
-    console.log(`Request: ${config.method.toUpperCase()} ${config.url}`);
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
 
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log(`Response: ${response.status} ${response.config.url}`);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
     handleCommonErrors(error);
 
-    if (error.response?.status === 403 && error.response.data.redirectTo === '/my-plan') {
+    if (error.response?.status === 403 && error.response.data.redirect === '/my-plan') {
       window.location.href = '/my-plan';
       return Promise.reject(error);
     }
@@ -69,11 +69,10 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = getRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token available');
+        const oldRefreshToken = getRefreshToken();
+        if (!oldRefreshToken) throw new Error('No refresh token available');
 
-        const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/refresh-token`, { refreshToken });
-        const { token, refreshToken: newRefreshToken } = data;
+        const { token, refreshToken: newRefreshToken } = await refreshToken(oldRefreshToken);
         
         const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
         storage.setItem('token', token);
@@ -97,7 +96,6 @@ axiosInstance.interceptors.response.use(
         isRefreshing = false;
       }
     }
-
     return Promise.reject(error);
   }
 );

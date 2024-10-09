@@ -70,7 +70,7 @@ const ErrorFallback = ({ error }) => (
 );
 
 const App = () => {
-  const { user, loading: userLoading, updateUserSettings, fetchUser, hasActiveSubscription } = useUser();
+  const { user, loading: userLoading, updateUserSettings, fetchUser } = useUser();
   const [themeMode, setThemeMode] = useState(() => ({
     app: user?.theme || localStorage.getItem('appTheme') || 'light',
     public: localStorage.getItem('publicTheme') || 'light'
@@ -109,108 +109,117 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <BrowserRouter>
-          <AppContent
-            appTheme={appTheme}
-            publicTheme={publicTheme}
-            toggleTheme={toggleTheme}
-            themeMode={themeMode}
-            fontSize={fontSize}
-            changeFontSize={changeFontSize}
-            user={user}
-            hasActiveSubscription={hasActiveSubscription}
-          />
-        </BrowserRouter>
+        <GoogleReCaptchaProvider
+          reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
+          useEnterprise={false}
+          scriptProps={{
+            async: true,
+            defer: true,
+            appendTo: 'head',
+          }}
+        >
+          <BrowserRouter>
+            <AppContent
+              appTheme={appTheme}
+              publicTheme={publicTheme}
+              toggleTheme={toggleTheme}
+              themeMode={themeMode}
+              fontSize={fontSize}
+              changeFontSize={changeFontSize}
+              user={user}
+            />
+          </BrowserRouter>
+        </GoogleReCaptchaProvider>
       </ErrorBoundary>
     </QueryClientProvider>
   );
 };
 
-const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize, user, hasActiveSubscription }) => (
-  <Suspense fallback={<LoadingFallback />}>
-    <Routes>
-      {publicRoutes.map(({ path, element: Element }) => (
-        <Route key={path} path={path} element={
-          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-            <Element />
-          </PublicLayout>
-        } />
-      ))}
-      <Route path="/signin" element={
-        <AuthenticatedRoute>
-          <GoogleReCaptchaProvider reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY} scriptProps={{ async: true, defer: true, appendTo: 'head' }}>
+const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize, user }) => {
+  const hasActiveSubscription = useMemo(() => user?.hasActiveSubscription || false, [user]);
+
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        {publicRoutes.map(({ path, element: Element }) => (
+          <Route key={path} path={path} element={
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+              <Element />
+            </PublicLayout>
+          } />
+        ))}
+        <Route path="/signin" element={
+          <AuthenticatedRoute>
             <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
               <SignIn />
             </PublicLayout>
-          </GoogleReCaptchaProvider>
-        </AuthenticatedRoute>
-      } />
-      <Route path="/get-started" element={
-        <AuthenticatedRoute>
-          <GoogleReCaptchaProvider reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY} scriptProps={{ async: true, defer: true, appendTo: 'head' }}>
-          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-            <SignUp />
-          </PublicLayout>
-          </GoogleReCaptchaProvider>
-        </AuthenticatedRoute>
-      } />
-      <Route path="/my-plan" element={
-        <ProtectedRoute>
-          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-            <MyPlan />
-          </PublicLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/create-blog" element={
-        <ProtectedRoute>
-          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-            <BlogEditor />
-          </PublicLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/edit-blog/:id" element={
-        <ProtectedRoute>
-          <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
-            <BlogEditor />
-          </PublicLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/app/*" element={
-        <ProtectedRoute>
-          <FontSizeWrapper fontSize={fontSize}>
-            <AppLayout
-              theme={appTheme}
-              toggleTheme={() => toggleTheme('app')}
-              themeMode={themeMode.app}
-              fontSize={fontSize}
-              changeFontSize={changeFontSize}
-            >
-              <Routes>
-                <Route index element={<Navigate to="/app/dashboard" replace />} />
-                {appRoutes.map(({ path, element: Element }) => (
-                  <Route key={path} path={path} element={
-                    hasActiveSubscription() ? (
-                      <Element
-                        toggleTheme={() => toggleTheme('app')}
-                        fontSize={fontSize}
-                        changeFontSize={changeFontSize}
-                        themeMode={themeMode.app}
-                      />
-                    ) : (
-                      <Navigate to="/my-plan" replace />
-                    )
-                  } />
-                ))}
-                <Route path="admin-feedback" element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/" replace />} />
-              </Routes>
-            </AppLayout>
-          </FontSizeWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  </Suspense>
-));
+          </AuthenticatedRoute>
+        } />
+        <Route path="/get-started" element={
+          <AuthenticatedRoute>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+              <SignUp />
+            </PublicLayout>
+          </AuthenticatedRoute>
+        } />
+        <Route path="/my-plan" element={
+          <ProtectedRoute>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+              <MyPlan />
+            </PublicLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/create-blog" element={
+          <ProtectedRoute>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+              <BlogEditor />
+            </PublicLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/edit-blog/:id" element={
+          <ProtectedRoute>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+              <BlogEditor />
+            </PublicLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/app/*" element={
+          <ProtectedRoute>
+            <FontSizeWrapper fontSize={fontSize}>
+              <AppLayout
+                theme={appTheme}
+                toggleTheme={() => toggleTheme('app')}
+                themeMode={themeMode.app}
+                fontSize={fontSize}
+                changeFontSize={changeFontSize}
+              >
+                <Routes>
+                  <Route index element={<Navigate to="/app/dashboard" replace />} />
+                  {appRoutes.map(({ path, element: Element }) => (
+                    <Route key={path} path={path} element={
+                      hasActiveSubscription ? (
+                        <Element
+                          toggleTheme={() => toggleTheme('app')}
+                          fontSize={fontSize}
+                          changeFontSize={changeFontSize}
+                          themeMode={themeMode.app}
+                        />
+                      ) : (
+                        <Navigate to="/my-plan" replace />
+                      )
+                    } />
+                  ))}
+                  <Route path="admin-feedback" element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/" replace />} />
+                </Routes>
+              </AppLayout>
+            </FontSizeWrapper>
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+});
 
 const PublicLayout = React.memo(({ children, toggleTheme, theme }) => (
   <ThemeProvider theme={theme}>

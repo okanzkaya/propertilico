@@ -3,14 +3,11 @@ const { sequelize } = require('../config/db');
 
 exports.getTasks = async (req, res) => {
   try {
-    const tasks = await Task.findAll({
-      where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
-    });
+    const tasks = await models.Task.findAll({ where: { userId: req.user.id } });
     res.json(tasks);
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ message: 'Error fetching tasks' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

@@ -1,5 +1,6 @@
 import axiosInstance from './axiosSetup';
 
+// Generic API call function
 const apiCall = async (method, url, data = null, options = {}) => {
   try {
     console.log(`Making ${method.toUpperCase()} request to ${url}`);
@@ -61,6 +62,7 @@ export const registerUser = async (userData) => {
     }
   }
 };
+
 export const loginUser = async (userData) => {
   try {
     if (!userData.email || !userData.password) {
@@ -101,12 +103,14 @@ export const googleLogin = async (tokenId) => {
     throw error;
   }
 };
+
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   sessionStorage.removeItem('token');
   sessionStorage.removeItem('refreshToken');
 };
+
 export const checkAuthStatus = async () => {
   try {
     const response = await axiosInstance.get('/api/auth/status');
@@ -117,48 +121,36 @@ export const checkAuthStatus = async () => {
   }
 };
 
-export const requestPasswordReset = (email) => apiCall('post', '/api/auth/request-password-reset', { email });
-export const resetPassword = (token, newPassword) => apiCall('post', '/api/auth/reset-password', { token, newPassword });
-export const changePassword = (oldPassword, newPassword) => apiCall('post', '/api/user/change-password', JSON.stringify({ oldPassword, newPassword }), {
-  headers: { 'Content-Type': 'application/json' }
-});
-
-export const changeEmail = (newEmail, password) => apiCall('post', '/api/user/change-email', JSON.stringify({ newEmail, password }), {
-  headers: { 'Content-Type': 'application/json' }
-});
-
-// User API
-export const getProtectedData = () => apiCall('get', '/api/user');
-export const getUserProfile = async () => {
+export const refreshToken = async (refreshToken) => {
   try {
-    const response = await axiosInstance.get('/api/user/profile');
+    const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
     return response.data;
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error('Error refreshing token:', error);
     throw error;
   }
 };
-const handleSubscriptionAction = async (action) => {
-  try {
-    const response = await axiosInstance[action === 'extending' ? 'post' : 'put'](`/api/user/${action === 'extending' ? 'extend' : 'reduce'}-subscription`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error ${action} subscription:`, error);
-    throw new Error(error.response?.data?.message || `Failed to ${action} subscription`);
-  }
-};
 
+export const requestPasswordReset = (email) => apiCall('post', '/api/auth/request-password-reset', { email });
+export const resetPassword = (token, newPassword) => apiCall('post', '/api/auth/reset-password', { token, newPassword });
+export const changePassword = (oldPassword, newPassword) => apiCall('post', '/api/user/change-password', { oldPassword, newPassword });
+export const changeEmail = (newEmail, password) => apiCall('post', '/api/user/change-email', { newEmail, password });
+
+// User API
+export const getProtectedData = () => apiCall('get', '/api/user');
+export const getUserProfile = () => apiCall('get', '/api/user/profile');
 export const updateUserProfile = (userData) => apiCall('put', '/api/user', userData);
 export const getSubscriptionDetails = () => apiCall('get', '/api/user/subscription');
-export const extendSubscription = () => handleSubscriptionAction('extending');
-export const reduceSubscription = () => apiCall('post', '/api/user/reduce-subscription', {});
+export const extendSubscription = () => apiCall('post', '/api/user/extend-subscription');
+export const reduceSubscription = () => apiCall('post', '/api/user/reduce-subscription');
 export const getNotifications = () => apiCall('get', '/api/user/notifications');
 export const markNotificationAsRead = (notificationId) => apiCall('put', `/api/user/notifications/${notificationId}/read`);
 export const updateUserPreferences = (preferences) => apiCall('put', '/api/user/preferences', preferences);
 export const uploadAvatar = (formData) => apiCall('post', '/api/user/avatar', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
-export const getOneMonthSubscription = () => apiCall('post', '/api/user/get-one-month-subscription', {});
+export const getOneMonthSubscription = () => apiCall('post', '/api/user/get-one-month-subscription');
+
 // Feedback API
 export const sendFeedback = (feedbackData) => apiCall('post', '/api/feedback', feedbackData, {
   headers: { 'Content-Type': 'multipart/form-data' },
@@ -220,8 +212,10 @@ export const authApi = {
   requestPasswordReset, 
   resetPassword,
   changePassword,
-  googleLogin
+  googleLogin,
+  refreshToken
 };
+
 export const userApi = { 
   getProtectedData,
   getUserProfile, 
@@ -236,6 +230,7 @@ export const userApi = {
   uploadAvatar,
   getOneMonthSubscription
 };
+
 export const feedbackApi = { sendFeedback, getFeedback, deleteFeedback, updateFeedback, checkFeedbackLimit };
 export const ticketApi = { createTicket, getTickets, getTicketById, updateTicket, deleteTicket, addNoteToTicket };
 export const financeApi = { getTransactions, addTransaction, updateTransaction, deleteTransaction, getFinancialSummary };
@@ -243,3 +238,17 @@ export const reportApi = { getReports, getReportData, createReport, updateReport
 export const propertyApi = { getProperties };
 export const taskApi = { getTasks, addTask, updateTask, deleteTask };
 export const contactApi = { getContacts, createContact, getContactById, updateContact, deleteContact };
+
+const apiModules = {
+  authApi,
+  userApi,
+  feedbackApi,
+  ticketApi,
+  financeApi,
+  reportApi,
+  propertyApi,
+  taskApi,
+  contactApi
+};
+
+export default apiModules;

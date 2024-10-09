@@ -1,6 +1,4 @@
-const { DataTypes } = require('sequelize');
-
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   const Report = sequelize.define('Report', {
     id: {
       type: DataTypes.UUID,
@@ -64,13 +62,11 @@ module.exports = (sequelize) => {
     }
   });
 
-  // Instance method to update tags
   Report.prototype.updateTags = async function(newTags) {
     this.tags = [...new Set([...this.tags, ...newTags])];
     return this.save();
   };
 
-  // Class method to find reports by tag
   Report.findByTag = function(tag) {
     return this.findAll({
       where: {
@@ -78,6 +74,13 @@ module.exports = (sequelize) => {
           [sequelize.Sequelize.Op.contains]: [tag]
         }
       }
+    });
+  };
+
+  Report.associate = (models) => {
+    Report.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user'
     });
   };
 

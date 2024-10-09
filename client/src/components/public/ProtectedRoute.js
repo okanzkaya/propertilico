@@ -4,7 +4,7 @@ import { useUser } from '../../context/UserContext';
 import { CircularProgress, Box } from '@mui/material';
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading, hasActiveSubscription } = useUser();
+  const { user, loading } = useUser();
   const location = useLocation();
 
   console.log('ProtectedRoute - Current user:', user);
@@ -30,11 +30,11 @@ const ProtectedRoute = ({ children }) => {
   const isSubscriptionRoute = location.pathname === '/my-plan' || location.pathname.includes('/subscription');
   const isAppRoute = location.pathname.startsWith('/app/');
 
-  console.log('ProtectedRoute - Has active subscription:', hasActiveSubscription());
+  console.log('ProtectedRoute - Has active subscription:', user.hasActiveSubscription);
   console.log('ProtectedRoute - Is subscription route:', isSubscriptionRoute);
   console.log('ProtectedRoute - Is app route:', isAppRoute);
 
-  if (isAppRoute && !hasActiveSubscription() && !isNewUser && !isSubscriptionRoute) {
+  if (isAppRoute && !user.hasActiveSubscription && !isNewUser && !isSubscriptionRoute) {
     console.log('ProtectedRoute - Redirecting to My Plan page');
     return <Navigate to="/my-plan" replace />;
   }
