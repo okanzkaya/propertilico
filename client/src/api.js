@@ -141,15 +141,15 @@ export const getProtectedData = () => apiCall('get', '/api/user');
 export const getUserProfile = () => apiCall('get', '/api/user/profile');
 export const updateUserProfile = (userData) => apiCall('put', '/api/user', userData);
 export const getSubscriptionDetails = () => apiCall('get', '/api/user/subscription');
-export const extendSubscription = () => apiCall('post', '/api/user/extend-subscription');
-export const reduceSubscription = () => apiCall('post', '/api/user/reduce-subscription');
+export const extendSubscription = () => apiCall('post', '/api/user/extend-subscription', {});
+export const reduceSubscription = () => apiCall('post', '/api/user/reduce-subscription', {});
 export const getNotifications = () => apiCall('get', '/api/user/notifications');
 export const markNotificationAsRead = (notificationId) => apiCall('put', `/api/user/notifications/${notificationId}/read`);
 export const updateUserPreferences = (preferences) => apiCall('put', '/api/user/preferences', preferences);
 export const uploadAvatar = (formData) => apiCall('post', '/api/user/avatar', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
-export const getOneMonthSubscription = () => apiCall('post', '/api/user/get-one-month-subscription');
+export const getOneMonthSubscription = () => apiCall('post', '/api/user/get-one-month-subscription', {});
 
 // Feedback API
 export const sendFeedback = (feedbackData) => apiCall('post', '/api/feedback', feedbackData, {
