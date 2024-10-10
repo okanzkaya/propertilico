@@ -70,7 +70,7 @@ const ErrorFallback = ({ error }) => (
 );
 
 const App = () => {
-  const { user, loading: userLoading, updateUserSettings, fetchUser } = useUser();
+  const { user, loading: userLoading, updateUserSettings, fetchUser, setShowReCaptcha } = useUser();
   const [themeMode, setThemeMode] = useState(() => ({
     app: user?.theme || localStorage.getItem('appTheme') || 'light',
     public: localStorage.getItem('publicTheme') || 'light'
@@ -127,6 +127,7 @@ const App = () => {
               fontSize={fontSize}
               changeFontSize={changeFontSize}
               user={user}
+              setShowReCaptcha={setShowReCaptcha}
             />
           </BrowserRouter>
         </GoogleReCaptchaProvider>
@@ -135,7 +136,7 @@ const App = () => {
   );
 };
 
-const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize, user }) => {
+const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize, user, setShowReCaptcha }) => {
   const hasActiveSubscription = useMemo(() => user?.hasActiveSubscription || false, [user]);
 
   return (
@@ -143,42 +144,42 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
       <Routes>
         {publicRoutes.map(({ path, element: Element }) => (
           <Route key={path} path={path} element={
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
               <Element />
             </PublicLayout>
           } />
         ))}
         <Route path="/signin" element={
           <AuthenticatedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
               <SignIn />
             </PublicLayout>
           </AuthenticatedRoute>
         } />
         <Route path="/get-started" element={
           <AuthenticatedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
               <SignUp />
             </PublicLayout>
           </AuthenticatedRoute>
         } />
         <Route path="/my-plan" element={
           <ProtectedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
               <MyPlan />
             </PublicLayout>
           </ProtectedRoute>
         } />
         <Route path="/create-blog" element={
           <ProtectedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
               <BlogEditor />
             </PublicLayout>
           </ProtectedRoute>
         } />
         <Route path="/edit-blog/:id" element={
           <ProtectedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')}>
+            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
               <BlogEditor />
             </PublicLayout>
           </ProtectedRoute>
@@ -192,6 +193,7 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
                 themeMode={themeMode.app}
                 fontSize={fontSize}
                 changeFontSize={changeFontSize}
+                showReCaptcha={false}
               >
                 <Routes>
                   <Route index element={<Navigate to="/app/dashboard" replace />} />
@@ -221,27 +223,53 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
   );
 });
 
-const PublicLayout = React.memo(({ children, toggleTheme, theme }) => (
-  <ThemeProvider theme={theme}>
-    <CssBaseline />
-    <PublicHeader toggleTheme={toggleTheme} />
-    <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {children}
-    </Box>
-    <PublicFooter />
-  </ThemeProvider>
-));
+const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }) => {
+  const { setShowReCaptcha } = useUser();
 
-const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSize, changeFontSize }) => (
-  <ThemeProvider theme={theme}>
-    <CssBaseline />
-    <Box sx={{ display: 'flex', height: '100vh' }}>
-      <Sidebar themeMode={themeMode} toggleTheme={toggleTheme} />
-      <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, mt: '64px', overflow: 'auto' }}>
+  useEffect(() => {
+    setShowReCaptcha(showReCaptcha);
+  }, [showReCaptcha, setShowReCaptcha]);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <PublicHeader toggleTheme={toggleTheme} />
+      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         {children}
       </Box>
-    </Box>
-  </ThemeProvider>
-));
+      <PublicFooter />
+      {!showReCaptcha && (
+        <style>{`
+          .grecaptcha-badge { visibility: hidden !important; }
+        `}</style>
+      )}
+    </ThemeProvider>
+  );
+});
+
+const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSize, changeFontSize, showReCaptcha }) => {
+  const { setShowReCaptcha } = useUser();
+
+  useEffect(() => {
+    setShowReCaptcha(showReCaptcha);
+  }, [showReCaptcha, setShowReCaptcha]);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ display: 'flex', height: '100vh' }}>
+        <Sidebar themeMode={themeMode} toggleTheme={toggleTheme} />
+        <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, mt: '64px', overflow: 'auto' }}>
+          {children}
+        </Box>
+      </Box>
+      {!showReCaptcha && (
+        <style>{`
+          .grecaptcha-badge { visibility: hidden !important; }
+        `}</style>
+      )}
+    </ThemeProvider>
+  );
+});
 
 export default App;

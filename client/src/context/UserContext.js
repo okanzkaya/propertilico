@@ -8,6 +8,7 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showReCaptcha, setShowReCaptcha] = useState(false);
 
   const clearStoredData = useCallback(() => {
     console.log('Clearing stored data...');
@@ -177,7 +178,9 @@ export const UserProvider = ({ children }) => {
     fetchUser,
     updateUserSettings,
     setError,
-    refreshToken
+    refreshToken,
+    showReCaptcha,
+    setShowReCaptcha
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
