@@ -1,10 +1,9 @@
-const { Property } = require('../models/Property');
-const { User } = require('../models/User');
-const { sequelize } = require('../config/db');
+const { models, sequelize } = require('../config/db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 
+// Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const dir = './uploads/properties';
@@ -12,13 +11,13 @@ const storage = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -28,18 +27,23 @@ const upload = multer({
   }
 }).array('images', 5);
 
+// Helper function to handle file upload
+const handleFileUpload = (req, res) => {
+  return new Promise((resolve, reject) => {
+    upload(req, res, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+};
+
 exports.createProperty = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    await new Promise((resolve, reject) => {
-      upload(req, res, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+    await handleFileUpload(req, res);
 
-    const user = await User.findByPk(req.user.id);
+    const user = await models.User.findByPk(req.user.id);
     if (!user) {
       await t.rollback();
       return res.status(404).json({ message: 'User not found' });
@@ -50,7 +54,7 @@ exports.createProperty = async (req, res) => {
       return res.status(403).json({ message: 'You have reached the maximum number of properties for your subscription' });
     }
 
-    const newProperty = await Property.create({
+    const newProperty = await models.Property.create({
       ...req.body,
       ownerId: req.user.id,
       furnished: req.body.furnished === 'true',
@@ -71,26 +75,26 @@ exports.createProperty = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error creating property:', error);
-    res.status(500).json({ message: 'Error creating property' });
+    res.status(500).json({ message: 'Error creating property', error: error.message });
   }
 };
 
 exports.getUserProperties = async (req, res) => {
   try {
-    const properties = await Property.findAll({
+    const properties = await models.Property.findAll({
       where: { ownerId: req.user.id },
       order: [['createdAt', 'DESC']]
     });
     res.json(properties);
   } catch (error) {
     console.error('Error fetching user properties:', error);
-    res.status(500).json({ message: 'Error fetching properties' });
+    res.status(500).json({ message: 'Error fetching properties', error: error.message });
   }
 };
 
 exports.getPropertyById = async (req, res) => {
   try {
-    const property = await Property.findOne({
+    const property = await models.Property.findOne({
       where: { id: req.params.id, ownerId: req.user.id }
     });
     if (!property) {
@@ -99,7 +103,7 @@ exports.getPropertyById = async (req, res) => {
     res.json(property);
   } catch (error) {
     console.error('Error fetching property by ID:', error);
-    res.status(500).json({ message: 'Error fetching property' });
+    res.status(500).json({ message: 'Error fetching property', error: error.message });
   }
 };
 
@@ -107,12 +111,7 @@ exports.updateProperty = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    await new Promise((resolve, reject) => {
-      upload(req, res, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+    await handleFileUpload(req, res);
 
     let updateData = {
       ...req.body,
@@ -133,7 +132,7 @@ exports.updateProperty = async (req, res) => {
       }));
     }
 
-    const [updatedRowsCount, updatedProperties] = await Property.update(
+    const [updatedRowsCount, updatedProperties] = await models.Property.update(
       updateData,
       {
         where: { id: req.params.id, ownerId: req.user.id },
@@ -152,7 +151,7 @@ exports.updateProperty = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error updating property:', error);
-    res.status(500).json({ message: 'Error updating property' });
+    res.status(500).json({ message: 'Error updating property', error: error.message });
   }
 };
 
@@ -160,7 +159,7 @@ exports.deleteProperty = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const property = await Property.findOne({
+    const property = await models.Property.findOne({
       where: { id: req.params.id, ownerId: req.user.id },
       transaction: t
     });
@@ -179,7 +178,7 @@ exports.deleteProperty = async (req, res) => {
 
     await property.destroy({ transaction: t });
 
-    await User.update(
+    await models.User.update(
       { properties: sequelize.literal('"properties" - 1') },
       { where: { id: req.user.id }, transaction: t }
     );
@@ -189,7 +188,7 @@ exports.deleteProperty = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error deleting property:', error);
-    res.status(500).json({ message: 'Error deleting property' });
+    res.status(500).json({ message: 'Error deleting property', error: error.message });
   }
 };
 
@@ -197,13 +196,13 @@ exports.toggleFavorite = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const property = await Property.findByPk(req.params.id, { transaction: t });
+    const property = await models.Property.findByPk(req.params.id, { transaction: t });
     if (!property) {
       await t.rollback();
       return res.status(404).json({ message: 'Property not found' });
     }
 
-    const user = await User.findByPk(req.user.id, { transaction: t });
+    const user = await models.User.findByPk(req.user.id, { transaction: t });
     const isFavorite = await user.hasFavoriteProperty(property, { transaction: t });
 
     if (isFavorite) {
@@ -217,6 +216,6 @@ exports.toggleFavorite = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error toggling favorite:', error);
-    res.status(500).json({ message: 'Error updating favorite status' });
+    res.status(500).json({ message: 'Error updating favorite status', error: error.message });
   }
 };

@@ -47,16 +47,18 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     }
   }, {
+    tableName: 'feedbacks',
+    underscored: true,
     indexes: [
-      { fields: ['feedbackType'] },
-      { fields: ['createdAt'] },
-      { fields: ['userId'] }
+      { fields: ['feedback_type'] },
+      { fields: ['created_at'] },
+      { fields: ['user_id'] }
     ]
   });
 
   Feedback.associate = (models) => {
     Feedback.belongsTo(models.User, {
-      foreignKey: 'userId',
+      foreignKey: 'user_id',
       as: 'user'
     });
   };

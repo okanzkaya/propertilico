@@ -9,50 +9,50 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: false,
       validate: {
-        notEmpty: true,
-        len: [1, 255]
+        notEmpty: { msg: 'Property name cannot be empty' },
+        len: { args: [1, 255], msg: 'Property name must be between 1 and 255 characters' }
       }
     },
     description: {
       type: DataTypes.TEXT,
       allowNull: false,
       validate: {
-        notEmpty: true
+        notEmpty: { msg: 'Property description cannot be empty' }
       }
     },
     rentAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       validate: {
-        min: 0
+        min: { args: [0], msg: 'Rent amount cannot be negative' }
       }
     },
     propertyType: {
       type: DataTypes.STRING(50),
       allowNull: false,
       validate: {
-        notEmpty: true
+        notEmpty: { msg: 'Property type cannot be empty' }
       }
     },
     bedrooms: {
       type: DataTypes.INTEGER,
       allowNull: false,
       validate: {
-        min: 0
+        min: { args: [0], msg: 'Number of bedrooms cannot be negative' }
       }
     },
     bathrooms: {
       type: DataTypes.INTEGER,
       allowNull: false,
       validate: {
-        min: 0
+        min: { args: [0], msg: 'Number of bathrooms cannot be negative' }
       }
     },
     area: {
       type: DataTypes.FLOAT,
       allowNull: false,
       validate: {
-        min: 0
+        min: { args: [0], msg: 'Area cannot be negative' }
       }
     },
     furnished: {
@@ -75,16 +75,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: true,
       validate: {
-        min: -90,
-        max: 90
+        min: { args: [-90], msg: 'Latitude must be between -90 and 90' },
+        max: { args: [90], msg: 'Latitude must be between -90 and 90' }
       }
     },
     longitude: {
       type: DataTypes.FLOAT,
       allowNull: true,
       validate: {
-        min: -180,
-        max: 180
+        min: { args: [-180], msg: 'Longitude must be between -180 and 180' },
+        max: { args: [180], msg: 'Longitude must be between -180 and 180' }
       }
     },
     images: {
@@ -96,19 +96,21 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     }
   }, {
+    tableName: 'properties',
+    underscored: true,
     indexes: [
-      { fields: ['propertyType'] },
-      { fields: ['rentAmount'] },
+      { fields: ['property_type'] },
+      { fields: ['rent_amount'] },
       { fields: ['bedrooms'] },
       { fields: ['bathrooms'] },
       { fields: ['area'] },
-      { fields: ['ownerId'] }
+      { fields: ['owner_id'] }
     ]
   });
 
   Property.associate = (models) => {
     Property.belongsTo(models.User, {
-      foreignKey: 'ownerId',
+      foreignKey: 'owner_id',
       as: 'owner'
     });
   };

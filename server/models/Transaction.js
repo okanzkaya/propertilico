@@ -53,12 +53,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     }
   }, {
+    tableName: 'transactions',
+    underscored: true,
     indexes: [
       { fields: ['type'] },
       { fields: ['category'] },
       { fields: ['date'] },
-      { fields: ['userId'] },
-      { fields: ['propertyId'] }
+      { fields: ['user_id'] },
+      { fields: ['property_id'] }
     ],
     hooks: {
       beforeValidate: (transaction) => {
@@ -85,6 +87,17 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     return result.total || 0;
+  };
+
+  Transaction.associate = (models) => {
+    Transaction.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user'
+    });
+    Transaction.belongsTo(models.Property, {
+      foreignKey: 'property_id',
+      as: 'property'
+    });
   };
 
   return Transaction;

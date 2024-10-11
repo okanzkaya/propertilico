@@ -1,4 +1,6 @@
-module.exports = (sequelize, DataTypes) => {
+const { DataTypes } = require('sequelize');
+
+module.exports = (sequelize) => {
   const Report = sequelize.define('Report', {
     id: {
       type: DataTypes.UUID,
@@ -47,13 +49,20 @@ module.exports = (sequelize, DataTypes) => {
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
+    tableName: 'reports',
+    underscored: true,
     indexes: [
       { fields: ['type'] },
-      { fields: ['chartType'] },
+      { fields: ['chart_type'] },
       { fields: ['tags'], using: 'gin' },
-      { fields: ['isActive'] }
+      { fields: ['is_active'] },
+      { fields: ['user_id'] }
     ],
     scopes: {
       active: {
@@ -79,7 +88,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Report.associate = (models) => {
     Report.belongsTo(models.User, {
-      foreignKey: 'userId',
+      foreignKey: 'user_id',
       as: 'user'
     });
   };

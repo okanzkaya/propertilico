@@ -9,8 +9,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: false,
       validate: {
-        notEmpty: true,
-        len: [1, 255]
+        notEmpty: { msg: 'Name cannot be empty' },
+        len: { args: [1, 255], msg: 'Name must be between 1 and 255 characters' }
       }
     },
     type: {
@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       defaultValue: 0,
       validate: {
-        min: 0
+        min: { args: [0], msg: 'Size cannot be negative' }
       }
     },
     content: {
@@ -48,35 +48,42 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(500),
       allowNull: false,
       validate: {
-        notEmpty: true
+        notEmpty: { msg: 'Path cannot be empty' }
       }
     },
     parentId: {
       type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'Documents',
-        key: 'id'
-      }
+      allowNull: true
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false
     }
   }, {
+    tableName: 'documents',
+    underscored: true,
     indexes: [
       { fields: ['type'] },
       { fields: ['category'] },
       { fields: ['path'] },
-      { fields: ['parentId'] }
+      { fields: ['parent_id'] },
+      { fields: ['user_id'] }
     ]
   });
 
   Document.associate = (models) => {
     Document.belongsTo(models.User, { 
-      foreignKey: { 
-        name: 'userId', 
-        allowNull: false 
-      }
+      foreignKey: 'user_id',
+      as: 'user'
     });
-    Document.belongsTo(Document, { as: 'parent', foreignKey: 'parentId' });
-    Document.hasMany(Document, { as: 'children', foreignKey: 'parentId' });
+    Document.belongsTo(Document, { 
+      as: 'parent', 
+      foreignKey: 'parent_id'
+    });
+    Document.hasMany(Document, { 
+      as: 'children', 
+      foreignKey: 'parent_id'
+    });
   };
 
   return Document;

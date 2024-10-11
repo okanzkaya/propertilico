@@ -1,12 +1,11 @@
-const { Ticket } = require('../models/Ticket');
-const { sequelize } = require('../config/db');
+const { models, sequelize } = require('../config/db');
 
 exports.createTicket = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
     const { title, description, status, priority, assignee, dueDate } = req.body;
-    const newTicket = await Ticket.create({
+    const newTicket = await models.Ticket.create({
       userId: req.user.id,
       title,
       description,
@@ -21,26 +20,26 @@ exports.createTicket = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error creating ticket:', error);
-    res.status(400).json({ message: 'Error creating ticket' });
+    res.status(400).json({ message: 'Error creating ticket', error: error.message });
   }
 };
 
 exports.getTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.findAll({
+    const tickets = await models.Ticket.findAll({
       where: { userId: req.user.id },
       order: [['createdAt', 'DESC']]
     });
     res.json(tickets);
   } catch (error) {
     console.error('Error fetching tickets:', error);
-    res.status(500).json({ message: 'Error fetching tickets' });
+    res.status(500).json({ message: 'Error fetching tickets', error: error.message });
   }
 };
 
 exports.getTicketById = async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({
+    const ticket = await models.Ticket.findOne({
       where: { id: req.params.id, userId: req.user.id }
     });
     if (!ticket) {
@@ -49,7 +48,7 @@ exports.getTicketById = async (req, res) => {
     res.json(ticket);
   } catch (error) {
     console.error('Error fetching ticket:', error);
-    res.status(500).json({ message: 'Error fetching ticket' });
+    res.status(500).json({ message: 'Error fetching ticket', error: error.message });
   }
 };
 
@@ -57,7 +56,7 @@ exports.updateTicket = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const [updatedRowsCount, updatedTickets] = await Ticket.update(req.body, {
+    const [updatedRowsCount, updatedTickets] = await models.Ticket.update(req.body, {
       where: { id: req.params.id, userId: req.user.id },
       returning: true,
       transaction: t
@@ -73,7 +72,7 @@ exports.updateTicket = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error updating ticket:', error);
-    res.status(400).json({ message: 'Error updating ticket' });
+    res.status(400).json({ message: 'Error updating ticket', error: error.message });
   }
 };
 
@@ -81,7 +80,7 @@ exports.deleteTicket = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const deletedRowsCount = await Ticket.destroy({
+    const deletedRowsCount = await models.Ticket.destroy({
       where: { id: req.params.id, userId: req.user.id },
       transaction: t
     });
@@ -96,7 +95,7 @@ exports.deleteTicket = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error deleting ticket:', error);
-    res.status(500).json({ message: 'Error deleting ticket' });
+    res.status(500).json({ message: 'Error deleting ticket', error: error.message });
   }
 };
 
@@ -104,7 +103,7 @@ exports.addNote = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const ticket = await Ticket.findOne({
+    const ticket = await models.Ticket.findOne({
       where: { id: req.params.id, userId: req.user.id },
       transaction: t
     });
@@ -123,6 +122,6 @@ exports.addNote = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error('Error adding note to ticket:', error);
-    res.status(400).json({ message: 'Error adding note to ticket' });
+    res.status(400).json({ message: 'Error adding note to ticket', error: error.message });
   }
 };

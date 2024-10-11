@@ -5,13 +5,11 @@ const path = require('path');
 const fs = require('fs').promises;
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
-const Feedback = require('../models/Feedback');
-const User = require('../models/User');
+const { models } = require('../config/db');
 const { protect, admin } = require('../middleware/authMiddleware');
 const subscriptionMiddleware = require('../middleware/subscriptionMiddleware');
 const { validateFeedback } = require('../utils/validation');
 const crypto = require('crypto');
-const { Op } = require('sequelize');
 
 // Rate limiting
 const limiter = rateLimit({
@@ -53,7 +51,7 @@ const generateSecureFileName = (originalName) => {
 // Check feedback limit
 router.get('/check-limit', protect, subscriptionMiddleware, async (req, res) => {
   try {
-    const lastFeedback = await Feedback.findOne({
+    const lastFeedback = await models.Feedback.findOne({
       where: { userId: req.user.id },
       order: [['createdAt', 'DESC']]
     });
@@ -69,7 +67,7 @@ router.get('/check-limit', protect, subscriptionMiddleware, async (req, res) => 
     }
   } catch (error) {
     console.error('Error checking feedback limit:', error);
-    res.status(500).json({ message: 'Error checking feedback limit' });
+    res.status(500).json({ message: 'Error checking feedback limit', error: error.message });
   }
 });
 
@@ -79,7 +77,7 @@ router.post('/', protect, subscriptionMiddleware, limiter, (req, res) => {
     if (err instanceof multer.MulterError) {
       return res.status(400).json({ message: err.message });
     } else if (err) {
-      return res.status(500).json({ message: 'An error occurred while uploading the file' });
+      return res.status(500).json({ message: 'An error occurred while uploading the file', error: err.message });
     }
 
     try {
@@ -99,7 +97,7 @@ router.post('/', protect, subscriptionMiddleware, limiter, (req, res) => {
         attachment = `/uploads/feedbacks/${secureFileName}`;
       }
 
-      const newFeedback = await Feedback.create({
+      const newFeedback = await models.Feedback.create({
         userId: req.user.id,
         message,
         rating: rating || 0,
@@ -110,7 +108,7 @@ router.post('/', protect, subscriptionMiddleware, limiter, (req, res) => {
       res.status(201).json({ message: 'Feedback submitted successfully', feedback: newFeedback });
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      res.status(500).json({ message: 'Error submitting feedback' });
+      res.status(500).json({ message: 'Error submitting feedback', error: error.message });
     }
   });
 });
@@ -118,21 +116,21 @@ router.post('/', protect, subscriptionMiddleware, limiter, (req, res) => {
 // Get all feedback (admin only)
 router.get('/', protect, admin, async (req, res) => {
   try {
-    const feedback = await Feedback.findAll({
-      include: [{ model: User, attributes: ['name', 'email'] }]
+    const feedback = await models.Feedback.findAll({
+      include: [{ model: models.User, attributes: ['name', 'email'] }]
     });
     res.json(feedback);
   } catch (error) {
     console.error('Error fetching feedback:', error);
-    res.status(500).json({ message: 'Error fetching feedback' });
+    res.status(500).json({ message: 'Error fetching feedback', error: error.message });
   }
 });
 
 // Get single feedback by ID (admin only)
 router.get('/:id', protect, admin, async (req, res) => {
   try {
-    const feedback = await Feedback.findByPk(req.params.id, {
-      include: [{ model: User, attributes: ['name', 'email'] }]
+    const feedback = await models.Feedback.findByPk(req.params.id, {
+      include: [{ model: models.User, attributes: ['name', 'email'] }]
     });
     if (!feedback) {
       return res.status(404).json({ message: 'Feedback not found' });
@@ -140,7 +138,7 @@ router.get('/:id', protect, admin, async (req, res) => {
     res.json(feedback);
   } catch (error) {
     console.error('Error fetching feedback:', error);
-    res.status(500).json({ message: 'Error fetching feedback' });
+    res.status(500).json({ message: 'Error fetching feedback', error: error.message });
   }
 });
 
@@ -150,7 +148,7 @@ router.put('/:id', protect, admin, async (req, res) => {
     const { id } = req.params;
     const { isFavorite, isRead } = req.body;
 
-    const [updatedRows] = await Feedback.update(
+    const [updatedRows] = await models.Feedback.update(
       { isFavorite, isRead },
       { where: { id } }
     );
@@ -159,11 +157,11 @@ router.put('/:id', protect, admin, async (req, res) => {
       return res.status(404).json({ message: 'Feedback not found' });
     }
 
-    const updatedFeedback = await Feedback.findByPk(id);
+    const updatedFeedback = await models.Feedback.findByPk(id);
     res.json(updatedFeedback);
   } catch (error) {
     console.error('Error updating feedback:', error);
-    res.status(500).json({ message: 'Error updating feedback' });
+    res.status(500).json({ message: 'Error updating feedback', error: error.message });
   }
 });
 
@@ -171,7 +169,7 @@ router.put('/:id', protect, admin, async (req, res) => {
 router.delete('/:id', protect, admin, async (req, res) => {
   try {
     const { id } = req.params;
-    const feedback = await Feedback.findByPk(id);
+    const feedback = await models.Feedback.findByPk(id);
 
     if (!feedback) {
       return res.status(404).json({ message: 'Feedback not found' });
@@ -186,7 +184,7 @@ router.delete('/:id', protect, admin, async (req, res) => {
     res.json({ message: 'Feedback deleted successfully' });
   } catch (error) {
     console.error('Error deleting feedback:', error);
-    res.status(500).json({ message: 'Error deleting feedback' });
+    res.status(500).json({ message: 'Error deleting feedback', error: error.message });
   }
 });
 

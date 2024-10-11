@@ -9,8 +9,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(500),
       allowNull: false,
       validate: {
-        notEmpty: true,
-        len: [1, 500]
+        notEmpty: { msg: 'Task cannot be empty' },
+        len: { args: [1, 500], msg: 'Task must be between 1 and 500 characters' }
       }
     },
     status: {
@@ -19,21 +19,29 @@ module.exports = (sequelize, DataTypes) => {
     },
     dueDate: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
+      validate: {
+        isDate: { msg: 'Invalid date format' }
+      }
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false
     }
   }, {
+    tableName: 'tasks',
+    underscored: true,
     indexes: [
       { fields: ['status'] },
-      { fields: ['dueDate'] }
+      { fields: ['due_date'] },
+      { fields: ['user_id'] }
     ]
   });
 
   Task.associate = (models) => {
     Task.belongsTo(models.User, { 
-      foreignKey: { 
-        name: 'userId', 
-        allowNull: false 
-      }
+      foreignKey: 'user_id',
+      as: 'user'
     });
   };
 

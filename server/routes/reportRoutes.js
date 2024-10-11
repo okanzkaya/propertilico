@@ -1,14 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { getReports, getReportData } = require('../controllers/reportController');
+const { getReports, getReportData, createCustomReport, updateReport, deleteReport } = require('../controllers/reportController');
 const { getPropertyStats, getTicketStats, getFinancialStats, getOccupancyStats } = require('../controllers/statsController');
 
 router.use(protect);
 
 // Report routes
-router.get('/', getReports);
-router.get('/:id', getReportData);
+router.route('/')
+  .get(getReports)
+  .post(createCustomReport);
+
+router.route('/:id')
+  .get(getReportData)
+  .put(updateReport)
+  .delete(deleteReport);
 
 // Stats routes
 router.get('/properties/stats', getPropertyStats);

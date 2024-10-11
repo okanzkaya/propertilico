@@ -49,44 +49,15 @@ const validations = {
   ]
 };
 
-router.post('/register', validations.register, handleErrors, (req, res, next) => {
-  registerUser(req, res).catch(next);
-});
-
-router.post('/login', validations.login, handleErrors, (req, res, next) => {
-  authUser(req, res).catch(next);
-});
-
-router.post('/refresh-token', (req, res, next) => {
-  refreshAccessToken(req, res).catch(next);
-});
-
-router.get('/profile', protect, (req, res, next) => {
-  getUserProfile(req, res).catch(next);
-});
-
-router.put('/profile', protect, (req, res, next) => {
-  updateUserProfile(req, res).catch(next);
-});
-
-router.post('/change-password', protect, validations.changePassword, handleErrors, (req, res, next) => {
-  changePassword(req, res).catch(next);
-});
-
-router.post('/forgot-password', validations.forgotPassword, handleErrors, (req, res, next) => {
-  forgotPassword(req, res).catch(next);
-});
-
-router.post('/reset-password', validations.resetPassword, handleErrors, (req, res, next) => {
-  resetPassword(req, res).catch(next);
-});
-
-router.get('/status', protect, (req, res, next) => {
-  checkAuthStatus(req, res).catch(next);
-});
-
-router.post('/logout', protect, (req, res, next) => {
-  logout(req, res).catch(next);
-});
+router.post('/register', validations.register, handleErrors, registerUser);
+router.post('/login', validations.login, handleErrors, authUser);
+router.post('/refresh-token', refreshAccessToken);
+router.get('/profile', protect, getUserProfile);
+router.put('/profile', protect, updateUserProfile);
+router.post('/change-password', protect, validations.changePassword, handleErrors, changePassword);
+router.post('/forgot-password', validations.forgotPassword, handleErrors, forgotPassword);
+router.post('/reset-password', validations.resetPassword, handleErrors, resetPassword);
+router.get('/status', protect, checkAuthStatus);
+router.post('/logout', protect, logout);
 
 module.exports = router;

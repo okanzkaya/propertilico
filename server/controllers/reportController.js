@@ -27,7 +27,6 @@ exports.getReports = async (req, res, next) => {
   }
 };
 
-
 exports.getReportData = async (req, res, next) => {
   try {
     const report = await models.Report.findByPk(req.params.id);

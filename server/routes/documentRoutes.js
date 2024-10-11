@@ -18,12 +18,14 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-router.get('/', protect, getDocuments);
-router.post('/upload', protect, upload.single('file'), uploadFile);
-router.get('/:id/download', protect, downloadFile);
-router.delete('/:id', protect, deleteDocument);
-router.put('/:id', protect, updateDocument);
-router.put('/:id/favorite', protect, toggleFavorite);
-router.get('/storage', protect, getStorageInfo);
+router.use(protect);
+
+router.get('/', getDocuments);
+router.post('/upload', upload.single('file'), uploadFile);
+router.get('/:id/download', downloadFile);
+router.delete('/:id', deleteDocument);
+router.put('/:id', updateDocument);
+router.put('/:id/favorite', toggleFavorite);
+router.get('/storage', getStorageInfo);
 
 module.exports = router;

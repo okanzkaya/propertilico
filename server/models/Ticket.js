@@ -55,13 +55,15 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: []
     }
   }, {
+    tableName: 'tickets',
+    underscored: true,
     indexes: [
       { fields: ['status'] },
       { fields: ['priority'] },
-      { fields: ['assigneeId'] },
-      { fields: ['creatorId'] },
-      { fields: ['dueDate'] },
-      { fields: ['createdAt'] }
+      { fields: ['assignee_id'] },
+      { fields: ['creator_id'] },
+      { fields: ['due_date'] },
+      { fields: ['created_at'] }
     ],
     hooks: {
       beforeValidate: (ticket) => {
@@ -80,6 +82,17 @@ module.exports = (sequelize, DataTypes) => {
     };
     this.notes = [...(this.notes || []), note];
     return this.save();
+  };
+
+  Ticket.associate = (models) => {
+    Ticket.belongsTo(models.User, {
+      foreignKey: 'assignee_id',
+      as: 'assignee'
+    });
+    Ticket.belongsTo(models.User, {
+      foreignKey: 'creator_id',
+      as: 'creator'
+    });
   };
 
   return Ticket;

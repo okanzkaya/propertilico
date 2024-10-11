@@ -2,15 +2,15 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
 const { protect } = require('../middleware/authMiddleware');
 const contactController = require('../controllers/contactController');
 
 // Configure multer for avatar uploads
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: async function (req, file, cb) {
     const uploadPath = path.join(__dirname, '..', 'uploads', 'avatars');
-    fs.mkdirSync(uploadPath, { recursive: true });
+    await fs.mkdir(uploadPath, { recursive: true });
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
@@ -41,7 +41,7 @@ router.route('/')
   .get(contactController.getContacts)
   .post(upload.single('avatar'), (req, res, next) => {
     if (req.file) {
-      req.body.avatarPath = req.file.path;
+      req.body.avatarPath = req.file.path.replace(/\\/g, '/');
     }
     next();
   }, contactController.createContact);
@@ -50,7 +50,7 @@ router.route('/:id')
   .get(contactController.getContactById)
   .put(upload.single('avatar'), (req, res, next) => {
     if (req.file) {
-      req.body.avatarPath = req.file.path;
+      req.body.avatarPath = req.file.path.replace(/\\/g, '/');
     }
     next();
   }, contactController.updateContact)

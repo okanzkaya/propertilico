@@ -122,6 +122,15 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'user'
     }
   }, {
+    tableName: 'users',
+    underscored: true,
+    indexes: [
+      { fields: ['email'] },
+      { fields: ['admin_id'] },
+      { fields: ['google_id'] },
+      { fields: ['status'] },
+      { fields: ['role'] }
+    ],
     hooks: {
       beforeSave: async (user) => {
         if (user.changed('password')) {
@@ -136,10 +145,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   User.prototype.matchPassword = async function(enteredPassword) {
-    console.log('Matching password for user:', this.email);
-    const isMatch = await bcrypt.compare(enteredPassword, this.password);
-    console.log('Password match result:', isMatch);
-    return isMatch;
+    return await bcrypt.compare(enteredPassword, this.password);
   };
 
   User.prototype.incrementLoginAttempts = async function() {
@@ -171,7 +177,16 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   User.associate = (models) => {
-    User.hasMany(models.Blog, { foreignKey: 'authorId', as: 'blogs' });
+    User.hasMany(models.Blog, { foreignKey: 'author_id', as: 'blogs' });
+    User.hasMany(models.Property, { foreignKey: 'owner_id', as: 'properties' });
+    User.hasMany(models.Contact, { foreignKey: 'user_id', as: 'contacts' });
+    User.hasMany(models.Document, { foreignKey: 'user_id', as: 'documents' });
+    User.hasMany(models.Feedback, { foreignKey: 'user_id', as: 'feedbacks' });
+    User.hasMany(models.Task, { foreignKey: 'user_id', as: 'tasks' });
+    User.hasMany(models.Ticket, { foreignKey: 'creator_id', as: 'createdTickets' });
+    User.hasMany(models.Ticket, { foreignKey: 'assignee_id', as: 'assignedTickets' });
+    User.hasMany(models.Transaction, { foreignKey: 'user_id', as: 'transactions' });
+    User.hasMany(models.Report, { foreignKey: 'user_id', as: 'reports' });
   };
 
   return User;

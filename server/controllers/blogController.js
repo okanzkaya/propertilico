@@ -1,4 +1,4 @@
-const { Blog, User } = require('../config/db');
+const { models } = require('../config/db');
 const { Op } = require('sequelize');
 
 exports.getAllBlogs = async (req, res, next) => {
@@ -12,7 +12,7 @@ exports.getAllBlogs = async (req, res, next) => {
 
     const order = sort === 'oldest' ? [['createdAt', 'ASC']] : [['createdAt', 'DESC']];
 
-    const { count, rows: blogs } = await Blog.findAndCountAll({
+    const { count, rows: blogs } = await models.Blog.findAndCountAll({
       where: {
         [Op.or]: [
           { title: { [Op.iLike]: `%${search}%` } },
@@ -23,7 +23,7 @@ exports.getAllBlogs = async (req, res, next) => {
       order,
       limit,
       offset,
-      include: [{ model: User, as: 'author', attributes: ['id', 'name'] }]
+      include: [{ model: models.User, as: 'author', attributes: ['id', 'name'] }]
     });
 
     console.log(`Found ${count} blogs`);
@@ -42,8 +42,8 @@ exports.getAllBlogs = async (req, res, next) => {
 
 exports.getBlogById = async (req, res, next) => {
   try {
-    const blog = await Blog.findByPk(req.params.id, {
-      include: [{ model: User, as: 'author', attributes: ['id', 'name'] }]
+    const blog = await models.Blog.findByPk(req.params.id, {
+      include: [{ model: models.User, as: 'author', attributes: ['id', 'name'] }]
     });
     if (!blog) {
       return res.status(404).json({ message: 'Blog post not found' });
@@ -61,7 +61,7 @@ exports.createBlog = async (req, res, next) => {
     // Ensure tags is always an array
     const processedTags = Array.isArray(tags) ? tags : tags ? [tags] : [];
 
-    const blog = await Blog.create({
+    const blog = await models.Blog.create({
       title,
       content,
       excerpt,
@@ -78,7 +78,7 @@ exports.createBlog = async (req, res, next) => {
 
 exports.updateBlog = async (req, res, next) => {
   try {
-    const blog = await Blog.findByPk(req.params.id);
+    const blog = await models.Blog.findByPk(req.params.id);
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
@@ -94,7 +94,7 @@ exports.updateBlog = async (req, res, next) => {
 
 exports.deleteBlog = async (req, res, next) => {
   try {
-    const blog = await Blog.findByPk(req.params.id);
+    const blog = await models.Blog.findByPk(req.params.id);
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
@@ -110,10 +110,10 @@ exports.deleteBlog = async (req, res, next) => {
 
 exports.getUserBlogs = async (req, res, next) => {
   try {
-    const blogs = await Blog.findAll({
+    const blogs = await models.Blog.findAll({
       where: { authorId: req.user.id },
       order: [['createdAt', 'DESC']],
-      include: [{ model: User, as: 'author', attributes: ['id', 'name'] }]
+      include: [{ model: models.User, as: 'author', attributes: ['id', 'name'] }]
     });
     res.json(blogs);
   } catch (err) {

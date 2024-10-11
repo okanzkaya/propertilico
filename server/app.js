@@ -20,12 +20,15 @@ const app = express();
 (async () => {
   try {
     await connectDB();
+    console.log('Database connected and synced.');
     await initializeReports();
+    console.log('Reports initialized.');
   } catch (error) {
     console.error('Startup error:', error);
     process.exit(1);
   }
 })();
+
 
 app.use(express.json());
 app.use(express.urlencoded({ limit: '10mb', extended: true }));

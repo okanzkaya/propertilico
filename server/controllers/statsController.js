@@ -80,14 +80,14 @@ exports.getFinancialStats = async (userId) => {
   }
 };
 
-exports.getOccupancyStats = async (userId) => {
+exports.getOccupancyStats = async (req, res) => {
   try {
     const stats = await models.Property.findAll({
       attributes: [
         'availableNow',
         [sequelize.fn('COUNT', sequelize.col('id')), 'count']
       ],
-      where: { ownerId: userId },
+      where: { ownerId: req.user.id },
       group: ['availableNow']
     });
 
@@ -95,18 +95,17 @@ exports.getOccupancyStats = async (userId) => {
     const vacantCount = parseInt(stats.find(stat => stat.availableNow)?.dataValues.count) || 0;
     const totalCount = occupiedCount + vacantCount;
 
-    return [
+    res.json([
       { name: 'Occupied', value: occupiedCount },
       { name: 'Vacant', value: vacantCount },
       { name: 'Total', value: totalCount }
-    ];
+    ]);
   } catch (error) {
     console.error('Error fetching occupancy stats:', error);
-    throw new Error('Failed to fetch occupancy statistics');
+    res.status(500).json({ message: 'Failed to fetch occupancy statistics', error: error.message });
   }
 };
 
-// New function to get all stats in one call
 exports.getAllStats = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -129,7 +128,6 @@ exports.getAllStats = async (req, res) => {
   }
 };
 
-// Individual stat endpoints
 exports.getPropertyStatsEndpoint = async (req, res) => {
   try {
     const stats = await exports.getPropertyStats(req.user.id);

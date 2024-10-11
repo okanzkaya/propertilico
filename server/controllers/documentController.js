@@ -1,4 +1,4 @@
-const { Document } = require('../models/Document');
+const { models, sequelize } = require('../config/db');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 
@@ -36,7 +36,7 @@ function categorizeFile(fileName) {
 
 exports.getDocuments = async (req, res) => {
   try {
-    const documents = await Document.findAll({
+    const documents = await models.Document.findAll({
       where: { userId: req.user.id, isDeleted: false },
       attributes: { exclude: ['content'] },
       order: [['createdAt', 'DESC']]
@@ -44,11 +44,12 @@ exports.getDocuments = async (req, res) => {
     res.json(documents);
   } catch (error) {
     console.error('Error fetching documents:', error);
-    res.status(500).json({ message: 'Error fetching documents' });
+    res.status(500).json({ message: 'Error fetching documents', error: error.message });
   }
 };
 
 exports.uploadFile = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -61,7 +62,7 @@ exports.uploadFile = async (req, res) => {
       return res.status(400).json({ message: 'File size exceeds the limit (10MB)' });
     }
 
-    const newFile = await Document.create({
+    const newFile = await models.Document.create({
       userId: req.user.id,
       name: originalname,
       type: 'file',
@@ -70,18 +71,20 @@ exports.uploadFile = async (req, res) => {
       size,
       content: encrypt(buffer.toString('base64')),
       path: `/${originalname}`
-    });
+    }, { transaction: t });
 
+    await t.commit();
     res.status(201).json({ message: 'File uploaded successfully', file: newFile });
   } catch (error) {
+    await t.rollback();
     console.error('Error uploading file:', error);
-    res.status(500).json({ message: 'Error uploading file' });
+    res.status(500).json({ message: 'Error uploading file', error: error.message });
   }
 };
 
 exports.downloadFile = async (req, res) => {
   try {
-    const file = await Document.findOne({
+    const file = await models.Document.findOne({
       where: { id: req.params.id, userId: req.user.id, type: 'file' }
     });
     if (!file) {
@@ -98,70 +101,87 @@ exports.downloadFile = async (req, res) => {
     res.send(decryptedContent);
   } catch (error) {
     console.error('Error downloading file:', error);
-    res.status(500).json({ message: 'Error downloading file' });
+    res.status(500).json({ message: 'Error downloading file', error: error.message });
   }
 };
 
 exports.deleteDocument = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const [updatedRowsCount] = await Document.update(
+    const [updatedRowsCount] = await models.Document.update(
       { isDeleted: true },
-      { where: { id: req.params.id, userId: req.user.id } }
-    );
-
-    if (updatedRowsCount === 0) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
-
-    res.json({ message: 'Document deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting document:', error);
-    res.status(500).json({ message: 'Error deleting document' });
-  }
-};
-
-exports.updateDocument = async (req, res) => {
-  try {
-    const { name } = req.body;
-    const [updatedRowsCount, updatedDocuments] = await Document.update(
-      { name },
-      {
+      { 
         where: { id: req.params.id, userId: req.user.id },
-        returning: true
+        transaction: t
       }
     );
 
     if (updatedRowsCount === 0) {
+      await t.rollback();
       return res.status(404).json({ message: 'Document not found' });
     }
 
+    await t.commit();
+    res.json({ message: 'Document deleted successfully' });
+  } catch (error) {
+    await t.rollback();
+    console.error('Error deleting document:', error);
+    res.status(500).json({ message: 'Error deleting document', error: error.message });
+  }
+};
+
+exports.updateDocument = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { name } = req.body;
+    const [updatedRowsCount, updatedDocuments] = await models.Document.update(
+      { name },
+      {
+        where: { id: req.params.id, userId: req.user.id },
+        returning: true,
+        transaction: t
+      }
+    );
+
+    if (updatedRowsCount === 0) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    await t.commit();
     res.json({ message: 'Document updated successfully', document: updatedDocuments[0] });
   } catch (error) {
+    await t.rollback();
     console.error('Error updating document:', error);
-    res.status(500).json({ message: 'Error updating document' });
+    res.status(500).json({ message: 'Error updating document', error: error.message });
   }
 };
 
 exports.toggleFavorite = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const document = await Document.findOne({
-      where: { id: req.params.id, userId: req.user.id }
+    const document = await models.Document.findOne({
+      where: { id: req.params.id, userId: req.user.id },
+      transaction: t
     });
     if (!document) {
+      await t.rollback();
       return res.status(404).json({ message: 'Document not found' });
     }
     document.isFavorite = !document.isFavorite;
-    await document.save();
+    await document.save({ transaction: t });
+    await t.commit();
     res.json({ message: 'Favorite status updated', isFavorite: document.isFavorite });
   } catch (error) {
+    await t.rollback();
     console.error('Error updating favorite status:', error);
-    res.status(500).json({ message: 'Error updating favorite status' });
+    res.status(500).json({ message: 'Error updating favorite status', error: error.message });
   }
 };
 
 exports.getStorageInfo = async (req, res) => {
   try {
-    const totalSize = await Document.sum('size', {
+    const totalSize = await models.Document.sum('size', {
       where: { userId: req.user.id, isDeleted: false, type: 'file' }
     });
 
@@ -170,6 +190,6 @@ exports.getStorageInfo = async (req, res) => {
     res.json({ used: totalSize || 0, limit });
   } catch (error) {
     console.error('Error fetching storage information:', error);
-    res.status(500).json({ message: 'Error fetching storage information' });
+    res.status(500).json({ message: 'Error fetching storage information', error: error.message });
   }
 };
