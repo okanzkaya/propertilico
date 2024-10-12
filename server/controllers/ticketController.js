@@ -4,14 +4,14 @@ exports.createTicket = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const { title, description, status, priority, assignee, dueDate } = req.body;
+    const { title, description, status, priority, assigneeId, dueDate } = req.body;
     const newTicket = await models.Ticket.create({
       userId: req.user.id,
       title,
       description,
       status,
       priority,
-      assignee,
+      assigneeId,
       dueDate
     }, { transaction: t });
 
@@ -28,7 +28,10 @@ exports.getTickets = async (req, res) => {
   try {
     const tickets = await models.Ticket.findAll({
       where: { userId: req.user.id },
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
+      include: [
+        { model: models.User, as: 'assignee', attributes: ['id', 'name', 'email'] }
+      ]
     });
     res.json(tickets);
   } catch (error) {
@@ -40,7 +43,10 @@ exports.getTickets = async (req, res) => {
 exports.getTicketById = async (req, res) => {
   try {
     const ticket = await models.Ticket.findOne({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: req.params.id, userId: req.user.id },
+      include: [
+        { model: models.User, as: 'assignee', attributes: ['id', 'name', 'email'] }
+      ]
     });
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
@@ -68,7 +74,15 @@ exports.updateTicket = async (req, res) => {
     }
 
     await t.commit();
-    res.json(updatedTickets[0]);
+    
+    const updatedTicket = await models.Ticket.findOne({
+      where: { id: req.params.id },
+      include: [
+        { model: models.User, as: 'assignee', attributes: ['id', 'name', 'email'] }
+      ]
+    });
+    
+    res.json(updatedTicket);
   } catch (error) {
     await t.rollback();
     console.error('Error updating ticket:', error);
@@ -113,8 +127,14 @@ exports.addNote = async (req, res) => {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
+    const note = {
+      content: req.body.content,
+      createdBy: req.user.id,
+      createdAt: new Date()
+    };
+
     ticket.notes = ticket.notes || [];
-    ticket.notes.push(req.body);
+    ticket.notes.push(note);
     await ticket.save({ transaction: t });
 
     await t.commit();

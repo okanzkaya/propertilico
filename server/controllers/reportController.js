@@ -7,12 +7,22 @@ exports.getReports = async (req, res, next) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const offset = (page - 1) * limit;
+    const where = {};
+
+    if (req.query.active) {
+      where.isActive = req.query.active === 'true';
+    }
+
+    if (req.query.type) {
+      where.type = req.query.type;
+    }
 
     const { count, rows } = await models.Report.findAndCountAll({
+      where,
       limit,
       offset,
       order: [['createdAt', 'DESC']],
-      where: req.query.active ? { isActive: true } : {}
+      include: [{ model: models.User, as: 'user', attributes: ['id', 'name'] }]
     });
 
     res.json({
@@ -37,22 +47,25 @@ exports.getReportData = async (req, res, next) => {
     let data;
     switch (report.dataFetchFunction) {
       case 'getPropertyStats':
-        data = await getPropertyStats(req.user.id);
+        data = await getPropertyStats(req, res, next);
         break;
       case 'getTicketStats':
-        data = await getTicketStats(req.user.id);
+        data = await getTicketStats(req, res, next);
         break;
       case 'getFinancialStats':
-        data = await getFinancialStats(req.user.id);
+        data = await getFinancialStats(req, res, next);
         break;
       case 'getOccupancyStats':
-        data = await getOccupancyStats(req.user.id);
+        data = await getOccupancyStats(req, res, next);
         break;
       default:
         return next(new AppError('Invalid data fetch function', 400));
     }
 
-    res.json({ ...report.get({ plain: true }), data });
+    // If the data function has already sent a response, we don't need to send another one
+    if (!res.headersSent) {
+      res.json({ ...report.toJSON(), data });
+    }
   } catch (error) {
     console.error('Error fetching report data:', error);
     next(new AppError('Error fetching report data', 500));
@@ -145,7 +158,7 @@ exports.updateReport = async (req, res, next) => {
 
   try {
     const { id } = req.params;
-    const { title, description, type, chartType, dataFetchFunction, tags } = req.body;
+    const { title, description, type, chartType, dataFetchFunction, tags, isActive } = req.body;
 
     const [updatedRowsCount, [updatedReport]] = await models.Report.update({
       title,
@@ -153,7 +166,8 @@ exports.updateReport = async (req, res, next) => {
       type,
       chartType,
       dataFetchFunction,
-      tags
+      tags,
+      isActive
     }, {
       where: { id, userId: req.user.id },
       returning: true,

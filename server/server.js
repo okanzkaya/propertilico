@@ -1,25 +1,34 @@
 require('dotenv').config();
 const app = require('./app');
+const { connectDB } = require('./config/db');
 
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
+    await connectDB();
+    console.log('Database connected successfully');
+
     const server = app.listen(PORT, () => {
       console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     });
 
-    // Graceful shutdown
-    const shutdown = () => {
-      console.log('Shutting down gracefully...');
+    const gracefulShutdown = async (signal) => {
+      console.log(`Received ${signal}. Shutting down gracefully...`);
       server.close(() => {
         console.log('Server closed');
         process.exit(0);
       });
+
+      // If server hasn't finished in 10s, shut down forcefully
+      setTimeout(() => {
+        console.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+      }, 10000);
     };
 
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -27,18 +36,16 @@ const startServer = async () => {
   }
 };
 
-// Handling unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.log('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error('Error:', err);
-  process.exit(1);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Application specific logging, throwing an error, or other logic here
 });
 
-// Handling uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.error('Error:', err);
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Application specific logging, throwing an error, or other logic here
   process.exit(1);
 });
 
 startServer();
+

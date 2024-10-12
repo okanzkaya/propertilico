@@ -24,18 +24,22 @@ module.exports = (sequelize) => {
       }
     },
     type: {
-      type: DataTypes.ENUM('PropertyOverview', 'TicketSummary', 'FinancialOverview', 'OccupancyTrend'),
+      type: DataTypes.ENUM('PropertyOverview', 'TicketSummary', 'FinancialOverview', 'OccupancyTrend', 'Custom'),
       allowNull: false
     },
     chartType: {
-      type: DataTypes.ENUM('bar', 'line', 'pie'),
+      type: DataTypes.ENUM('bar', 'line', 'pie', 'doughnut', 'radar'),
       allowNull: false
     },
     dataFetchFunction: {
       type: DataTypes.STRING(255),
       allowNull: false,
       validate: {
-        notEmpty: { msg: 'Data fetch function cannot be empty' }
+        notEmpty: { msg: 'Data fetch function cannot be empty' },
+        isIn: {
+          args: [['getPropertyStats', 'getTicketStats', 'getFinancialStats', 'getOccupancyStats']],
+          msg: 'Invalid data fetch function'
+        }
       }
     },
     tags: {
@@ -44,6 +48,9 @@ module.exports = (sequelize) => {
       get() {
         const rawValue = this.getDataValue('tags');
         return rawValue ? rawValue : [];
+      },
+      set(val) {
+        this.setDataValue('tags', val.map(tag => tag.toLowerCase()));
       }
     },
     isActive: {
@@ -52,6 +59,10 @@ module.exports = (sequelize) => {
     },
     userId: {
       type: DataTypes.UUID,
+      allowNull: true
+    },
+    lastGeneratedAt: {
+      type: DataTypes.DATE,
       allowNull: true
     }
   }, {
@@ -72,7 +83,12 @@ module.exports = (sequelize) => {
   });
 
   Report.prototype.updateTags = async function(newTags) {
-    this.tags = [...new Set([...this.tags, ...newTags])];
+    this.tags = [...new Set([...this.tags, ...newTags.map(tag => tag.toLowerCase())])];
+    return this.save();
+  };
+
+  Report.prototype.setLastGeneratedAt = async function() {
+    this.lastGeneratedAt = new Date();
     return this.save();
   };
 
@@ -80,7 +96,7 @@ module.exports = (sequelize) => {
     return this.findAll({
       where: {
         tags: {
-          [sequelize.Sequelize.Op.contains]: [tag]
+          [sequelize.Sequelize.Op.contains]: [tag.toLowerCase()]
         }
       }
     });
@@ -88,7 +104,7 @@ module.exports = (sequelize) => {
 
   Report.associate = (models) => {
     Report.belongsTo(models.User, {
-      foreignKey: 'user_id',
+      foreignKey: 'userId',
       as: 'user'
     });
   };

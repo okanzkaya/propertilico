@@ -1,10 +1,9 @@
 import axios from 'axios';
-import { refreshToken } from './api';
 
 const axiosInstance = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
+  timeout: 10000, // 10 seconds timeout
 });
 
 let isRefreshing = false;
@@ -25,7 +24,8 @@ const handleCommonErrors = (error) => {
     500: 'Internal server error',
   };
   const status = error.response?.status;
-  console.error(errorMessages[status] || `An error occurred: ${error.message}`);
+  console.error(`API Error (${status}):`, errorMessages[status] || error.message);
+  return error;
 };
 
 axiosInstance.interceptors.request.use(
@@ -34,22 +34,32 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    console.log(`Request: ${config.method.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
+    console.error('Request Interceptor Error:', error);
     return Promise.reject(error);
   }
 );
 
 axiosInstance.interceptors.response.use(
   (response) => {
+    console.log(`Response: ${response.status} ${response.config.url}`);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
     handleCommonErrors(error);
 
+    if (error.code === 'ECONNABORTED' && !originalRequest._retry) {
+      console.log('Request timed out, retrying...');
+      originalRequest._retry = true;
+      return axiosInstance(originalRequest);
+    }
+
     if (error.response?.status === 403 && error.response.data.redirect === '/my-plan') {
+      console.log('Redirecting to subscription plan page');
       window.location.href = '/my-plan';
       return Promise.reject(error);
     }
@@ -72,7 +82,8 @@ axiosInstance.interceptors.response.use(
         const oldRefreshToken = getRefreshToken();
         if (!oldRefreshToken) throw new Error('No refresh token available');
 
-        const { token, refreshToken: newRefreshToken } = await refreshToken(oldRefreshToken);
+        const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken: oldRefreshToken });
+        const { token, refreshToken: newRefreshToken } = response.data;
         
         const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
         storage.setItem('token', token);
@@ -90,6 +101,7 @@ axiosInstance.interceptors.response.use(
           storage.removeItem('refreshToken');
         });
         delete axiosInstance.defaults.headers.common['Authorization'];
+        console.error('Token refresh failed, redirecting to signin');
         window.location.href = '/signin';
         return Promise.reject(refreshError);
       } finally {

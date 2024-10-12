@@ -1,136 +1,65 @@
 import axiosInstance from './axiosSetup';
 
+// Fallback data
+const fallbackData = {
+  propertyStats: { totalProperties: 0, occupiedProperties: 0, vacantProperties: 0, occupancyRate: 0 },
+  ticketStats: { openTickets: 0, inProgressTickets: 0, closedTickets: 0, totalTickets: 0 },
+  occupancyStats: [{ name: 'Occupied', value: 0 }, { name: 'Vacant', value: 0 }],
+  tickets: [],
+  transactions: [],
+  properties: [],
+  tasks: [],
+  contacts: []
+};
+
 // Generic API call function
 const apiCall = async (method, url, data = null, options = {}) => {
   try {
-    console.log(`Making ${method.toUpperCase()} request to ${url}`);
+    console.log(`API Call: ${method.toUpperCase()} ${url}`);
     const response = await axiosInstance({
       method,
       url,
       data: method !== 'get' ? data : undefined,
       params: method === 'get' ? data : undefined,
+      timeout: 30000, // 30 seconds timeout
       ...options,
     });
 
-    console.log('Response:', response.data);
+    console.log(`API Response: ${url}`, response.data);
     return response.data;
   } catch (error) {
-    console.error('API call error:', error);
+    console.error(`API Error: ${url}`, error.response?.data || error.message);
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timed out');
+      return fallbackData[url.split('/').pop()] || null;
+    }
     if (error.response) {
-      console.error('Error response:', error.response.data);
-      console.error('Error status:', error.response.status);
-      console.error('Error headers:', error.response.headers);
-      
       if (error.response.status === 403 && error.response.data.redirect === '/my-plan') {
         window.location.href = '/my-plan';
         throw new Error('Subscription required');
       }
-      
       throw new Error(error.response.data.message || 'An error occurred');
     } else if (error.request) {
       console.error('No response received:', error.request);
-      throw new Error('No response received from the server');
+      return fallbackData[url.split('/').pop()] || null;
     } else {
-      console.error('Error setting up request:', error.message);
       throw error;
     }
   }
 };
 
 // Auth API
-export const registerUser = async (userData) => {
-  try {
-    console.log('Sending registration request with data:', {
-      name: userData.name,
-      email: userData.email,
-      passwordLength: userData.password.length
-    });
-    const response = await axiosInstance.post('/api/auth/register', userData);
-    console.log('Registration response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Registration API error:', error);
-    if (error.response) {
-      console.error('Error response:', error.response.data);
-      throw new Error(error.response.data.message || 'Registration failed');
-    } else if (error.request) {
-      console.error('No response received');
-      throw new Error('No response received from the server');
-    } else {
-      console.error('Error setting up request:', error.message);
-      throw error;
-    }
-  }
-};
-
-export const loginUser = async (userData) => {
-  try {
-    if (!userData.email || !userData.password) {
-      console.error('Login error: Email and password are required');
-      throw new Error('Email and password are required');
-    }
-
-    console.log('API: Sending login request');
-    const response = await axiosInstance.post('/api/auth/login', userData);
-    console.log('API: Login response received', response.data);
-    
-    if (response.data && response.data.token) {
-      return response.data;
-    } else {
-      console.error('API: Login failed - No token received');
-      throw new Error('Login failed: No token received from server');
-    }
-  } catch (error) {
-    console.error('API: Login error:', error);
-    if (error.response && error.response.data) {
-      throw new Error(error.response.data.message || 'An error occurred during login');
-    }
-    throw error;
-  }
-};
-
-export const googleLogin = async (tokenId) => {
-  try {
-    const response = await axiosInstance.post('/api/auth/google', { tokenId });
-    if (response.data && response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      return response.data;
-    } else {
-      throw new Error('Google login failed: No token received from server');
-    }
-  } catch (error) {
-    console.error('Google login API error:', error);
-    throw error;
-  }
-};
-
+export const registerUser = (userData) => apiCall('post', '/api/auth/register', userData);
+export const loginUser = (userData) => apiCall('post', '/api/auth/login', userData);
+export const googleLogin = (tokenId) => apiCall('post', '/api/auth/google', { tokenId });
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   sessionStorage.removeItem('token');
   sessionStorage.removeItem('refreshToken');
 };
-
-export const checkAuthStatus = async () => {
-  try {
-    const response = await axiosInstance.get('/api/auth/status');
-    return response.data;
-  } catch (error) {
-    console.error('Error checking auth status:', error);
-    throw error;
-  }
-};
-
-export const refreshToken = async (refreshToken) => {
-  try {
-    const response = await axiosInstance.post('/api/auth/refresh-token', { refreshToken });
-    return response.data;
-  } catch (error) {
-    console.error('Error refreshing token:', error);
-    throw error;
-  }
-};
-
+export const checkAuthStatus = () => apiCall('get', '/api/auth/status');
+export const refreshToken = (refreshToken) => apiCall('post', '/api/auth/refresh-token', { refreshToken });
 export const requestPasswordReset = (email) => apiCall('post', '/api/auth/request-password-reset', { email });
 export const resetPassword = (token, newPassword) => apiCall('post', '/api/auth/reset-password', { token, newPassword });
 export const changePassword = (oldPassword, newPassword) => apiCall('post', '/api/user/change-password', { oldPassword, newPassword });
@@ -186,7 +115,7 @@ export const getPropertyStats = () => apiCall('get', '/api/reports/properties/st
 export const getTicketStats = () => apiCall('get', '/api/reports/tickets/stats');
 export const getFinancialStats = () => apiCall('get', '/api/reports/finances/stats');
 export const getOccupancyStats = () => apiCall('get', '/api/reports/properties/occupancy');
-
+export const getAllStats = () => apiCall('get', '/api/reports/all-stats');
 // Property API
 export const getProperties = () => apiCall('get', '/api/properties');
 
@@ -234,7 +163,18 @@ export const userApi = {
 export const feedbackApi = { sendFeedback, getFeedback, deleteFeedback, updateFeedback, checkFeedbackLimit };
 export const ticketApi = { createTicket, getTickets, getTicketById, updateTicket, deleteTicket, addNoteToTicket };
 export const financeApi = { getTransactions, addTransaction, updateTransaction, deleteTransaction, getFinancialSummary };
-export const reportApi = { getReports, getReportData, createReport, updateReport, deleteReport, getPropertyStats, getTicketStats, getFinancialStats, getOccupancyStats };
+export const reportApi = {
+  getReports,
+  getReportData,
+  createReport,
+  updateReport,
+  deleteReport,
+  getAllStats,
+  getPropertyStats,
+  getTicketStats,
+  getFinancialStats,
+  getOccupancyStats
+};
 export const propertyApi = { getProperties };
 export const taskApi = { getTasks, addTask, updateTask, deleteTask };
 export const contactApi = { getContacts, createContact, getContactById, updateContact, deleteContact };

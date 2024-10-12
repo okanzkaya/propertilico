@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useQuery } from 'react-query';
 import {
   Typography, Grid, Box, IconButton, Card, Dialog, DialogContent, Avatar,
   List, ListItem, ListItemAvatar, ListItemText, Tooltip, Checkbox, TextField,
   Badge, Button, Chip, Select, MenuItem, CircularProgress, Alert, useMediaQuery,
   FormControl, InputLabel
 } from '@mui/material';
-import { useTheme, alpha } from '@mui/system';
+import { useTheme, alpha } from '@mui/material/styles';
 import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -24,7 +25,9 @@ import {
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { getPropertyStats, getTicketStats, getOccupancyStats, getTickets, getTransactions, getProperties, addTask, getTasks, deleteTask, updateTask, getContacts } from '../../api';
+import { 
+  reportApi, ticketApi, financeApi, propertyApi, taskApi, contactApi 
+} from '../../api';
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement, Title,
@@ -42,24 +45,108 @@ const Dashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [dialogsOpen, setDialogsOpen] = useState({ tickets: false, allTasks: false });
-  const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState(null);
   const [timeRange, setTimeRange] = useState('lastSixMonths');
-  const [dashboardData, setDashboardData] = useState({
-    propertyStats: null,
-    ticketStats: null,
-    financialData: [],
-    occupancyStats: null,
-    openTickets: [],
-    recentActivities: [],
-    properties: [],
-    tenants: []
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  const { data: propertyStats, isLoading: propertyStatsLoading, error: propertyStatsError } = useQuery(
+    ['propertyStats'], 
+    reportApi.getPropertyStats, 
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching property stats:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const { data: ticketStats, isLoading: ticketStatsLoading, error: ticketStatsError } = useQuery(
+    ['ticketStats'], 
+    reportApi.getTicketStats, 
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching ticket stats:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const { data: occupancyStats, isLoading: occupancyStatsLoading, error: occupancyStatsError } = useQuery(
+    ['occupancyStats'], 
+    reportApi.getOccupancyStats, 
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching occupancy stats:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const { data: tickets, isLoading: ticketsLoading, error: ticketsError } = useQuery(
+    ['tickets'], 
+    ticketApi.getTickets, 
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching tickets:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useQuery(
+    ['transactions'], 
+    financeApi.getTransactions, 
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching transactions:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const { data: properties, isLoading: propertiesLoading, error: propertiesError } = useQuery(
+    ['properties'], 
+    propertyApi.getProperties, 
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching properties:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const { data: tasks, isLoading: tasksLoading, error: tasksError, refetch: refetchTasks } = useQuery(
+    ['tasks'], 
+    taskApi.getTasks, 
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching tasks:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const { data: contacts, isLoading: contactsLoading, error: contactsError } = useQuery(
+    ['contacts'], 
+    contactApi.getContacts,
+    { 
+      retry: 2, 
+      retryDelay: 1000, 
+      onError: (error) => console.error('Error fetching contacts:', error),
+      staleTime: 5 * 60 * 1000
+    }
+  );
+
+  const isLoading = propertyStatsLoading || ticketStatsLoading || occupancyStatsLoading || 
+                    ticketsLoading || transactionsLoading || propertiesLoading || 
+                    tasksLoading || contactsLoading;
+
+  const hasError = propertyStatsError || ticketStatsError || occupancyStatsError || 
+                   ticketsError || transactionsError || propertiesError || 
+                   tasksError || contactsError;
 
   const processFinancialData = useCallback((transactions, range) => {
+    if (!transactions || transactions.length === 0) return [];
     const data = {};
     const now = new Date();
     const startDate = new Date(now);
@@ -103,7 +190,10 @@ const Dashboard = () => {
     return Object.values(data).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, []);
 
+  const financialData = useMemo(() => processFinancialData(transactions, timeRange), [transactions, timeRange, processFinancialData]);
+
   const generateRecentActivities = useCallback((transactions, tickets) => {
+    if (!transactions || !tickets) return [];
     const activities = [
       ...transactions.map(t => ({
         action: `${t.type === 'income' ? 'Rent collected' : 'Expense paid'}`,
@@ -121,89 +211,48 @@ const Dashboard = () => {
     return activities.sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 4);
   }, []);
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [propertyData, ticketData, occupancyData, ticketsData, transactionsData, propertiesData, tasksData, contactsData] = await Promise.all([
-        getPropertyStats(),
-        getTicketStats(),
-        getOccupancyStats(),
-        getTickets(),
-        getTransactions(),
-        getProperties(),
-        getTasks(),
-        getContacts()
-      ]);
-
-      setDashboardData({
-        propertyStats: propertyData,
-        ticketStats: {
-          ...ticketData,
-          totalTickets: ticketsData.length,
-          openTickets: ticketsData.filter(ticket => ticket.status === 'Open').length
-        },
-        financialData: processFinancialData(transactionsData, timeRange),
-        occupancyStats: occupancyData,
-        openTickets: ticketsData.filter(ticket => ticket.status === 'Open').slice(0, 3),
-        recentActivities: generateRecentActivities(transactionsData, ticketsData),
-        properties: propertiesData.filter(p => p.location?.coordinates?.length === 2),
-        tenants: contactsData.filter(contact => contact.role.toLowerCase().includes('tenant')),
-        transactions: transactionsData
-      });
-      setTasks(tasksData);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      setError('Failed to load dashboard data. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  }, [processFinancialData, generateRecentActivities, timeRange]);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+  const recentActivities = useMemo(() => generateRecentActivities(transactions, tickets), [transactions, tickets, generateRecentActivities]);
 
   const handleAddTask = useCallback(async () => {
     if (newTask.trim()) {
       try {
-        const addedTask = await addTask({ task: newTask, status: 'Pending', dueDate: newTaskDueDate });
-        setTasks(prevTasks => [addedTask, ...prevTasks]);
+        await taskApi.addTask({ task: newTask, status: 'Pending', dueDate: newTaskDueDate });
         setNewTask('');
         setNewTaskDueDate(null);
+        refetchTasks();
       } catch (error) {
         console.error('Error adding task:', error);
       }
     }
-  }, [newTask, newTaskDueDate]);
+  }, [newTask, newTaskDueDate, refetchTasks]);
 
   const handleDeleteTask = useCallback(async (taskId) => {
     try {
-      await deleteTask(taskId);
-      setTasks(prevTasks => prevTasks.filter(t => t._id !== taskId));
+      await taskApi.deleteTask(taskId);
+      refetchTasks();
     } catch (error) {
       console.error('Error deleting task:', error);
     }
-  }, []);
+  }, [refetchTasks]);
 
   const handleToggleTaskStatus = useCallback(async (taskId) => {
     try {
-      const taskToUpdate = tasks.find(t => t._id === taskId);
-      const updatedTask = await updateTask(taskId, {
+      const taskToUpdate = tasks.find(t => t.id === taskId);
+      await taskApi.updateTask(taskId, {
         ...taskToUpdate,
         status: taskToUpdate.status === 'Pending' ? 'Completed' : 'Pending'
       });
-      setTasks(prevTasks => prevTasks.map(t => t._id === taskId ? updatedTask : t));
+      refetchTasks();
     } catch (error) {
       console.error('Error updating task:', error);
     }
-  }, [tasks]);
+  }, [tasks, refetchTasks]);
 
   const renderTasks = useCallback((tasksToRender) => tasksToRender.map((task) => (
-    <ListItem key={task._id} sx={{ flexWrap: 'wrap', mb: 1, backgroundColor: alpha(theme.palette.background.paper, 0.6), borderRadius: 1 }}>
+    <ListItem key={task.id} sx={{ flexWrap: 'wrap', mb: 1, backgroundColor: alpha(theme.palette.background.paper, 0.6), borderRadius: 1 }}>
       <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" flexWrap="wrap">
         <Box display="flex" alignItems="center" flexGrow={1}>
-          <Checkbox checked={task.status === 'Completed'} onChange={() => handleToggleTaskStatus(task._id)} />
+          <Checkbox checked={task.status === 'Completed'} onChange={() => handleToggleTaskStatus(task.id)} />
           <ListItemText 
             primary={task.task} 
             secondary={task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : ''}
@@ -212,63 +261,59 @@ const Dashboard = () => {
         </Box>
         <Box display="flex" alignItems="center">
           <Chip label={task.status} color={task.status === 'Completed' ? 'success' : 'warning'} size="small" />
-          <IconButton size="small" onClick={() => handleDeleteTask(task._id)}>
+          <IconButton size="small" onClick={() => handleDeleteTask(task.id)}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
       </Box>
     </ListItem>
-  )), [handleDeleteTask, handleToggleTaskStatus, theme.palette.background.paper]);
+  )), [theme.palette.background.paper, handleToggleTaskStatus, handleDeleteTask]);
 
   const stats = useMemo(() => [
-    { title: 'Properties', value: dashboardData.propertyStats?.totalProperties || 0, icon: <HomeIcon />, color: theme.palette.primary.main, change: dashboardData.propertyStats?.change || '0', trend: dashboardData.propertyStats?.trend || 'up' },
-    { title: 'Tenants', value: dashboardData.tenants.length || 0, icon: <PersonIcon />, color: theme.palette.success.main, change: dashboardData.propertyStats?.tenantChange || '0', trend: dashboardData.propertyStats?.tenantTrend || 'up' },
-    { title: 'Tickets', value: dashboardData.ticketStats?.totalTickets || 0, icon: <BuildIcon />, color: theme.palette.warning.main, change: dashboardData.ticketStats?.change || '0', trend: dashboardData.ticketStats?.trend || 'down' },
-    { title: 'Monthly Profit', value: `$${dashboardData.financialData[dashboardData.financialData.length - 1]?.profit.toLocaleString() || '0'}`, icon: <MonetizationOnIcon />, color: theme.palette.error.main, change: dashboardData.financialData[dashboardData.financialData.length - 1]?.profit - dashboardData.financialData[dashboardData.financialData.length - 2]?.profit || 0, trend: 'up' },
-  ], [dashboardData, theme.palette]);
+    { title: 'Properties', value: propertyStats?.totalProperties || 0, icon: <HomeIcon />, color: theme.palette.primary.main, change: propertyStats?.change || '0', trend: propertyStats?.trend || 'up' },
+    { title: 'Tenants', value: contacts?.filter(c => c.role.toLowerCase().includes('tenant')).length || 0, icon: <PersonIcon />, color: theme.palette.success.main, change: propertyStats?.tenantChange || '0', trend: propertyStats?.tenantTrend || 'up' },
+    { title: 'Tickets', value: ticketStats?.totalTickets || 0, icon: <BuildIcon />, color: theme.palette.warning.main, change: ticketStats?.change || '0', trend: ticketStats?.trend || 'down' },
+    { title: 'Monthly Profit', value: `$${financialData[financialData.length - 1]?.profit.toLocaleString() || '0'}`, icon: <MonetizationOnIcon />, color: theme.palette.error.main, change: financialData[financialData.length - 1]?.profit - financialData[financialData.length - 2]?.profit || 0, trend: 'up' },
+  ], [propertyStats, contacts, ticketStats, financialData, theme.palette]);
 
   const occupancyRate = useMemo(() => {
-    const occupiedCount = dashboardData.properties.filter(p => !p.availableNow).length;
-    const totalCount = dashboardData.properties.length;
-    return totalCount > 0 ? Math.round((occupiedCount / totalCount) * 100) : 0;
-  }, [dashboardData.properties]);
+    if (!occupancyStats || occupancyStats.length === 0) return 0;
+    const occupied = occupancyStats.find(stat => stat.name === 'Occupied')?.value || 0;
+    const total = occupancyStats.reduce((sum, stat) => sum + stat.value, 0);
+    return total > 0 ? Math.round((occupied / total) * 100) : 0;
+  }, [occupancyStats]);
 
-  const occupancyChartData = {
-    labels: ['Occupied', 'Vacant'],
+  const occupancyChartData = useMemo(() => ({
+    labels: occupancyStats?.map(stat => stat.name) || [],
     datasets: [{
-      data: [occupancyRate, 100 - occupancyRate],
+      data: occupancyStats?.map(stat => stat.value) || [],
       backgroundColor: [theme.palette.success.main, theme.palette.error.main],
       hoverOffset: 4
     }]
-  };
+  }), [occupancyStats, theme.palette.success.main, theme.palette.error.main]);
 
   const mapBounds = useMemo(() => {
-    if (dashboardData.properties.length === 0) return null;
-    const latitudes = dashboardData.properties.map(p => p.location.coordinates[1]);
-    const longitudes = dashboardData.properties.map(p => p.location.coordinates[0]);
+    if (!properties || properties.length === 0) return null;
+    const latitudes = properties.map(p => p.location.coordinates[1]);
+    const longitudes = properties.map(p => p.location.coordinates[0]);
     return [
       [Math.min(...latitudes), Math.min(...longitudes)],
       [Math.max(...latitudes), Math.max(...longitudes)]
     ];
-  }, [dashboardData.properties]);
+  }, [properties]);
 
   const chartHeight = isMobile ? 300 : 400;
 
-  const handleTimeRangeChange = (event) => {
-    const newTimeRange = event.target.value;
-    setTimeRange(newTimeRange);
-    setDashboardData(prevData => ({
-      ...prevData,
-      financialData: processFinancialData(prevData.transactions, newTimeRange)
-    }));
-  };
+  const handleTimeRangeChange = useCallback((event) => {
+    setTimeRange(event.target.value);
+  }, []);
 
   const chartData = useMemo(() => ({
-    labels: dashboardData.financialData.map(item => item.date),
+    labels: financialData.map(item => item.date),
     datasets: [
       {
         label: 'Revenue',
-        data: dashboardData.financialData.map(item => item.income),
+        data: financialData.map(item => item.income),
         fill: true,
         backgroundColor: alpha(theme.palette.primary.main, 0.2),
         borderColor: theme.palette.primary.main,
@@ -276,7 +321,7 @@ const Dashboard = () => {
       },
       {
         label: 'Expenses',
-        data: dashboardData.financialData.map(item => item.expenses),
+        data: financialData.map(item => item.expenses),
         fill: true,
         backgroundColor: alpha(theme.palette.error.main, 0.2),
         borderColor: theme.palette.error.main,
@@ -284,16 +329,16 @@ const Dashboard = () => {
       },
       {
         label: 'Profit',
-        data: dashboardData.financialData.map(item => item.profit),
+        data: financialData.map(item => item.profit),
         fill: true,
         backgroundColor: alpha(theme.palette.success.main, 0.2),
         borderColor: theme.palette.success.main,
         tension: 0.4,
       }
     ]
-  }), [dashboardData.financialData, theme.palette]);
+  }), [financialData, theme.palette]);
 
-  const chartOptions = {
+  const chartOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -308,10 +353,11 @@ const Dashboard = () => {
         }
       },
     },
-  };
+  }), []);
 
-  if (loading) return <Box display="flex" justifyContent="center" alignItems="center" height="100vh"><CircularProgress /></Box>;
-  if (error) return <Box display="flex" justifyContent="center" alignItems="center" height="100vh"><Alert severity="error">{error}</Alert></Box>;
+  if (isLoading) return <Box display="flex" justifyContent="center" alignItems="center" height="100vh"><CircularProgress /></Box>;
+
+  if (hasError) return <Box p={3}><Alert severity="error">An error occurred while fetching data. Please try again later.</Alert></Box>;
 
   return (
     <Box sx={{ p: 3, backgroundColor: theme.palette.mode === 'light' ? '#f5f5f5' : '#121212', minHeight: '100vh' }}>
@@ -319,13 +365,12 @@ const Dashboard = () => {
         <Typography variant="h4" fontWeight="bold">Dashboard</Typography>
         <Tooltip title="Open Tickets">
           <IconButton color="inherit" onClick={() => setDialogsOpen({ ...dialogsOpen, tickets: true })}>
-            <Badge badgeContent={dashboardData.ticketStats?.openTickets || 0} color="error">
+            <Badge badgeContent={ticketStats?.openTickets || 0} color="error">
               <AssignmentIcon />
             </Badge>
           </IconButton>
         </Tooltip>
       </Box>
-
       <Grid container spacing={3}>
         {stats.map((stat, i) => (
           <Grid item xs={12} sm={6} md={3} key={i}>
@@ -408,7 +453,7 @@ const Dashboard = () => {
         <Grid item xs={12}>
           <Card sx={{ p: 2, borderRadius: 2, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <Typography variant="h6" mb={2}>Property Locations</Typography>
-            {dashboardData.properties.length > 0 ? (
+            {properties && properties.length > 0 ? (
               <MapContainer 
                 bounds={mapBounds} 
                 style={{ height: '400px', width: '100%', borderRadius: '8px' }}
@@ -422,8 +467,8 @@ const Dashboard = () => {
                   }
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
-                {dashboardData.properties.map((property) => (
-                  <Marker key={property._id} position={[property.location.coordinates[1], property.location.coordinates[0]]} icon={propertyIcon}>
+                {properties.map((property) => (
+                  <Marker key={property.id} position={[property.location.coordinates[1], property.location.coordinates[0]]} icon={propertyIcon}>
                     <Popup>
                       <Typography variant="subtitle1"><strong>{property.name}</strong></Typography>
                       <Typography variant="body2">{property.address}</Typography>
@@ -476,8 +521,8 @@ const Dashboard = () => {
                 <AddIcon />
               </IconButton>
             </Box>
-            <List sx={{ maxHeight: '300px', overflowY: 'auto' }}>{renderTasks(tasks.slice(0, 5))}</List>
-            {tasks.length > 5 && (
+            <List sx={{ maxHeight: '300px', overflowY: 'auto' }}>{renderTasks(tasks?.slice(0, 5) || [])}</List>
+            {tasks && tasks.length > 5 && (
               <Box display="flex" justifyContent="center" mt={2}>
                 <Button 
                   onClick={() => setDialogsOpen({ ...dialogsOpen, allTasks: true })}
@@ -494,7 +539,7 @@ const Dashboard = () => {
           <Card sx={{ p: 2, borderRadius: 2, boxShadow: '0 4px 6px rgba(0,0,0,0.1)', height: '100%' }}>
             <Typography variant="h6" mb={2}>Recent Activities</Typography>
             <List>
-              {dashboardData.recentActivities.map((activity, index) => (
+              {recentActivities.map((activity, index) => (
                 <ListItem key={index} sx={{ px: 0 }}>
                   <ListItemAvatar>
                     <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
@@ -526,8 +571,8 @@ const Dashboard = () => {
             </IconButton>
           </Box>
           <List>
-            {dashboardData.openTickets.map((ticket) => (
-              <ListItem key={ticket._id} sx={{ bgcolor: alpha(theme.palette.background.paper, 0.6), mb: 1, borderRadius: 1 }}>
+            {tickets && tickets.filter(ticket => ticket.status === 'Open').slice(0, 5).map((ticket) => (
+              <ListItem key={ticket.id} sx={{ bgcolor: alpha(theme.palette.background.paper, 0.6), mb: 1, borderRadius: 1 }}>
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: ticket.priority === 'High' ? theme.palette.error.main : theme.palette.warning.main }}>
                     <AssignmentIcon />
@@ -562,7 +607,7 @@ const Dashboard = () => {
               <CloseIcon />
             </IconButton>
           </Box>
-          <List sx={{ maxHeight: '60vh', overflowY: 'auto' }}>{renderTasks(tasks)}</List>
+          <List sx={{ maxHeight: '60vh', overflowY: 'auto' }}>{renderTasks(tasks || [])}</List>
         </DialogContent>
       </Dialog>
     </Box>

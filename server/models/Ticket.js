@@ -5,6 +5,10 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false
+    },
     title: {
       type: DataTypes.STRING(255),
       allowNull: false,
@@ -38,10 +42,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     },
-    creatorId: {
-      type: DataTypes.UUID,
-      allowNull: false
-    },
     dueDate: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -58,10 +58,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'tickets',
     underscored: true,
     indexes: [
+      { fields: ['user_id'] },
       { fields: ['status'] },
       { fields: ['priority'] },
       { fields: ['assignee_id'] },
-      { fields: ['creator_id'] },
       { fields: ['due_date'] },
       { fields: ['created_at'] }
     ],
@@ -86,12 +86,12 @@ module.exports = (sequelize, DataTypes) => {
 
   Ticket.associate = (models) => {
     Ticket.belongsTo(models.User, {
-      foreignKey: 'assignee_id',
-      as: 'assignee'
+      foreignKey: 'userId',
+      as: 'user'
     });
     Ticket.belongsTo(models.User, {
-      foreignKey: 'creator_id',
-      as: 'creator'
+      foreignKey: 'assigneeId',
+      as: 'assignee'
     });
   };
 

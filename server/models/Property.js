@@ -1,5 +1,17 @@
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const Property = sequelize.define('Property', {
+  class Property extends Model {
+    static associate(models) {
+      Property.belongsTo(models.User, {
+        foreignKey: 'ownerId',
+        as: 'owner'
+      });
+      // Add more associations if needed
+    }
+  }
+
+  Property.init({
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
@@ -24,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       validate: {
+        isDecimal: { msg: 'Rent amount must be a valid decimal number' },
         min: { args: [0], msg: 'Rent amount cannot be negative' }
       }
     },
@@ -31,20 +44,26 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(50),
       allowNull: false,
       validate: {
-        notEmpty: { msg: 'Property type cannot be empty' }
+        notEmpty: { msg: 'Property type cannot be empty' },
+        isIn: {
+          args: [['Apartment', 'House', 'Condo', 'Townhouse', 'Other']],
+          msg: 'Invalid property type'
+        }
       }
     },
     bedrooms: {
       type: DataTypes.INTEGER,
       allowNull: false,
       validate: {
+        isInt: { msg: 'Number of bedrooms must be an integer' },
         min: { args: [0], msg: 'Number of bedrooms cannot be negative' }
       }
     },
     bathrooms: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.FLOAT,
       allowNull: false,
       validate: {
+        isFloat: { msg: 'Number of bathrooms must be a valid number' },
         min: { args: [0], msg: 'Number of bathrooms cannot be negative' }
       }
     },
@@ -52,6 +71,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: false,
       validate: {
+        isFloat: { msg: 'Area must be a valid number' },
         min: { args: [0], msg: 'Area cannot be negative' }
       }
     },
@@ -75,6 +95,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: true,
       validate: {
+        isFloat: { msg: 'Latitude must be a valid number' },
         min: { args: [-90], msg: 'Latitude must be between -90 and 90' },
         max: { args: [90], msg: 'Latitude must be between -90 and 90' }
       }
@@ -83,19 +104,43 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: true,
       validate: {
+        isFloat: { msg: 'Longitude must be a valid number' },
         min: { args: [-180], msg: 'Longitude must be between -180 and 180' },
         max: { args: [180], msg: 'Longitude must be between -180 and 180' }
       }
     },
     images: {
       type: DataTypes.JSONB,
-      defaultValue: []
+      defaultValue: [],
+      validate: {
+        isValidImageArray(value) {
+          if (!Array.isArray(value)) {
+            throw new Error('Images must be an array');
+          }
+          if (value.some(img => typeof img !== 'string')) {
+            throw new Error('All image entries must be strings');
+          }
+        }
+      }
     },
     ownerId: {
       type: DataTypes.UUID,
       allowNull: false
+    },
+    occupancyStatus: {
+      type: DataTypes.ENUM('Occupied', 'Vacant'),
+      allowNull: false,
+      defaultValue: 'Vacant',
+      validate: {
+        isIn: {
+          args: [['Occupied', 'Vacant']],
+          msg: 'Invalid occupancy status'
+        }
+      }
     }
   }, {
+    sequelize,
+    modelName: 'Property',
     tableName: 'properties',
     underscored: true,
     indexes: [
@@ -104,16 +149,17 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['bedrooms'] },
       { fields: ['bathrooms'] },
       { fields: ['area'] },
-      { fields: ['owner_id'] }
-    ]
+      { fields: ['owner_id'] },
+      { fields: ['available_now'] },
+      { fields: ['occupancy_status'] }
+    ],
+    hooks: {
+      beforeValidate: (property) => {
+        if (property.latitude === '') property.latitude = null;
+        if (property.longitude === '') property.longitude = null;
+      }
+    }
   });
-
-  Property.associate = (models) => {
-    Property.belongsTo(models.User, {
-      foreignKey: 'owner_id',
-      as: 'owner'
-    });
-  };
 
   return Property;
 };

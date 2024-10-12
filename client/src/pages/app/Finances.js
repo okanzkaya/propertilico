@@ -39,11 +39,13 @@ const PageWrapper = styled(Box)(({ theme }) => ({
 const StyledCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: theme.shape.borderRadius * 2,
-  boxShadow: '0 4px 20px 0 rgba(0,0,0,0.12)',
+  boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+  backdropFilter: 'blur(4px)',
+  border: '1px solid rgba(255, 255, 255, 0.18)',
   transition: 'all 0.3s ease-in-out',
   '&:hover': {
     transform: 'translateY(-5px)',
-    boxShadow: '0 8px 25px 0 rgba(0,0,0,0.15)',
+    boxShadow: '0 12px 40px 0 rgba(31, 38, 135, 0.5)',
   },
 }));
 
@@ -51,6 +53,7 @@ const ChartCard = styled(StyledCard)(({ theme }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
+  overflow: 'hidden',
 }));
 
 const ButtonGroup = styled(Box)(({ theme }) => ({
@@ -66,6 +69,8 @@ const ActionButton = styled(Button)(({ theme }) => ({
   flexGrow: 1,
   padding: theme.spacing(1.5),
   borderRadius: theme.shape.borderRadius * 1.5,
+  textTransform: 'none',
+  fontWeight: 'bold',
 }));
 
 const TableCard = styled(StyledCard)(({ theme }) => ({
@@ -92,12 +97,14 @@ const StyledTableContainer = styled(Box)(({ theme }) => ({
 const StyledChip = styled(Chip)(({ theme }) => ({
   marginRight: theme.spacing(1),
   marginBottom: theme.spacing(1),
+  fontWeight: 'bold',
 }));
 
 const InsightCard = styled(StyledCard)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
+  background: 'linear-gradient(145deg, #f3f4f6, #ffffff)',
 }));
 
 const InsightItem = styled(Box)(({ theme }) => ({
@@ -106,7 +113,7 @@ const InsightItem = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
 }));
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28BFF', '#FF6B6B'];
+const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F06292'];
 const incomeCategories = ['Salary', 'Investments', 'Freelance', 'Gifts', 'Other'];
 const expenseCategories = ['Housing', 'Transportation', 'Food', 'Utilities', 'Insurance', 'Healthcare', 'Personal', 'Entertainment', 'Other'];
 
@@ -117,25 +124,25 @@ const FinancialInsights = ({ financialSummary }) => {
 
   return (
     <InsightCard>
-      <Typography variant="h6" gutterBottom>Financial Insights</Typography>
+      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: (theme) => theme.palette.primary.main }}>Financial Insights</Typography>
       <InsightItem>
         <MoneyIcon color="primary" sx={{ mr: 1 }} />
-        <Typography>Net Income: ${balance.toFixed(2)}</Typography>
+        <Typography><strong>Net Income:</strong> ${balance.toFixed(2)}</Typography>
       </InsightItem>
       <InsightItem>
         <TrendingUpIcon color={savingsRate > 20 ? "success" : "warning"} sx={{ mr: 1 }} />
-        <Typography>Savings Rate: {savingsRate.toFixed(2)}%</Typography>
+        <Typography><strong>Savings Rate:</strong> {savingsRate.toFixed(2)}%</Typography>
       </InsightItem>
       <InsightItem>
         <TrendingDownIcon color={expenseRatio < 70 ? "success" : "error"} sx={{ mr: 1 }} />
-        <Typography>Expense Ratio: {expenseRatio.toFixed(2)}%</Typography>
+        <Typography><strong>Expense Ratio:</strong> {expenseRatio.toFixed(2)}%</Typography>
       </InsightItem>
-      <Typography variant="body2" sx={{ mt: 2 }}>
+      <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic' }}>
         {savingsRate > 20 
           ? "Great job on your savings! Keep it up!" 
           : "Try to increase your savings rate to at least 20% for better financial health."}
       </Typography>
-      <Typography variant="body2" sx={{ mt: 1 }}>
+      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
         {expenseRatio < 70 
           ? "Your expense ratio is well-managed." 
           : "Consider reducing your expenses to improve your financial stability."}
@@ -326,8 +333,8 @@ const Finances = () => {
         <YAxis />
         <RechartsTooltip />
         <Legend />
-        <Bar dataKey="income" fill="#8884d8" name="Income" />
-        <Bar dataKey="expense" fill="#82ca9d" name="Expense" />
+        <Bar dataKey="income" fill="#4ECDC4" name="Income" />
+        <Bar dataKey="expense" fill="#FF6B6B" name="Expense" />
       </BarChart>
     </ResponsiveContainer>
   ), []);
@@ -340,7 +347,7 @@ const Finances = () => {
         <YAxis />
         <RechartsTooltip />
         <Legend />
-        <Line type="monotone" dataKey="profit" stroke="#8884d8" name="Profit" />
+        <Line type="monotone" dataKey="profit" stroke="#45B7D1" name="Profit" />
       </LineChart>
     </ResponsiveContainer>
   ), []);
@@ -370,7 +377,7 @@ const Finances = () => {
   const renderChart = useCallback((title, ChartComponent, data) => (
     <ChartCard>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">{title}</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>{title}</Typography>
         <Tooltip title={`This chart shows ${title.toLowerCase()}`}>
           <IconButton size="small"><InfoIcon /></IconButton>
         </Tooltip>
@@ -383,12 +390,12 @@ const Finances = () => {
         )}
       </Box>
     </ChartCard>
-  ), []);
+  ), [theme.palette.primary.main]);
 
   const renderTransactionsTable = useCallback(() => (
     <TableCard>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">Recent Transactions</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>Recent Transactions</Typography>
         <Box display="flex" alignItems="center">
           <IconButton size="small" onClick={(e) => setFilterAnchorEl(e.currentTarget)}><FilterListIcon /></IconButton>
           <IconButton size="small" onClick={(e) => setSortAnchorEl(e.currentTarget)}><SortIcon /></IconButton>
@@ -416,7 +423,7 @@ const Finances = () => {
           </TableHead>
           <TableBody>
             {filteredAndSortedTransactions.map((transaction) => (
-              <TableRow key={transaction._id} hover>
+              <TableRow key={transaction._id || `${transaction.date}-${transaction.description}`} hover>
                 <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
                 <TableCell>{transaction.description}</TableCell>
                 <TableCell>{transaction.category}</TableCell>
@@ -440,7 +447,7 @@ const Finances = () => {
         </Table>
       </StyledTableContainer>
     </TableCard>
-  ), [filteredAndSortedTransactions, handleModalOpen, handleTransactionDelete, searchTerm]);
+  ), [filteredAndSortedTransactions, handleModalOpen, handleTransactionDelete, searchTerm, theme.palette.primary.main]);
 
   const renderContent = useCallback(() => {
     if (isLoadingTransactions) {
@@ -502,7 +509,7 @@ const Finances = () => {
 
   return (
     <PageWrapper>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.primary.main, textShadow: '2px 2px 4px rgba(0,0,0,0.1)' }}>
         Financial Dashboard
       </Typography>
       <ButtonGroup>
