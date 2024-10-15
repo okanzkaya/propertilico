@@ -38,4 +38,7 @@ router.get('/notifications', userController.getNotifications);
 router.put('/notifications/:id/read', userController.markNotificationAsRead);
 router.put('/preferences', userController.updateUserPreferences);
 
+// Add this new route
+router.put('/', userController.updateUserProfile);
+
 module.exports = router;

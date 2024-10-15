@@ -60,6 +60,7 @@ const SectionTitle = styled(Typography)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1),
+  color: theme.palette.primary.main,
 }));
 
 const CustomFormControl = styled(FormControl)(({ theme }) => ({
@@ -68,6 +69,8 @@ const CustomFormControl = styled(FormControl)(({ theme }) => ({
 
 const InputLabelStyled = styled(InputLabel)(({ theme }) => ({
   marginBottom: theme.spacing(1),
+  color: theme.palette.text.secondary,
+  fontWeight: 500,
 }));
 
 const CustomButton = styled(Button)(({ theme }) => ({
@@ -93,6 +96,19 @@ const DropzoneArea = styled(Box)(({ theme }) => ({
   transition: 'all 0.3s ease',
   '&:hover': {
     backgroundColor: theme.palette.action.hover,
+  },
+  fontFamily: theme.typography.fontFamily,
+}));
+
+const ListItemTextStyled = styled(ListItemText)(({ theme }) => ({
+  '& .MuiListItemText-primary': {
+    fontFamily: theme.typography.fontFamily,
+    fontWeight: 500,
+    color: theme.palette.text.primary,
+  },
+  '& .MuiListItemText-secondary': {
+    fontFamily: theme.typography.fontFamily,
+    color: theme.palette.text.secondary,
   },
 }));
 
@@ -238,7 +254,7 @@ const FeedbackPage = () => {
 
   return (
     <PageWrapper>
-      <Typography variant="h4" gutterBottom align="center">
+      <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
         Send Feedback
       </Typography>
 
@@ -268,7 +284,10 @@ const FeedbackPage = () => {
                   value={feedback.feedbackType}
                   onChange={handleChange}
                   required
+                  displayEmpty
+                  sx={{ fontFamily: theme.typography.fontFamily }}
                 >
+                  <MenuItem value="" disabled>Select feedback type</MenuItem>
                   <MenuItem value="bug">Report a Bug</MenuItem>
                   <MenuItem value="feature">Request a Feature</MenuItem>
                   <MenuItem value="improvement">Suggest an Improvement</MenuItem>
@@ -286,6 +305,7 @@ const FeedbackPage = () => {
                   onChange={handleChange}
                   placeholder="Please provide detailed feedback (minimum 10 characters)..."
                   required
+                  sx={{ fontFamily: theme.typography.fontFamily }}
                 />
               </CustomFormControl>
               <CustomFormControl fullWidth>
@@ -303,15 +323,15 @@ const FeedbackPage = () => {
                 <DropzoneArea {...getRootProps()}>
                   <input {...getInputProps()} />
                   {isDragActive ? (
-                    <p>Drop the file here ...</p>
+                    <Typography>Drop the file here ...</Typography>
                   ) : (
-                    <p>Drag 'n' drop an image, video, or audio file here, or click to select a file</p>
+                    <Typography>Drag 'n' drop an image, video, or audio file here, or click to select a file</Typography>
                   )}
                 </DropzoneArea>
                 {feedback.attachment && (
                   <List>
                     <ListItem>
-                      <ListItemText 
+                      <ListItemTextStyled 
                         primary={feedback.attachment.name} 
                         secondary={`${(feedback.attachment.size / 1024 / 1024).toFixed(2)} MB`} 
                       />

@@ -16,33 +16,44 @@ const fallbackData = {
 const apiCall = async (method, url, data = null, options = {}) => {
   try {
     console.log(`API Call: ${method.toUpperCase()} ${url}`);
-    const response = await axiosInstance({
+    const config = {
       method,
       url,
-      data: method !== 'get' ? data : undefined,
-      params: method === 'get' ? data : undefined,
       timeout: 30000, // 30 seconds timeout
       ...options,
-    });
+    };
+
+    if (method.toLowerCase() !== 'get' && method.toLowerCase() !== 'delete') {
+      config.data = data;
+    } else if (method.toLowerCase() === 'get') {
+      config.params = data;
+    }
+
+    const response = await axiosInstance(config);
 
     console.log(`API Response: ${url}`, response.data);
     return response.data;
   } catch (error) {
     console.error(`API Error: ${url}`, error.response?.data || error.message);
+    
     if (error.code === 'ECONNABORTED') {
       console.error('Request timed out');
       return fallbackData[url.split('/').pop()] || null;
     }
+    
     if (error.response) {
       if (error.response.status === 403 && error.response.data.redirect === '/my-plan') {
         window.location.href = '/my-plan';
         throw new Error('Subscription required');
       }
+      
+      console.error('Response error:', error.response.status, error.response.data);
       throw new Error(error.response.data.message || 'An error occurred');
     } else if (error.request) {
       console.error('No response received:', error.request);
       return fallbackData[url.split('/').pop()] || null;
     } else {
+      console.error('Error setting up request:', error.message);
       throw error;
     }
   }
