@@ -120,6 +120,16 @@ module.exports = (sequelize, DataTypes) => {
     role: {
       type: DataTypes.ENUM('user', 'blogger', 'admin'),
       defaultValue: 'user'
+    },
+    properties: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false
+    },
+    maxProperties: {
+      type: DataTypes.INTEGER,
+      defaultValue: 10,
+      allowNull: false
     }
   }, {
     tableName: 'users',
@@ -178,7 +188,7 @@ module.exports = (sequelize, DataTypes) => {
 
   User.associate = (models) => {
     User.hasMany(models.Blog, { foreignKey: 'author_id', as: 'blogs' });
-    User.hasMany(models.Property, { foreignKey: 'owner_id', as: 'properties' });
+    User.hasMany(models.Property, { foreignKey: 'owner_id', as: 'ownedProperties' }); // Changed 'properties' to 'ownedProperties'
     User.hasMany(models.Contact, { foreignKey: 'user_id', as: 'contacts' });
     User.hasMany(models.Document, { foreignKey: 'user_id', as: 'documents' });
     User.hasMany(models.Feedback, { foreignKey: 'user_id', as: 'feedbacks' });

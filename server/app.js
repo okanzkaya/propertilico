@@ -87,7 +87,17 @@ app.use('/api/tasks', limiter, protect, require('./routes/taskRoutes'));
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', (req, res, next) => {
+  console.log('Attempting to serve:', req.url);
+  console.log('Full path:', path.join(__dirname, 'uploads', req.url));
+  express.static(path.join(__dirname, 'uploads'))(req, res, (err) => {
+    if (err) {
+      console.error('Error serving static file:', err);
+      return res.status(500).send('Error serving file');
+    }
+    next();
+  });
+});
 
 // Health check route
 app.get('/health', (req, res) => res.status(200).json({ status: 'OK' }));

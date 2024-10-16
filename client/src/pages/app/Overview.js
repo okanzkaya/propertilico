@@ -301,13 +301,13 @@ const Dashboard = () => {
     { title: 'Properties', value: propertyStats?.totalProperties || 0, icon: <HomeIcon />, color: theme.palette.primary.main, change: propertyStats?.change || '0', trend: propertyStats?.trend || 'up' },
     { title: 'Tenants', value: contacts?.filter(c => c.role.toLowerCase().includes('tenant')).length || 0, icon: <PersonIcon />, color: theme.palette.success.main, change: propertyStats?.tenantChange || '0', trend: propertyStats?.tenantTrend || 'up' },
     { title: 'Tickets', value: ticketStats?.totalTickets || 0, icon: <BuildIcon />, color: theme.palette.warning.main, change: ticketStats?.change || '0', trend: ticketStats?.trend || 'down' },
-    { 
-      title: 'Monthly Profit', 
-      value: `$${currentProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
-      icon: <MonetizationOnIcon />, 
-      color: theme.palette.error.main, 
-      change: change.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' }), 
-      trend: change >= 0 ? 'up' : 'down' 
+    {
+      title: 'Monthly Profit',
+      value: `$${currentProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      icon: <MonetizationOnIcon />,
+      color: theme.palette.error.main,
+      change: change.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' }),
+      trend: change >= 0 ? 'up' : 'down'
     },
   ], [propertyStats, contacts, ticketStats, currentProfit, change, theme.palette]);
 
@@ -330,8 +330,11 @@ const Dashboard = () => {
 
   const mapBounds = useMemo(() => {
     if (!properties || properties.length === 0) return null;
-    const latitudes = properties.map(p => p.location.coordinates[1]);
-    const longitudes = properties.map(p => p.location.coordinates[0]);
+    const validProperties = properties.filter(p => p.location && Array.isArray(p.location.coordinates) && p.location.coordinates.length === 2);
+    if (validProperties.length === 0) return null;
+    const latitudes = validProperties.map(p => p.location.coordinates[1]);
+    const longitudes = validProperties.map(p => p.location.coordinates[0]);
+    if (latitudes.length === 0 || longitudes.length === 0) return null;
     return [
       [Math.min(...latitudes), Math.min(...longitudes)],
       [Math.max(...latitudes), Math.max(...longitudes)]
@@ -489,12 +492,12 @@ const Dashboard = () => {
         <Grid item xs={12}>
           <Card sx={{ p: 2, borderRadius: 2, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <Typography variant="h6" mb={2}>Property Locations</Typography>
-            {properties && properties.length > 0 ? (
+            {properties && properties.length > 0 && mapBounds ? (
               <MapContainer
                 bounds={mapBounds}
                 style={{ height: '400px', width: '100%', borderRadius: '8px' }}
-                zoomControl={false}
-                attributionControl={false}
+                zoomControl={true}
+                attributionControl={true}
               >
                 <TileLayer
                   url={theme.palette.mode === 'dark'
@@ -504,17 +507,25 @@ const Dashboard = () => {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 {properties.map((property) => (
-                  <Marker key={property.id} position={[property.location.coordinates[1], property.location.coordinates[0]]} icon={propertyIcon}>
-                    <Popup>
-                      <Typography variant="subtitle1"><strong>{property.name}</strong></Typography>
-                      <Typography variant="body2">{property.address}</Typography>
-                    </Popup>
-                  </Marker>
+                  property.location &&
+                    Array.isArray(property.location.coordinates) &&
+                    property.location.coordinates.length === 2 ? (
+                    <Marker
+                      key={property.id}
+                      position={[property.location.coordinates[1], property.location.coordinates[0]]}
+                      icon={propertyIcon}
+                    >
+                      <Popup>
+                        <Typography variant="subtitle1"><strong>{property.name}</strong></Typography>
+                        <Typography variant="body2">{property.address}</Typography>
+                      </Popup>
+                    </Marker>
+                  ) : null
                 ))}
               </MapContainer>
             ) : (
               <Box height="400px" display="flex" justifyContent="center" alignItems="center">
-                <Typography variant="body1" color="textSecondary">No property data available</Typography>
+                <Typography variant="body1" color="textSecondary">No property location data available</Typography>
               </Box>
             )}
           </Card>

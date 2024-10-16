@@ -27,7 +27,6 @@ import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { styled, alpha } from "@mui/material/styles";
 
-
 // Styled components
 const PageWrapper = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -142,7 +141,6 @@ const Properties = () => {
         }
       });
       
-
       if (Array.isArray(response.data)) {
         setProperties(response.data);
         setTotalPages(1);
@@ -278,15 +276,13 @@ const Properties = () => {
       Object.keys(data).forEach(key => formData.append(key, data[key]));
       uploadedImages.forEach((image, index) => {
         formData.append('images', image);
-        if (index === mainImageIndex) {
-          formData.append('mainImageIndex', index);
-        }
       });
+      formData.append('mainImageIndex', mainImageIndex.toString());
       if (selectedLocation) {
         formData.append('latitude', selectedLocation.lat);
         formData.append('longitude', selectedLocation.lng);
       }
-
+  
       const response = await axiosInstance.post('/api/properties', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -303,7 +299,7 @@ const Properties = () => {
       setMainImageIndex(0);
       setSelectedLocation(null);
     } catch (error) {
-      console.error('Error adding property:', error.response?.data || error.message);
+      console.error('Error adding property:', error.response?.data || error);
       setSnackbar({
         open: true,
         message: error.response?.data?.message || "Failed to add property. Please try again.",
@@ -384,8 +380,7 @@ const Properties = () => {
           open: true,
           message: "Property deleted successfully",
           severity: "success"
-        });
-        fetchProperties();
+        });fetchProperties();
       } catch (error) {
         console.error('Error deleting property:', error);
         setSnackbar({
@@ -424,7 +419,7 @@ const Properties = () => {
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={(e) => {
                 e.target.onerror = null;
-                e.target.style.display = 'none';
+                e.target.src = "/placeholder-property.jpg";
               }}
             />
           ) : (
@@ -710,7 +705,7 @@ const Properties = () => {
                     <ListItemText primary={`Pet Friendly: ${quickViewProperty.petFriendly ? 'Yes' : 'No'}`} />
                   </ListItem>
                   <ListItem>
-                    <ListItemIcon>{quickViewProperty.availableNow ? <CheckCircleIcon color="success" /> : <ScheduleIcon />}</ListItemIcon>
+                    <ListItemIcon>{quickViewProperty.availableNow ? <CheckCircleIcon color="success" /> :<ScheduleIcon />}</ListItemIcon>
                     <ListItemText primary={`Available: ${quickViewProperty.availableNow ? 'Now' : 'Soon'}`} />
                   </ListItem>
                 </List>
@@ -1154,49 +1149,49 @@ const Properties = () => {
 
       {totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
-          <Pagination
-            count={totalPages}
-            page={currentPage}
-            onChange={(_, page) => setCurrentPage(page)}
-            color="primary"
-            size={isMobile ? "small" : "medium"}
-          />
-        </Box>
-      )}
+        <Pagination
+          count={totalPages}
+          page={currentPage}
+          onChange={(_, page) => setCurrentPage(page)}
+          color="primary"
+          size={isMobile ? "small" : "medium"}
+        />
+      </Box>
+    )}
 
-      <Button
-        variant="contained"
-        color="primary"
-        startIcon={<AddIcon />}
-        onClick={() => {
-          setSelectedProperty(null);
-          setIsAddPropertyModalOpen(true);
-        }}
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
-      >
-        Add Property
-      </Button>
+    <Button
+      variant="contained"
+      color="primary"
+      startIcon={<AddIcon />}
+      onClick={() => {
+        setSelectedProperty(null);
+        setIsAddPropertyModalOpen(true);
+      }}
+      sx={{ position: 'fixed', bottom: 16, right: 16 }}
+    >
+      Add Property
+    </Button>
 
-      {renderAdvancedFilterDrawer()}
-      {renderQuickViewModal()}
-      {renderAddEditPropertyModal()}
+    {renderAdvancedFilterDrawer()}
+    {renderQuickViewModal()}
+    {renderAddEditPropertyModal()}
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
+    <Snackbar
+      open={snackbar.open}
+      autoHideDuration={6000}
+      onClose={() => setSnackbar({ ...snackbar, open: false })}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
+      <Alert
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        severity={snackbar.severity}
+        sx={{ width: "100%" }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </PageWrapper>
-  );
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
+  </PageWrapper>
+);
 };
 
 export default Properties;

@@ -117,8 +117,8 @@ module.exports = (sequelize, DataTypes) => {
           if (!Array.isArray(value)) {
             throw new Error('Images must be an array');
           }
-          if (value.some(img => typeof img !== 'string')) {
-            throw new Error('All image entries must be strings');
+          if (value.some(img => typeof img !== 'object' || !img.path || typeof img.path !== 'string')) {
+            throw new Error('All image entries must be objects with a path property');
           }
         }
       }

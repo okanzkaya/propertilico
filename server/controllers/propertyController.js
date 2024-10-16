@@ -6,7 +6,7 @@ const fs = require('fs').promises;
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const dir = './uploads/properties';
+    const dir = path.join(__dirname, '..', 'uploads', 'properties');
     await fs.mkdir(dir, { recursive: true });
     cb(null, dir);
   },
@@ -49,7 +49,10 @@ exports.createProperty = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (user.properties.length >= user.maxProperties) {
+    console.log('User found:', user.toJSON());
+
+    // Check subscription limit
+    if (user.properties >= user.maxProperties) {
       await t.rollback();
       return res.status(403).json({ message: 'You have reached the maximum number of properties for your subscription' });
     }
@@ -61,14 +64,19 @@ exports.createProperty = async (req, res) => {
       parking: req.body.parking === 'true',
       petFriendly: req.body.petFriendly === 'true',
       availableNow: req.body.availableNow === 'true',
-      location: sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', req.body.longitude, req.body.latitude), 4326),
+      location: req.body.latitude && req.body.longitude
+        ? sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', req.body.longitude, req.body.latitude), 4326)
+        : null,
       images: req.files ? req.files.map((file, index) => ({
-        path: file.path.replace(/\\/g, '/'),
+        path: file.filename, // Save only the filename
         isMain: index.toString() === req.body.mainImageIndex
       })) : []
     }, { transaction: t });
 
-    await user.addProperty(newProperty, { transaction: t });
+    console.log('New property created:', newProperty.toJSON());
+
+    // Update user's properties count
+    await user.increment('properties', { transaction: t });
 
     await t.commit();
     res.status(201).json(newProperty);
@@ -127,7 +135,7 @@ exports.updateProperty = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       updateData.images = req.files.map((file, index) => ({
-        path: file.path.replace(/\\/g, '/'),
+        path: file.filename,
         isMain: index.toString() === req.body.mainImageIndex
       }));
     }
@@ -172,7 +180,8 @@ exports.deleteProperty = async (req, res) => {
     // Delete associated images
     if (property.images && property.images.length > 0) {
       for (const image of property.images) {
-        await fs.unlink(image.path).catch(console.error);
+        const imagePath = path.join(__dirname, '..', 'uploads', 'properties', image.path);
+        await fs.unlink(imagePath).catch(console.error);
       }
     }
 
