@@ -19,7 +19,7 @@ const apiCall = async (method, url, data = null, options = {}) => {
     const config = {
       method,
       url,
-      timeout: 30000, // 30 seconds timeout
+      timeout: 10000, // 10 seconds timeout
       ...options,
     };
 

@@ -121,24 +121,42 @@ exports.getFinancialSummary = async (req, res) => {
         [sequelize.fn('SUM', sequelize.literal('CASE WHEN type = \'income\' THEN amount ELSE 0 END')), 'totalIncome'],
         [sequelize.fn('SUM', sequelize.literal('CASE WHEN type = \'expense\' THEN amount ELSE 0 END')), 'totalExpense'],
         [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('date')), 'month'],
-        [sequelize.literal('SUM(CASE WHEN type = \'income\' THEN amount ELSE -amount END)'), 'profit'],
+        [sequelize.fn('DATE_TRUNC', 'year', sequelize.col('date')), 'year'],
+        [sequelize.literal('SUM(CASE WHEN type = \'income\' THEN amount ELSE -amount END)'), 'netProfit'],
         'type',
         'category'
       ],
       where: { userId: req.user.id },
-      group: [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('date')), 'type', 'category'],
-      order: [[sequelize.fn('DATE_TRUNC', 'month', sequelize.col('date')), 'ASC']],
+      group: [
+        sequelize.fn('DATE_TRUNC', 'month', sequelize.col('date')),
+        sequelize.fn('DATE_TRUNC', 'year', sequelize.col('date')),
+        'type',
+        'category'
+      ],
+      order: [
+        [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('date')), 'ASC'],
+        [sequelize.fn('DATE_TRUNC', 'year', sequelize.col('date')), 'ASC']
+      ],
       raw: true
     });
 
     const monthlyData = results.reduce((acc, result) => {
       const month = new Date(result.month).toLocaleString('default', { month: 'short', year: 'numeric' });
       if (!acc[month]) {
-        acc[month] = { name: month, income: 0, expense: 0, profit: 0 };
+        acc[month] = { name: month, income: 0, expense: 0, netProfit: 0 };
       }
       acc[month].income += parseFloat(result.totalIncome) || 0;
       acc[month].expense += parseFloat(result.totalExpense) || 0;
-      acc[month].profit += parseFloat(result.profit) || 0;
+      acc[month].netProfit += parseFloat(result.netProfit) || 0;
+      return acc;
+    }, {});
+
+    const yearlyData = results.reduce((acc, result) => {
+      const year = new Date(result.year).getFullYear().toString();
+      if (!acc[year]) {
+        acc[year] = { name: year, netProfit: 0 };
+      }
+      acc[year].netProfit += parseFloat(result.netProfit) || 0;
       return acc;
     }, {});
 
@@ -165,8 +183,9 @@ exports.getFinancialSummary = async (req, res) => {
     const summary = {
       totalIncome: results.reduce((sum, result) => sum + parseFloat(result.totalIncome || 0), 0),
       totalExpense: results.reduce((sum, result) => sum + parseFloat(result.totalExpense || 0), 0),
-      balance: results.reduce((sum, result) => sum + parseFloat(result.profit || 0), 0),
+      balance: results.reduce((sum, result) => sum + parseFloat(result.netProfit || 0), 0),
       monthlyData: Object.values(monthlyData),
+      yearlyData: Object.values(yearlyData),
       incomeBreakdown: Object.entries(incomeBreakdown).map(([name, value]) => ({ name, value })),
       expenseBreakdown: Object.entries(expenseBreakdown).map(([name, value]) => ({ name, value }))
     };

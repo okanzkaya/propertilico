@@ -185,10 +185,10 @@ const ChartComponent = React.memo(({ type, data, keys }) => {
       return <Pie data={pieData} options={chartOptions} />;
     case 'line':
       const lineData = {
-        labels: data.map(item => item.x),
+        labels: data.map(item => item.name),
         datasets: [{
-          label: 'Net Operating Income',
-          data: data.map(item => item.y),
+          label: 'Net Profit',
+          data: data.map(item => item.netProfit),
           borderColor: theme.palette.primary.main,
           backgroundColor: theme.palette.primary.main,
         }],
@@ -369,342 +369,344 @@ const Finances = () => {
     onError: (error) => {
       console.error('Error fetching transactions:', error);
       setSnackbar({ open: true, message: 'Failed to fetch transactions. Please try again.', severity: 'error' });
-    }});
+    }
+  });
 
-    const { 
-      data: financialSummary, 
-      isLoading: isLoadingFinancialSummary,
-      isError: isErrorFinancialSummary,
-    } = useQuery('financialSummary', getFinancialSummary, {
-      onError: (error) => {
-        console.error('Error fetching financial summary:', error);
-        setSnackbar({ open: true, message: 'Failed to fetch financial summary. Please try again.', severity: 'error' });
-      }
-    });
-  
-    const addTransactionMutation = useMutation(addTransaction, {
+  const { 
+    data: financialSummary, 
+    isLoading: isLoadingFinancialSummary,
+    isError: isErrorFinancialSummary,
+  } = useQuery('financialSummary', getFinancialSummary, {
+    onError: (error) => {
+      console.error('Error fetching financial summary:', error);
+      setSnackbar({ open: true, message: 'Failed to fetch financial summary. Please try again.', severity: 'error' });
+    }
+  });
+
+  const addTransactionMutation = useMutation(addTransaction, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('transactions');
+      queryClient.invalidateQueries('financialSummary');
+      setSnackbar({ open: true, message: 'Transaction added successfully', severity: 'success' });
+      handleModalClose();
+    },
+    onError: (error) => {
+      console.error('Error adding transaction:', error);
+      setSnackbar({ open: true, message: `Error: ${error.message}`, severity: 'error' });
+    },
+  });
+
+  const updateTransactionMutation = useMutation(
+    ({ id, ...data }) => updateTransaction(id, data),
+    {
       onSuccess: () => {
         queryClient.invalidateQueries('transactions');
         queryClient.invalidateQueries('financialSummary');
-        setSnackbar({ open: true, message: 'Transaction added successfully', severity: 'success' });
+        setSnackbar({ open: true, message: 'Transaction updated successfully', severity: 'success' });
         handleModalClose();
       },
       onError: (error) => {
-        console.error('Error adding transaction:', error);
+        console.error('Error updating transaction:', error);
         setSnackbar({ open: true, message: `Error: ${error.message}`, severity: 'error' });
       },
-    });
-  
-    const updateTransactionMutation = useMutation(
-      ({ id, ...data }) => updateTransaction(id, data),
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries('transactions');
-          queryClient.invalidateQueries('financialSummary');
-          setSnackbar({ open: true, message: 'Transaction updated successfully', severity: 'success' });
-          handleModalClose();
-        },
-        onError: (error) => {
-          console.error('Error updating transaction:', error);
-          setSnackbar({ open: true, message: `Error: ${error.message}`, severity: 'error' });
-        },
+    }
+  );
+
+  const deleteTransactionMutation = useMutation(deleteTransaction, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('transactions');
+      queryClient.invalidateQueries('financialSummary');
+      setSnackbar({ open: true, message: 'Transaction deleted successfully', severity: 'success' });
+    },
+    onError: (error) => {
+      console.error('Error deleting transaction:', error);
+      setSnackbar({ open: true, message: `Error: ${error.response?.data?.message || error.message}`, severity: 'error' });
+    },
+  });
+
+  const handleModalOpen = useCallback((transaction = null) => {
+    setModalState({
+      isOpen: true,
+      isEditing: !!transaction,
+      currentTransaction: transaction || {
+        type: 'expense',
+        category: '',
+        amount: '',
+        description: '',
+        date: new Date().toISOString().split('T')[0]
       }
+    });
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setModalState(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setModalState(prev => ({
+      ...prev,
+      currentTransaction: { ...prev.currentTransaction, [name]: value }
+    }));
+  }, []);
+
+  const handleTransactionSubmit = useCallback(() => {
+    const { isEditing, currentTransaction } = modalState;
+    
+    if (!currentTransaction.type || !currentTransaction.amount || !currentTransaction.description || !currentTransaction.date) {
+      setSnackbar({ open: true, message: 'Please fill in all required fields', severity: 'error' });
+      return;
+    }
+
+    const transactionDate = new Date(currentTransaction.date);
+    const currentDate = new Date();
+    currentDate.setHours(23, 59, 59, 999); // Set to end of the current day
+
+    if (transactionDate > currentDate) {
+      setSnackbar({ open: true, message: 'Transaction date cannot be in the future', severity: 'error' });
+      return;
+    }
+
+    if (isEditing) {
+      updateTransactionMutation.mutate(currentTransaction);
+    } else {
+      addTransactionMutation.mutate(currentTransaction);
+    }
+  }, [modalState, updateTransactionMutation, addTransactionMutation]);
+
+  const handleTransactionDelete = useCallback((id) => {
+    if (window.confirm('Are you sure you want to delete this transaction?')) {
+      deleteTransactionMutation.mutate(id);
+    }
+  }, [deleteTransactionMutation]);
+
+  const filteredAndSortedTransactions = useMemo(() => {
+    if (!transactions) return [];
+    
+    let filtered = transactions.filter(t => 
+      t.description.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (filterConfig === 'all' || t.type === filterConfig)
     );
-  
-    const deleteTransactionMutation = useMutation(deleteTransaction, {
-      onSuccess: () => {
-        queryClient.invalidateQueries('transactions');
-        queryClient.invalidateQueries('financialSummary');
-        setSnackbar({ open: true, message: 'Transaction deleted successfully', severity: 'success' });
-      },
-      onError: (error) => {
-        console.error('Error deleting transaction:', error);
-        setSnackbar({ open: true, message: `Error: ${error.response?.data?.message || error.message}`, severity: 'error' });
-      },
+
+    return filtered.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
     });
+  }, [transactions, searchTerm, filterConfig, sortConfig]);
   
-    const handleModalOpen = useCallback((transaction = null) => {
-      setModalState({
-        isOpen: true,
-        isEditing: !!transaction,
-        currentTransaction: transaction || {
-          type: 'expense',
-          category: '',
-          amount: '',
-          description: '',
-          date: new Date().toISOString().split('T')[0]
-        }
-      });
-    }, []);
-  
-    const handleModalClose = useCallback(() => {
-      setModalState(prev => ({ ...prev, isOpen: false }));
-    }, []);
-  
-    const handleInputChange = useCallback((e) => {
-      const { name, value } = e.target;
-      setModalState(prev => ({
-        ...prev,
-        currentTransaction: { ...prev.currentTransaction, [name]: value }
-      }));
-    }, []);
-  
-    const handleTransactionSubmit = useCallback(() => {
-      const { isEditing, currentTransaction } = modalState;
-      
-      if (!currentTransaction.type || !currentTransaction.amount || !currentTransaction.description || !currentTransaction.date) {
-        setSnackbar({ open: true, message: 'Please fill in all required fields', severity: 'error' });
-        return;
-      }
-  
-      const transactionDate = new Date(currentTransaction.date);
-      const currentDate = new Date();
-      currentDate.setHours(23, 59, 59, 999); // Set to end of the current day
-  
-      if (transactionDate > currentDate) {
-        setSnackbar({ open: true, message: 'Transaction date cannot be in the future', severity: 'error' });
-        return;
-      }
-  
-      if (isEditing) {
-        updateTransactionMutation.mutate(currentTransaction);
-      } else {
-        addTransactionMutation.mutate(currentTransaction);
-      }
-    }, [modalState, updateTransactionMutation, addTransactionMutation]);
-  
-    const handleTransactionDelete = useCallback((id) => {
-      if (window.confirm('Are you sure you want to delete this transaction?')) {
-        deleteTransactionMutation.mutate(id);
-      }
-    }, [deleteTransactionMutation]);
-  
-    const filteredAndSortedTransactions = useMemo(() => {
-      if (!transactions) return [];
-      
-      let filtered = transactions.filter(t => 
-        t.description.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (filterConfig === 'all' || t.type === filterConfig)
-      );
-  
-      return filtered.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }, [transactions, searchTerm, filterConfig, sortConfig]);
-  
-    const handleChangePage = (event, newPage) => {
-      setPage(newPage);
-    };
-  
-    const handleChangeRowsPerPage = (event) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      setPage(0);
-    };
-  
-    const renderChart = useCallback((title, type, data, keys) => (
-      <ChartCard>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>{title}</Typography>
-          <Tooltip title={`This chart shows ${title.toLowerCase()}`}>
-            <IconButton size="small"><InfoIcon /></IconButton>
-          </Tooltip>
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const renderChart = useCallback((title, type, data, keys) => (
+    <ChartCard>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>{title}</Typography>
+        <Tooltip title={`This chart shows ${title.toLowerCase()}`}>
+          <IconButton size="small"><InfoIcon /></IconButton>
+        </Tooltip>
+      </Box>
+      <Box flexGrow={1} display="flex" alignItems="center" justifyContent="center" height={400}>
+        {data && data.length > 0 ? (
+          <ChartComponent type={type} data={data} keys={keys} />
+        ) : (
+          <Typography>No data available for {title}</Typography>
+        )}
+      </Box>
+    </ChartCard>
+  ), [theme.palette.primary.main]);
+
+  const renderTransactionsTable = useCallback((transactions) => (
+    <TableCard>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>Transactions</Typography>
+        <Box display="flex" alignItems="center">
+          <IconButton size="small" onClick={(e) => setFilterAnchorEl(e.currentTarget)}><FilterListIcon /></IconButton>
+          <IconButton size="small" onClick={(e) => setSortAnchorEl(e.currentTarget)}><SortIcon /></IconButton>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder="Search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{ startAdornment: <SearchIcon fontSize="small" /> }}
+          />
         </Box>
-        <Box flexGrow={1} display="flex" alignItems="center" justifyContent="center" height={400}>
-          {data && data.length > 0 ? (
-            <ChartComponent type={type} data={data} keys={keys} />
-          ) : (
-            <Typography>No data available for {title}</Typography>
-          )}
-        </Box>
-      </ChartCard>
-    ), [theme.palette.primary.main]);
-  
-    const renderTransactionsTable = useCallback((transactions) => (
-      <TableCard>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>Transactions</Typography>
-          <Box display="flex" alignItems="center">
-            <IconButton size="small" onClick={(e) => setFilterAnchorEl(e.currentTarget)}><FilterListIcon /></IconButton>
-            <IconButton size="small" onClick={(e) => setSortAnchorEl(e.currentTarget)}><SortIcon /></IconButton>
-            <TextField
-              variant="outlined"
-              size="small"
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{ startAdornment: <SearchIcon fontSize="small" /> }}
-            />
-          </Box>
-        </Box>
-        <StyledTableContainer>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell align="right">Amount</TableCell>
-                <TableCell align="right">Type</TableCell>
-                <TableCell align="right">Actions</TableCell>
+      </Box>
+      <StyledTableContainer>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>Date</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell>Category</TableCell>
+              <TableCell align="right">Amount</TableCell>
+              <TableCell align="right">Type</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {transactions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((transaction) => (
+              <TableRow key={transaction.id} hover>
+                <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                <TableCell>{transaction.description}</TableCell>
+                <TableCell>{transaction.category}</TableCell>
+                <TableCell align="right" sx={{ color: transaction.type === 'income' ? 'success.main' : 'error.main' }}>
+                  {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
+                </TableCell>
+                <TableCell align="right">
+                  <StyledChip
+                    label={transaction.type}
+                    color={transaction.type === 'income' ? 'success' : 'error'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton size="small" onClick={() => handleModalOpen(transaction)}><EditIcon /></IconButton>
+                  <IconButton size="small" onClick={() => handleTransactionDelete(transaction.id)}><DeleteIcon /></IconButton>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {transactions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((transaction) => (
-                <TableRow key={transaction.id} hover>
-                  <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{transaction.description}</TableCell>
-                  <TableCell>{transaction.category}</TableCell>
-                  <TableCell align="right" sx={{ color: transaction.type === 'income' ? 'success.main' : 'error.main' }}>
-                    {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
-                  </TableCell>
-                  <TableCell align="right">
-                    <StyledChip
-                      label={transaction.type}
-                      color={transaction.type === 'income' ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => handleModalOpen(transaction)}><EditIcon /></IconButton>
-                    <IconButton size="small" onClick={() => handleTransactionDelete(transaction.id)}><DeleteIcon /></IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </StyledTableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={transactions.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </TableCard>
-    ), [theme.palette.primary.main, searchTerm, page, rowsPerPage, handleModalOpen, handleTransactionDelete]);
-  
-    const renderContent = useCallback(() => {
-      if (isLoadingTransactions || isLoadingFinancialSummary) {
-        return (
-          <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
-            <CircularProgress />
-          </Box>
-        );
-      }
-  
-      if (isErrorTransactions || isErrorFinancialSummary) {
-        return (
-          <Typography variant="h6" align="center" color="error">
-            Error loading data. Please try again later.
-          </Typography>
-        );
-      }
-    
-      if (!transactions || transactions.length === 0 || !financialSummary) {
-        return (
-          <Typography variant="h6" align="center">
-            No financial data available. Please add some transactions.
-          </Typography>
-        );
-      }
-    
-      const { monthlyData = [], incomeBreakdown = [], expenseBreakdown = [] } = financialSummary || {};
-      
-      const formatPieChartData = (data) => data.map(item => ({ id: item.category || item.name, value: parseFloat(item.value) }));
-    
-      const filteredTransactions = filteredAndSortedTransactions.filter(transaction => {
-        if (tabValue === 1) return transaction.type === 'income';
-        if (tabValue === 2) return transaction.type === 'expense';
-        return true;
-      });
-  
-      switch (tabValue) {
-        case 0: // Overview
-          return (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <FinancialInsights financialSummary={financialSummary} />
-              </Grid>
-              <Grid item xs={12} md={6}>{renderChart('Income vs Expenses', 'bar', monthlyData, ['income', 'expense'])}</Grid>
-              <Grid item xs={12} md={6}>{renderChart('Net Operating Income Trend', 'line', monthlyData.map(item => ({ x: item.month, y: item.income - item.expense })), ['netOperatingIncome'])}</Grid>
-              <Grid item xs={12} md={6}>{renderChart('Income Breakdown', 'pie', formatPieChartData(incomeBreakdown))}</Grid>
-              <Grid item xs={12} md={6}>{renderChart('Expense Breakdown', 'pie', formatPieChartData(expenseBreakdown))}</Grid>
-              <Grid item xs={12}>{renderTransactionsTable(filteredTransactions)}</Grid>
-            </Grid>
-          );
-        case 1: // Income
-          return (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>{renderChart('Monthly Income', 'bar', monthlyData.map(item => ({ name: item.month, income: item.income })), ['income'])}</Grid>
-              <Grid item xs={12} md={6}>{renderChart('Income Breakdown', 'pie', formatPieChartData(incomeBreakdown))}</Grid>
-              <Grid item xs={12}>{renderTransactionsTable(filteredTransactions)}</Grid>
-            </Grid>
-          );
-        case 2: // Expenses
-          return (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>{renderChart('Monthly Expenses', 'bar', monthlyData.map(item => ({ name: item.month, expense: item.expense })), ['expense'])}</Grid>
-              <Grid item xs={12} md={6}>{renderChart('Expense Breakdown', 'pie', formatPieChartData(expenseBreakdown))}</Grid>
-              <Grid item xs={12}>{renderTransactionsTable(filteredTransactions)}</Grid>
-            </Grid>
-          );
-        case 3: // Transactions
-        return renderTransactionsTable(filteredTransactions);
-        default:
-          return <Typography variant="h6" align="center">Invalid tab selected.</Typography>;
-      }
-    }, [tabValue, renderChart, renderTransactionsTable, financialSummary, transactions, isLoadingTransactions, isLoadingFinancialSummary, isErrorTransactions, isErrorFinancialSummary, filteredAndSortedTransactions]);
-  
-    return (
-      <PageWrapper>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.primary.main, textShadow: `2px 2px 4px ${theme.palette.mode === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}` }}>
-          Property Financial Dashboard
+            ))}
+          </TableBody>
+        </Table>
+      </StyledTableContainer>
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={transactions.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
+    </TableCard>
+  ), [theme.palette.primary.main, searchTerm, page, rowsPerPage, handleModalOpen, handleTransactionDelete]);
+
+  const renderContent = useCallback(() => {
+    if (isLoadingTransactions || isLoadingFinancialSummary) {
+      return (
+        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (isErrorTransactions || isErrorFinancialSummary) {
+      return (
+        <Typography variant="h6" align="center" color="error">
+          Error loading data. Please try again later.
         </Typography>
-        <ButtonGroup>
-          <ActionButton
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => handleModalOpen()}
-          >
-            Add Transaction
-          </ActionButton>
-        </ButtonGroup>
-        <Tabs
-          value={tabValue}
-          onChange={(_, newValue) => setTabValue(newValue)}
-          variant={isMobile ? "scrollable" : "fullWidth"}
-          scrollButtons="auto"
-          sx={{ mb: 3 }}
-        >
-          <Tab icon={<BarChartIcon />} label="Overview" />
-          <Tab icon={<MoneyIcon />} label="Income" />
-          <Tab icon={<PieChartIcon />} label="Expenses" />
-          <Tab icon={<TimelineIcon />} label="Transactions" />
-        </Tabs>
-        <Fade in={true}>
-          <Box>{renderContent()}</Box>
-        </Fade>
+      );
+    }
   
-        <TransactionModal
-          isOpen={modalState.isOpen}
-          onClose={handleModalClose}
-          currentTransaction={modalState.currentTransaction}
-          handleInputChange={handleInputChange}
-          handleTransactionSubmit={handleTransactionSubmit}
-          isEditing={modalState.isEditing}
-        />
+    if (!transactions || transactions.length === 0 || !financialSummary) {
+      return (
+        <Typography variant="h6" align="center">
+          No financial data available. Please add some transactions.
+        </Typography>
+      );
+    }
   
-        <Menu
-          anchorEl={sortAnchorEl}
-          open={Boolean(sortAnchorEl)}
-          onClose={() => setSortAnchorEl(null)}
+    const { monthlyData = [], incomeBreakdown = [], expenseBreakdown = [], yearlyData = [] } = financialSummary || {};
+    
+    const formatPieChartData = (data) => data.map(item => ({ id: item.category || item.name, value: parseFloat(item.value) }));
+  
+    const filteredTransactions = filteredAndSortedTransactions.filter(transaction => {
+      if (tabValue === 1) return transaction.type === 'income';
+      if (tabValue === 2) return transaction.type === 'expense';
+      return true;
+    });
+
+    switch (tabValue) {
+      case 0: // Overview
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <FinancialInsights financialSummary={financialSummary} />
+            </Grid>
+            <Grid item xs={12} md={6}>{renderChart('Income vs Expenses', 'bar', monthlyData, ['income', 'expense'])}</Grid>
+            <Grid item xs={12} md={6}>{renderChart('Monthly Net Profit', 'bar', monthlyData, ['netProfit'])}</Grid>
+            <Grid item xs={12} md={6}>{renderChart('Yearly Net Profit', 'bar', yearlyData, ['netProfit'])}</Grid>
+            <Grid item xs={12} md={6}>{renderChart('Income Breakdown', 'pie', formatPieChartData(incomeBreakdown))}</Grid>
+            <Grid item xs={12} md={6}>{renderChart('Expense Breakdown', 'pie', formatPieChartData(expenseBreakdown))}</Grid>
+            <Grid item xs={12}>{renderTransactionsTable(filteredTransactions)}</Grid>
+          </Grid>
+        );
+      case 1: // Income
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>{renderChart('Monthly Income', 'bar', monthlyData.map(item => ({ name: item.name, income: item.income })), ['income'])}</Grid>
+            <Grid item xs={12} md={6}>{renderChart('Income Breakdown', 'pie', formatPieChartData(incomeBreakdown))}</Grid>
+            <Grid item xs={12}>{renderTransactionsTable(filteredTransactions)}</Grid>
+          </Grid>
+        );
+      case 2: // Expenses
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>{renderChart('Monthly Expenses', 'bar', monthlyData.map(item => ({ name: item.name, expense: item.expense })), ['expense'])}</Grid>
+            <Grid item xs={12} md={6}>{renderChart('Expense Breakdown', 'pie', formatPieChartData(expenseBreakdown))}</Grid>
+            <Grid item xs={12}>{renderTransactionsTable(filteredTransactions)}</Grid>
+          </Grid>
+        );
+      case 3: // Transactions
+      return renderTransactionsTable(filteredTransactions);
+      default:
+        return <Typography variant="h6" align="center">Invalid tab selected.</Typography>;
+    }
+  }, [tabValue, renderChart, renderTransactionsTable, financialSummary, transactions, isLoadingTransactions, isLoadingFinancialSummary, isErrorTransactions, isErrorFinancialSummary, filteredAndSortedTransactions]);
+
+  return (
+    <PageWrapper>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.primary.main, textShadow: `2px 2px 4px ${theme.palette.mode === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}` }}>
+        Property Financial Dashboard
+      </Typography>
+      <ButtonGroup>
+        <ActionButton
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => handleModalOpen()}
         >
-          <MenuItem onClick={() => { setSortConfig({ key: 'date', direction: 'desc' }); setSortAnchorEl(null); }}>
+          Add Transaction
+        </ActionButton>
+      </ButtonGroup>
+      <Tabs
+        value={tabValue}
+        onChange={(_, newValue) => setTabValue(newValue)}
+        variant={isMobile ? "scrollable" : "fullWidth"}
+        scrollButtons="auto"
+        sx={{ mb: 3 }}
+      >
+        <Tab icon={<BarChartIcon />} label="Overview" />
+        <Tab icon={<MoneyIcon />} label="Income" />
+        <Tab icon={<PieChartIcon />} label="Expenses" />
+        <Tab icon={<TimelineIcon />} label="Transactions" />
+      </Tabs>
+      <Fade in={true}>
+        <Box>{renderContent()}</Box>
+      </Fade>
+
+      <TransactionModal
+        isOpen={modalState.isOpen}
+        onClose={handleModalClose}
+        currentTransaction={modalState.currentTransaction}
+        handleInputChange={handleInputChange}
+        handleTransactionSubmit={handleTransactionSubmit}
+        isEditing={modalState.isEditing}
+      />
+
+      <Menu
+        anchorEl={sortAnchorEl}
+        open={Boolean(sortAnchorEl)}
+        onClose={() => setSortAnchorEl(null)}
+      >
+        <MenuItem onClick={() => { setSortConfig({ key: 'date', direction: 'desc' }); setSortAnchorEl(null); }}>
           Sort by Date (Newest First)
         </MenuItem>
         <MenuItem onClick={() => { setSortConfig({ key: 'amount', direction: 'asc' }); setSortAnchorEl(null); }}>

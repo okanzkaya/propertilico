@@ -25,8 +25,8 @@ import {
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { 
-  reportApi, ticketApi, financeApi, propertyApi, taskApi, contactApi 
+import {
+  reportApi, ticketApi, financeApi, propertyApi, taskApi, contactApi
 } from '../../api';
 
 ChartJS.register(
@@ -50,100 +50,100 @@ const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('lastSixMonths');
 
   const { data: propertyStats, isLoading: propertyStatsLoading, error: propertyStatsError } = useQuery(
-    ['propertyStats'], 
-    reportApi.getPropertyStats, 
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    ['propertyStats'],
+    reportApi.getPropertyStats,
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching property stats:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
   const { data: ticketStats, isLoading: ticketStatsLoading, error: ticketStatsError } = useQuery(
-    ['ticketStats'], 
-    reportApi.getTicketStats, 
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    ['ticketStats'],
+    reportApi.getTicketStats,
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching ticket stats:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
   const { data: occupancyStats, isLoading: occupancyStatsLoading, error: occupancyStatsError } = useQuery(
-    ['occupancyStats'], 
-    reportApi.getOccupancyStats, 
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    ['occupancyStats'],
+    reportApi.getOccupancyStats,
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching occupancy stats:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
   const { data: tickets, isLoading: ticketsLoading, error: ticketsError } = useQuery(
-    ['tickets'], 
-    ticketApi.getTickets, 
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    ['tickets'],
+    ticketApi.getTickets,
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching tickets:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
   const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useQuery(
-    ['transactions'], 
-    financeApi.getTransactions, 
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    ['transactions'],
+    financeApi.getTransactions,
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching transactions:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
   const { data: properties, isLoading: propertiesLoading, error: propertiesError } = useQuery(
-    ['properties'], 
-    propertyApi.getProperties, 
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    ['properties'],
+    propertyApi.getProperties,
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching properties:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
   const { data: tasks, isLoading: tasksLoading, error: tasksError, refetch: refetchTasks } = useQuery(
-    ['tasks'], 
-    taskApi.getTasks, 
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    ['tasks'],
+    taskApi.getTasks,
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching tasks:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
   const { data: contacts, isLoading: contactsLoading, error: contactsError } = useQuery(
-    ['contacts'], 
+    ['contacts'],
     contactApi.getContacts,
-    { 
-      retry: 2, 
-      retryDelay: 1000, 
+    {
+      retry: 2,
+      retryDelay: 1000,
       onError: (error) => console.error('Error fetching contacts:', error),
       staleTime: 5 * 60 * 1000
     }
   );
 
-  const isLoading = propertyStatsLoading || ticketStatsLoading || occupancyStatsLoading || 
-                    ticketsLoading || transactionsLoading || propertiesLoading || 
-                    tasksLoading || contactsLoading;
+  const isLoading = propertyStatsLoading || ticketStatsLoading || occupancyStatsLoading ||
+    ticketsLoading || transactionsLoading || propertiesLoading ||
+    tasksLoading || contactsLoading;
 
-  const hasError = propertyStatsError || ticketStatsError || occupancyStatsError || 
-                   ticketsError || transactionsError || propertiesError || 
-                   tasksError || contactsError;
+  const hasError = propertyStatsError || ticketStatsError || occupancyStatsError ||
+    ticketsError || transactionsError || propertiesError ||
+    tasksError || contactsError;
 
   const processFinancialData = useCallback((transactions, range) => {
     if (!transactions || transactions.length === 0) return [];
@@ -179,9 +179,9 @@ const Dashboard = () => {
           data[key] = { date: key, income: 0, expenses: 0, profit: 0 };
         }
         if (transaction.type === 'income') {
-          data[key].income += transaction.amount;
+          data[key].income += parseFloat(transaction.amount) || 0;
         } else {
-          data[key].expenses += transaction.amount;
+          data[key].expenses += parseFloat(transaction.amount) || 0;
         }
         data[key].profit = data[key].income - data[key].expenses;
       }
@@ -191,6 +191,34 @@ const Dashboard = () => {
   }, []);
 
   const financialData = useMemo(() => processFinancialData(transactions, timeRange), [transactions, timeRange, processFinancialData]);
+
+  const calculateMonthlyProfit = useCallback(() => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+
+    const currentMonthData = financialData.filter(item => {
+      const itemDate = new Date(item.date);
+      return itemDate.getFullYear() === currentYear && itemDate.getMonth() === currentMonth;
+    });
+
+    const lastMonthData = financialData.filter(item => {
+      const itemDate = new Date(item.date);
+      return itemDate.getFullYear() === lastMonthDate.getFullYear() && itemDate.getMonth() === lastMonthDate.getMonth();
+    });
+
+    const currentMonthProfit = currentMonthData.reduce((sum, item) => sum + item.profit, 0);
+    const lastMonthProfit = lastMonthData.reduce((sum, item) => sum + item.profit, 0);
+    const change = currentMonthProfit - lastMonthProfit;
+
+    return {
+      currentProfit: currentMonthProfit,
+      change: change
+    };
+  }, [financialData]);
+
+  const { currentProfit, change } = useMemo(() => calculateMonthlyProfit(), [calculateMonthlyProfit]);
 
   const generateRecentActivities = useCallback((transactions, tickets) => {
     if (!transactions || !tickets) return [];
@@ -253,8 +281,8 @@ const Dashboard = () => {
       <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" flexWrap="wrap">
         <Box display="flex" alignItems="center" flexGrow={1}>
           <Checkbox checked={task.status === 'Completed'} onChange={() => handleToggleTaskStatus(task.id)} />
-          <ListItemText 
-            primary={task.task} 
+          <ListItemText
+            primary={task.task}
             secondary={task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : ''}
             sx={{ textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}
           />
@@ -273,8 +301,16 @@ const Dashboard = () => {
     { title: 'Properties', value: propertyStats?.totalProperties || 0, icon: <HomeIcon />, color: theme.palette.primary.main, change: propertyStats?.change || '0', trend: propertyStats?.trend || 'up' },
     { title: 'Tenants', value: contacts?.filter(c => c.role.toLowerCase().includes('tenant')).length || 0, icon: <PersonIcon />, color: theme.palette.success.main, change: propertyStats?.tenantChange || '0', trend: propertyStats?.tenantTrend || 'up' },
     { title: 'Tickets', value: ticketStats?.totalTickets || 0, icon: <BuildIcon />, color: theme.palette.warning.main, change: ticketStats?.change || '0', trend: ticketStats?.trend || 'down' },
-    { title: 'Monthly Profit', value: `$${financialData[financialData.length - 1]?.profit.toLocaleString() || '0'}`, icon: <MonetizationOnIcon />, color: theme.palette.error.main, change: financialData[financialData.length - 1]?.profit - financialData[financialData.length - 2]?.profit || 0, trend: 'up' },
-  ], [propertyStats, contacts, ticketStats, financialData, theme.palette]);
+    { 
+      title: 'Monthly Profit', 
+      value: `$${currentProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+      icon: <MonetizationOnIcon />, 
+      color: theme.palette.error.main, 
+      change: change.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' }), 
+      trend: change >= 0 ? 'up' : 'down' 
+    },
+  ], [propertyStats, contacts, ticketStats, currentProfit, change, theme.palette]);
+
 
   const occupancyRate = useMemo(() => {
     if (!occupancyStats || occupancyStats.length === 0) return 0;
@@ -432,7 +468,7 @@ const Dashboard = () => {
               <Typography variant="h4" fontWeight="bold" color={theme.palette.success.main}>{occupancyRate}%</Typography>
             </Box>
             <Box height={chartHeight}>
-              <Doughnut 
+              <Doughnut
                 data={occupancyChartData}
                 options={{
                   responsive: true,
@@ -454,14 +490,14 @@ const Dashboard = () => {
           <Card sx={{ p: 2, borderRadius: 2, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <Typography variant="h6" mb={2}>Property Locations</Typography>
             {properties && properties.length > 0 ? (
-              <MapContainer 
-                bounds={mapBounds} 
+              <MapContainer
+                bounds={mapBounds}
                 style={{ height: '400px', width: '100%', borderRadius: '8px' }}
                 zoomControl={false}
                 attributionControl={false}
               >
                 <TileLayer
-                  url={theme.palette.mode === 'dark' 
+                  url={theme.palette.mode === 'dark'
                     ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
                     : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
                   }
@@ -524,7 +560,7 @@ const Dashboard = () => {
             <List sx={{ maxHeight: '300px', overflowY: 'auto' }}>{renderTasks(tasks?.slice(0, 5) || [])}</List>
             {tasks && tasks.length > 5 && (
               <Box display="flex" justifyContent="center" mt={2}>
-                <Button 
+                <Button
                   onClick={() => setDialogsOpen({ ...dialogsOpen, allTasks: true })}
                   startIcon={<MoreVertIcon />}
                 >
@@ -557,10 +593,10 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      <Dialog 
-        open={dialogsOpen.tickets} 
-        onClose={() => setDialogsOpen({ ...dialogsOpen, tickets: false })} 
-        maxWidth="sm" 
+      <Dialog
+        open={dialogsOpen.tickets}
+        onClose={() => setDialogsOpen({ ...dialogsOpen, tickets: false })}
+        maxWidth="sm"
         fullWidth
       >
         <DialogContent>
@@ -582,9 +618,9 @@ const Dashboard = () => {
                   primary={ticket.title}
                   secondary={`${new Date(ticket.createdAt).toLocaleString()} • Priority: ${ticket.priority}`}
                 />
-                <Chip 
-                  label={ticket.status} 
-                  color={ticket.status === 'Open' ? 'error' : 'warning'} 
+                <Chip
+                  label={ticket.status}
+                  color={ticket.status === 'Open' ? 'error' : 'warning'}
                   size="small"
                   sx={{ fontWeight: 'bold' }}
                 />
@@ -594,10 +630,10 @@ const Dashboard = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog 
-        open={dialogsOpen.allTasks} 
-        onClose={() => setDialogsOpen({ ...dialogsOpen, allTasks: false })} 
-        maxWidth="sm" 
+      <Dialog
+        open={dialogsOpen.allTasks}
+        onClose={() => setDialogsOpen({ ...dialogsOpen, allTasks: false })}
+        maxWidth="sm"
         fullWidth
       >
         <DialogContent>
