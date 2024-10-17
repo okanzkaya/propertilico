@@ -4,8 +4,7 @@ import {
   MenuItem, IconButton, InputAdornment, Tooltip, Select, FormControl,
   FormControlLabel, Checkbox, Slider, Dialog, DialogTitle, DialogContent,
   DialogActions, Pagination, Chip, useMediaQuery, Snackbar,
-  Alert, CircularProgress, Tabs, Tab, Paper, List, ListItem, ListItemText,
-  ListItemAvatar, Avatar, InputLabel, Rating, CardActions, Drawer, ListItemIcon,
+  Alert, CircularProgress, Tabs, Tab, Paper, List, ListItem, ListItemText, Avatar, InputLabel, Rating, CardActions, Drawer, ListItemIcon,
   ImageList, ImageListItem, ImageListItemBar, FormHelperText
 } from "@mui/material";
 import { useTheme, styled, alpha } from "@mui/material/styles";
@@ -104,7 +103,7 @@ const Properties = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [loading, setLoading] = useState(true);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [editingProperty, setEditingProperty] = useState(null);
   const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] = useState(false);
   const [properties, setProperties] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -113,6 +112,8 @@ const Properties = () => {
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [quickViewProperty, setQuickViewProperty] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [mapCenter, setMapCenter] = useState([40.7128, -74.006]);
+  const [mapZoom, setMapZoom] = useState(13);
 
   const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     resolver: yupResolver(propertySchema),
@@ -259,10 +260,16 @@ const Properties = () => {
   const LocationPicker = () => {
     const map = useMap();
 
+    useEffect(() => {
+      if (selectedLocation) {
+        map.flyTo([selectedLocation.lat, selectedLocation.lng], 15);
+      }
+    }, [map]); // Remove selectedLocation from the dependency array
+
     useMapEvents({
       click(e) {
         setSelectedLocation(e.latlng);
-        map.flyTo(e.latlng, map.getZoom());
+        map.flyTo(e.latlng, 15); // Move the flyTo here to respond to clicks
       },
     });
 
@@ -315,6 +322,8 @@ const Properties = () => {
       setUploadedImages([]);
       setMainImageIndex(0);
       setSelectedLocation(null);
+      setMapCenter([40.7128, -74.006]);
+      setMapZoom(13);
     } catch (error) {
       console.error('Error adding property:', error.response?.data || error);
       setSnackbar({
@@ -350,39 +359,52 @@ const Properties = () => {
       return;
     }
 
-    setSelectedProperty({ ...property, _id: propertyId });
-    setIsAddPropertyModalOpen(true);
-  }, []);
+    setEditingProperty({ ...property, _id: propertyId });
 
-  useEffect(() => {
-    if (selectedProperty && isAddPropertyModalOpen) {
-      console.log("Setting form values for:", selectedProperty);
-      Object.keys(selectedProperty).forEach(key => {
-        if (key in control._fields) {
-          console.log(`Setting form field: ${key} = ${selectedProperty[key]}`);
-          setValue(key, selectedProperty[key]);
-        }
+    // Populate form fields immediately
+    const fieldsToSet = [
+      'name', 'description', 'rentAmount', 'propertyType',
+      'bedrooms', 'bathrooms', 'area', 'furnished',
+      'parking', 'petFriendly', 'availableNow'
+    ];
+
+    fieldsToSet.forEach(field => {
+      console.log(`Setting ${field}:`, property[field]);
+      setValue(field, property[field], { shouldValidate: true, shouldDirty: true });
+    });
+
+    if (property.latitude && property.longitude) {
+      setSelectedLocation({
+        lat: parseFloat(property.latitude),
+        lng: parseFloat(property.longitude)
       });
-
-      if (selectedProperty.latitude && selectedProperty.longitude) {
-        setSelectedLocation({
-          lat: selectedProperty.latitude,
-          lng: selectedProperty.longitude
-        });
-      } else {
-        setSelectedLocation(null);
-      }
-
-      if (selectedProperty.images && Array.isArray(selectedProperty.images)) {
-        setUploadedImages(selectedProperty.images);
-        const mainImageIndex = selectedProperty.images.findIndex(img => img.isMain);
-        setMainImageIndex(mainImageIndex !== -1 ? mainImageIndex : 0);
-      } else {
-        setUploadedImages([]);
-        setMainImageIndex(0);
-      }
+      setMapCenter([parseFloat(property.latitude), parseFloat(property.longitude)]);
+      setMapZoom(15);
+    } else {
+      setSelectedLocation(null);
+      setMapCenter([40.7128, -74.006]);
+      setMapZoom(13);
     }
-  }, [selectedProperty, isAddPropertyModalOpen, setValue, control._fields]);
+
+    if (property.images && Array.isArray(property.images)) {
+      setUploadedImages(property.images);
+      const mainImageIndex = property.images.findIndex(img => img.isMain);
+      setMainImageIndex(mainImageIndex !== -1 ? mainImageIndex : 0);
+    } else {
+      setUploadedImages([]);
+      setMainImageIndex(0);
+    }
+
+    setIsAddPropertyModalOpen(true);
+  }, [setValue]);
+
+  // Modify the useEffect hook that watches for changes in editingProperty
+  useEffect(() => {
+    if (isAddPropertyModalOpen) {
+      const formValues = control._formValues;
+      console.log("Current form values:", formValues);
+    }
+  }, [isAddPropertyModalOpen, control._formValues]);
 
   const handleUpdateProperty = async (data) => {
     try {
@@ -423,7 +445,7 @@ const Properties = () => {
         formData.append('longitude', selectedLocation.lng.toString());
       }
 
-      const propertyId = selectedProperty._id || selectedProperty.id;
+      const propertyId = editingProperty._id || editingProperty.id;
       const response = await axiosInstance.put(`/api/properties/${propertyId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -445,11 +467,13 @@ const Properties = () => {
       });
 
       setIsAddPropertyModalOpen(false);
-      setSelectedProperty(null);
+      setEditingProperty(null);
       reset();
       setUploadedImages([]);
       setMainImageIndex(0);
       setSelectedLocation(null);
+      setMapCenter([40.7128, -74.006]);
+      setMapZoom(13);
     } catch (error) {
       console.error('Error updating property:', error.response?.data || error.message);
       setSnackbar({
@@ -650,75 +674,64 @@ const Properties = () => {
                   sx={{ mb: 2, border: 1, borderColor: "divider", borderRadius: 2, "&:hover": { backgroundColor: "action.hover" } }}
                   onClick={() => handlePropertyDetails(property)}
                 >
-                  <ListItemAvatar sx={{ mr: 2 }}>
-                    <Avatar
-                      src={imageUrl}
-                      alt={property.name}
-                      variant="rounded"
-                      sx={{ width: 100, height: 100 }}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "/placeholder-property.jpg";
-                      }}
-                    >
-                      {(!mainImage) && <HomeIcon />}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={<Typography variant="h6" component="div">{property.name}</Typography>}
-                    secondary={
-                      <>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          component="span"
-                          sx={{
-                            display: 'block',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                          }}
-                        >
-                          {property.description}
-                        </Typography>
-                        <Typography variant="h6" color="primary" component="div" sx={{ mt: 1 }}>
-                          ${property.rentAmount?.toLocaleString()} / month
-                        </Typography>
+                  <Box sx={{ display: 'flex', width: '100%' }}>
+                    <Box sx={{ mr: 2 }}>
+                      <Avatar
+                        src={imageUrl}
+                        alt={property.name}
+                        variant="rounded"
+                        sx={{ width: 100, height: 100 }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/placeholder-property.jpg";
+                        }}
+                      >
+                        {(!mainImage) && <HomeIcon />}
+                      </Avatar>
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6">{property.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {property.description}
+                      </Typography>
+                      <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                        ${property.rentAmount?.toLocaleString()} / month
+                      </Typography>
+                      <Box sx={{ mt: 1 }}>
                         <StyledRating name={`rating-${propertyId}`} value={property.rating || 0} readOnly size="small" />
-                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
-                          <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
-                          <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
-                        </Box>
-                      </>
-                    }
-                  />
-                  <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <Tooltip title={favoriteProperties.includes(propertyId) ? "Remove from Favorites" : "Add to Favorites"}>
-                      <IconButton onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(propertyId);
-                      }}>
-                        {favoriteProperties.includes(propertyId) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Edit">
-                      <IconButton onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditProperty(property);
-                      }}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteProperty(propertyId);
-                      }}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+                      </Box>
+                      <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
+                        <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
+                        <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "space-between", ml: 2 }}>
+                      <Tooltip title={favoriteProperties.includes(propertyId) ? "Remove from Favorites" : "Add to Favorites"}>
+                        <IconButton onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(propertyId);
+                        }}>
+                          {favoriteProperties.includes(propertyId) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit">
+                        <IconButton onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProperty(property);
+                        }}>
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProperty(propertyId);
+                        }}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </Box>
                 </ListItem>
               );
@@ -728,7 +741,7 @@ const Properties = () => {
       case 'map':
         return (
           <Box sx={{ height: 600, width: '100%', borderRadius: theme.shape.borderRadius * 2, overflow: 'hidden', position: 'relative' }}>
-            <MapContainer center={[40.7128, -74.006]} zoom={13} style={{ height: "100%", width: "100%" }}>
+            <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: "100%", width: "100%" }}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {properties.map((property) => {
                 if (property.latitude && property.longitude) {
@@ -868,24 +881,26 @@ const Properties = () => {
         open={isAddPropertyModalOpen}
         onClose={() => {
           setIsAddPropertyModalOpen(false);
-          setSelectedProperty(null);
+          setEditingProperty(null);
           reset();
           setUploadedImages([]);
           setMainImageIndex(0);
           setSelectedLocation(null);
+          setMapCenter([40.7128, -74.006]);
+          setMapZoom(13);
         }}
         maxWidth="md"
         fullWidth
       >
-        <form onSubmit={handleSubmit(selectedProperty ? handleUpdateProperty : handleAddProperty)}>
-          <DialogTitle>{selectedProperty ? `Edit Property: ${selectedProperty._id}` : 'Add New Property'}</DialogTitle>
+        <form onSubmit={handleSubmit(editingProperty ? handleUpdateProperty : handleAddProperty)}>
+          <DialogTitle>{editingProperty ? `Edit Property: ${editingProperty._id}` : 'Add New Property'}</DialogTitle>
           <DialogContent>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Controller
                   name="name"
                   control={control}
-                  defaultValue={selectedProperty?.name || ''}
+                  defaultValue=""
                   rules={{ required: 'Property name is required' }}
                   render={({ field }) => (
                     <TextField
@@ -894,6 +909,7 @@ const Properties = () => {
                       fullWidth
                       error={!!errors.name}
                       helperText={errors.name?.message}
+                      value={field.value || ''} // Ensure a value is always provided
                     />
                   )}
                 />
@@ -902,7 +918,7 @@ const Properties = () => {
                 <Controller
                   name="description"
                   control={control}
-                  defaultValue={selectedProperty?.description || ''}
+                  defaultValue=""
                   rules={{ required: 'Description is required' }}
                   render={({ field }) => (
                     <TextField
@@ -921,7 +937,7 @@ const Properties = () => {
                 <Controller
                   name="rentAmount"
                   control={control}
-                  defaultValue={selectedProperty?.rentAmount || ''}
+                  defaultValue=""
                   rules={{ required: 'Rent amount is required', min: { value: 0, message: 'Rent must be positive' } }}
                   render={({ field }) => (
                     <TextField
@@ -942,7 +958,7 @@ const Properties = () => {
                 <Controller
                   name="propertyType"
                   control={control}
-                  defaultValue={selectedProperty?.propertyType || ''}
+                  defaultValue=""
                   rules={{ required: 'Property type is required' }}
                   render={({ field }) => (
                     <FormControl fullWidth error={!!errors.propertyType}>
@@ -961,7 +977,7 @@ const Properties = () => {
                 <Controller
                   name="bedrooms"
                   control={control}
-                  defaultValue={selectedProperty?.bedrooms || ''}
+                  defaultValue=""
                   rules={{ required: 'Number of bedrooms is required', min: { value: 0, message: 'Bedrooms must be non-negative' } }}
                   render={({ field }) => (
                     <TextField
@@ -979,7 +995,7 @@ const Properties = () => {
                 <Controller
                   name="bathrooms"
                   control={control}
-                  defaultValue={selectedProperty?.bathrooms || ''}
+                  defaultValue=""
                   rules={{ required: 'Number of bathrooms is required', min: { value: 0, message: 'Bathrooms must be non-negative' } }}
                   render={({ field }) => (
                     <TextField
@@ -997,7 +1013,7 @@ const Properties = () => {
                 <Controller
                   name="area"
                   control={control}
-                  defaultValue={selectedProperty?.area || ''}
+                  defaultValue=""
                   rules={{ required: 'Area is required', min: { value: 0, message: 'Area must be non-negative' } }}
                   render={({ field }) => (
                     <TextField
@@ -1017,7 +1033,7 @@ const Properties = () => {
                     <Controller
                       name="furnished"
                       control={control}
-                      defaultValue={selectedProperty?.furnished || false}
+                      defaultValue={false}
                       render={({ field }) => <Checkbox {...field} checked={field.value} />}
                     />
                   }
@@ -1030,7 +1046,7 @@ const Properties = () => {
                     <Controller
                       name="parking"
                       control={control}
-                      defaultValue={selectedProperty?.parking || false}
+                      defaultValue={false}
                       render={({ field }) => <Checkbox {...field} checked={field.value} />}
                     />
                   }
@@ -1043,7 +1059,7 @@ const Properties = () => {
                     <Controller
                       name="petFriendly"
                       control={control}
-                      defaultValue={selectedProperty?.petFriendly || false}
+                      defaultValue={false}
                       render={({ field }) => <Checkbox {...field} checked={field.value} />}
                     />
                   }
@@ -1056,7 +1072,7 @@ const Properties = () => {
                     <Controller
                       name="availableNow"
                       control={control}
-                      defaultValue={selectedProperty?.availableNow || false}
+                      defaultValue={true}
                       render={({ field }) => <Checkbox {...field} checked={field.value} />}
                     />
                   }
@@ -1066,7 +1082,7 @@ const Properties = () => {
               <Grid item xs={12}>
                 <Typography variant="subtitle1">Property Location</Typography>
                 <Box sx={{ height: 300, width: '100%' }}>
-                  <MapContainer center={selectedLocation || [40.7128, -74.006]} zoom={13} style={{ height: "100%", width: "100%" }}>
+                  <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: "100%", width: "100%" }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <LocationPicker />
                   </MapContainer>
@@ -1137,18 +1153,20 @@ const Properties = () => {
           <DialogActions>
             <Button onClick={() => {
               setIsAddPropertyModalOpen(false);
-              setSelectedProperty(null);
+              setEditingProperty(null);
               reset();
               setUploadedImages([]);
               setMainImageIndex(0);
               setSelectedLocation(null);
+              setMapCenter([40.7128, -74.006]);
+              setMapZoom(13);
             }}>Cancel</Button>
             <Button
               type="submit"
               color="primary"
-              onClick={() => console.log("Submit button clicked. selectedProperty:", selectedProperty)}
+              onClick={() => console.log("Submit button clicked. editingProperty:", editingProperty)}
             >
-              {selectedProperty ? 'Update' : 'Add'} Property
+              {editingProperty ? 'Update' : 'Add'} Property
             </Button>
           </DialogActions>
         </form>
@@ -1173,7 +1191,8 @@ const Properties = () => {
       <Box sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Advanced Filters</Typography>
         <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Property Type</InputLabel><Select
+          <InputLabel>Property Type</InputLabel>
+          <Select
             value={selectedFilter}
             onChange={(e) => setSelectedFilter(e.target.value)}
           >
@@ -1327,7 +1346,7 @@ const Properties = () => {
         color="primary"
         startIcon={<AddIcon />}
         onClick={() => {
-          setSelectedProperty(null);
+          setEditingProperty(null);
           setIsAddPropertyModalOpen(true);
         }}
         sx={{
