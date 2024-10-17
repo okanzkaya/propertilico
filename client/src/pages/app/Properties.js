@@ -3,11 +3,12 @@ import {
   Typography, Grid, Box, Card, CardContent, Button, TextField,
   MenuItem, IconButton, InputAdornment, Tooltip, Select, FormControl,
   FormControlLabel, Checkbox, Slider, Dialog, DialogTitle, DialogContent,
-  DialogActions, Pagination, Chip, useMediaQuery, useTheme, Snackbar,
+  DialogActions, Pagination, Chip, useMediaQuery, Snackbar,
   Alert, CircularProgress, Tabs, Tab, Paper, List, ListItem, ListItemText,
   ListItemAvatar, Avatar, InputLabel, Rating, CardActions, Drawer, ListItemIcon,
-  ImageList, ImageListItem, ImageListItemBar
+  ImageList, ImageListItem, ImageListItemBar, FormHelperText
 } from "@mui/material";
+import { useTheme, styled, alpha } from "@mui/material/styles";
 import {
   Search as SearchIcon, Sort as SortIcon, FilterList as FilterListIcon,
   Favorite as FavoriteIcon, FavoriteBorder as FavoriteBorderIcon,
@@ -16,7 +17,7 @@ import {
   Map as MapIcon, Home as HomeIcon, Edit as EditIcon,
   CheckCircle as CheckCircleIcon, Schedule as ScheduleIcon, Cancel as CancelIcon,
   Delete as DeleteIcon, Add as AddIcon, CloudUpload as CloudUploadIcon,
-  NavigateBefore, NavigateNext, CropOriginal, Image as ImageIcon
+  NavigateBefore, NavigateNext, CropOriginal
 } from "@mui/icons-material";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -25,7 +26,9 @@ import axiosInstance from '../../axiosSetup';
 import { useForm, Controller } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { styled, alpha } from "@mui/material/styles";
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Styled components
 const PageWrapper = styled(Box)(({ theme }) => ({
@@ -54,14 +57,14 @@ const StyledRating = styled(Rating)(({ theme }) => ({
 }));
 
 // Custom marker icon
-const markerIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+const customMarkerIcon = new L.Icon({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-  shadowSize: [41, 41],
+  shadowSize: [41, 41]
 });
 
 // Validation schema
@@ -140,7 +143,7 @@ const Properties = () => {
           ...filters,
         }
       });
-      
+
       if (Array.isArray(response.data)) {
         setProperties(response.data);
         setTotalPages(1);
@@ -165,7 +168,7 @@ const Properties = () => {
       setLoading(false);
     }
   }, [currentPage, searchTerm, sortOrder, filters]);
-  
+
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
@@ -185,25 +188,25 @@ const Properties = () => {
 
   const toggleFavorite = useCallback(async (propertyId) => {
     try {
-      const response = await axiosInstance.post(`/api/properties/${propertyId}/favorite`);
+      const response = await axiosInstance.post(`/api/user/favorites/${propertyId}`);
       setFavoriteProperties(prev => {
         const newFavorites = response.data.isFavorite
           ? [...prev, propertyId]
           : prev.filter(id => id !== propertyId);
-        setSnackbar({
-          open: true,
-          message: response.data.isFavorite
-            ? "Property added to favorites"
-            : "Property removed from favorites",
-          severity: "success",
-        });
         return newFavorites;
       });
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
       setSnackbar({
         open: true,
-        message: "Failed to update favorites. Please try again.",
+        message: response.data.isFavorite
+          ? "Property added to favorites"
+          : "Property removed from favorites",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error.response?.data || error.message);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || "Failed to update favorites. Please try again.",
         severity: "error",
       });
     }
@@ -264,7 +267,7 @@ const Properties = () => {
     });
 
     return selectedLocation ? (
-      <Marker position={selectedLocation} icon={markerIcon}>
+      <Marker position={selectedLocation} icon={customMarkerIcon}>
         <Popup>Selected location</Popup>
       </Marker>
     ) : null;
@@ -272,6 +275,20 @@ const Properties = () => {
 
   const handleAddProperty = async (data) => {
     try {
+      if (Object.keys(errors).length > 0) {
+        const firstErrorField = Object.keys(errors)[0];
+        const errorElement = document.getElementById(firstErrorField);
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setSnackbar({
+          open: true,
+          message: "Please fill all required fields correctly",
+          severity: "error"
+        });
+        return;
+      }
+
       const formData = new FormData();
       Object.keys(data).forEach(key => formData.append(key, data[key]));
       uploadedImages.forEach((image, index) => {
@@ -279,10 +296,10 @@ const Properties = () => {
       });
       formData.append('mainImageIndex', mainImageIndex.toString());
       if (selectedLocation) {
-        formData.append('latitude', selectedLocation.lat);
-        formData.append('longitude', selectedLocation.lng);
+        formData.append('latitude', selectedLocation.lat.toFixed(6));
+        formData.append('longitude', selectedLocation.lng.toFixed(6));
       }
-  
+
       const response = await axiosInstance.post('/api/properties', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -309,26 +326,87 @@ const Properties = () => {
   };
 
   const handleEditProperty = useCallback((property) => {
-    setSelectedProperty(property);
+    console.log("Attempting to edit property:", property);
+
+    if (!property) {
+      console.error("Error: property is null or undefined");
+      setSnackbar({
+        open: true,
+        message: "Error: Invalid property data",
+        severity: "error"
+      });
+      return;
+    }
+
+    const propertyId = property._id || property.id;
+
+    if (!propertyId) {
+      console.error("Error: property is missing identifier", property);
+      setSnackbar({
+        open: true,
+        message: "Error: Property is missing identifier",
+        severity: "error"
+      });
+      return;
+    }
+
+    setSelectedProperty({ ...property, _id: propertyId });
     setIsAddPropertyModalOpen(true);
-    // Pre-fill the form with existing property data
-    Object.keys(property).forEach(key => {
-      if (key in control._fields) {
-        setValue(key, property[key]);
+  }, []);
+
+  useEffect(() => {
+    if (selectedProperty && isAddPropertyModalOpen) {
+      console.log("Setting form values for:", selectedProperty);
+      Object.keys(selectedProperty).forEach(key => {
+        if (key in control._fields) {
+          console.log(`Setting form field: ${key} = ${selectedProperty[key]}`);
+          setValue(key, selectedProperty[key]);
+        }
+      });
+
+      if (selectedProperty.latitude && selectedProperty.longitude) {
+        setSelectedLocation({
+          lat: selectedProperty.latitude,
+          lng: selectedProperty.longitude
+        });
+      } else {
+        setSelectedLocation(null);
       }
-    });
-    setSelectedLocation(property.location?.coordinates ? {
-      lat: property.location.coordinates[1],
-      lng: property.location.coordinates[0]
-    } : null);
-    setUploadedImages(property.images || []);
-    setMainImageIndex(property.images?.findIndex(img => img.isMain) || 0);
-  }, [control._fields, setValue]);
+
+      if (selectedProperty.images && Array.isArray(selectedProperty.images)) {
+        setUploadedImages(selectedProperty.images);
+        const mainImageIndex = selectedProperty.images.findIndex(img => img.isMain);
+        setMainImageIndex(mainImageIndex !== -1 ? mainImageIndex : 0);
+      } else {
+        setUploadedImages([]);
+        setMainImageIndex(0);
+      }
+    }
+  }, [selectedProperty, isAddPropertyModalOpen, setValue, control._fields]);
 
   const handleUpdateProperty = async (data) => {
     try {
+      if (Object.keys(errors).length > 0) {
+        const firstErrorField = Object.keys(errors)[0];
+        const errorElement = document.getElementById(firstErrorField);
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setSnackbar({
+          open: true,
+          message: "Please fill all required fields correctly",
+          severity: "error"
+        });
+        return;
+      }
+
       const formData = new FormData();
-      Object.keys(data).forEach(key => formData.append(key, data[key]));
+      Object.keys(data).forEach(key => {
+        if (data[key] !== undefined && data[key] !== null) {
+          formData.append(key, data[key]);
+        }
+      });
+
       uploadedImages.forEach((image, index) => {
         if (image instanceof File) {
           formData.append('images', image);
@@ -336,25 +414,36 @@ const Properties = () => {
           formData.append('existingImages', JSON.stringify(image));
         }
         if (index === mainImageIndex) {
-          formData.append('mainImageIndex', index);
+          formData.append('mainImageIndex', index.toString());
         }
       });
+
       if (selectedLocation) {
-        formData.append('latitude', selectedLocation.lat);
-        formData.append('longitude', selectedLocation.lng);
+        formData.append('latitude', selectedLocation.lat.toString());
+        formData.append('longitude', selectedLocation.lng.toString());
       }
 
-      const response = await axiosInstance.put(`/api/properties/${selectedProperty._id}`, formData, {
+      const propertyId = selectedProperty._id || selectedProperty.id;
+      const response = await axiosInstance.put(`/api/properties/${propertyId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setProperties(prevProperties => 
-        prevProperties.map(p => p._id === selectedProperty._id ? response.data : p)
+
+      console.log("Update response:", response.data);
+
+      // Fetch the updated property data
+      const updatedPropertyResponse = await axiosInstance.get(`/api/properties/${propertyId}`);
+      const updatedProperty = updatedPropertyResponse.data;
+
+      setProperties(prevProperties =>
+        prevProperties.map(p => (p._id || p.id) === propertyId ? updatedProperty : p)
       );
+
       setSnackbar({
         open: true,
         message: "Property updated successfully",
         severity: "success"
       });
+
       setIsAddPropertyModalOpen(false);
       setSelectedProperty(null);
       reset();
@@ -372,6 +461,16 @@ const Properties = () => {
   };
 
   const handleDeleteProperty = useCallback(async (propertyId) => {
+    if (!propertyId) {
+      console.error('Invalid property ID');
+      setSnackbar({
+        open: true,
+        message: "Invalid property ID. Cannot delete.",
+        severity: "error"
+      });
+      return;
+    }
+
     if (window.confirm('Are you sure you want to delete this property?')) {
       try {
         await axiosInstance.delete(`/api/properties/${propertyId}`);
@@ -380,12 +479,13 @@ const Properties = () => {
           open: true,
           message: "Property deleted successfully",
           severity: "success"
-        });fetchProperties();
+        });
+        fetchProperties();
       } catch (error) {
         console.error('Error deleting property:', error);
         setSnackbar({
           open: true,
-          message: "Failed to delete property. Please try again.",
+          message: error.response?.data?.message || "Failed to delete property. Please try again.",
           severity: "error"
         });
       }
@@ -394,48 +494,51 @@ const Properties = () => {
 
   const renderPropertyCard = useCallback((property) => {
     if (!property) return null;
+    const propertyId = property._id || property.id;
+
     const mainImage = property.images && property.images.length > 0
-      ? `${process.env.REACT_APP_API_URL}/${property.images.find(img => img.isMain)?.path || property.images[0].path}`
+      ? property.images.find(img => img.isMain) || property.images[0]
       : null;
 
+    const imageUrl = mainImage
+      ? `${process.env.REACT_APP_API_URL}/uploads/properties/${mainImage.path}`
+      : "/placeholder-property.jpg";
+
     return (
-      <PropertyCard key={property._id}>
-        <Box 
-          sx={{ 
-            position: 'relative', 
-            width: '100%', 
-            height: 200, 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            bgcolor: 'grey.200' 
-          }} 
+      <PropertyCard key={propertyId}>
+        <Box
+          sx={{
+            position: 'relative',
+            width: '100%',
+            height: 200,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            bgcolor: 'grey.200'
+          }}
           onClick={() => handlePropertyDetails(property)}
         >
-          {mainImage ? (
-            <img
-              src={mainImage}
-              alt={property.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "/placeholder-property.jpg";
-              }}
-            />
-          ) : (
-            <ImageIcon sx={{ fontSize: 80, color: 'grey.400' }} />
-          )}
+          <img
+            src={imageUrl}
+            alt={property.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              console.error('Image failed to load:', imageUrl);
+              e.target.onerror = null;
+              e.target.src = "/placeholder-property.jpg";
+            }}
+          />
         </Box>
         <CardContent sx={{ flexGrow: 1 }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              height: '2.5em', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              display: '-webkit-box', 
-              WebkitLineClamp: 2, 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              height: '2.5em',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               lineHeight: '1.25em',
               mb: 1
@@ -443,22 +546,25 @@ const Properties = () => {
           >
             {property.name}
           </Typography>
-          <Typography 
-            variant="body2" 
-            color="text.secondary" 
-            sx={{ 
-              height: '3em', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              display: '-webkit-box', 
-              WebkitLineClamp: 2, 
-              WebkitBoxOrient: 'vertical' 
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            component="div"
+            sx={{
+              height: '3em',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
             }}
           >
             {property.description}
           </Typography>
-          <Typography variant="h6" color="primary" sx={{ mt: 1 }}>${property.rentAmount?.toLocaleString()} / month</Typography>
-          <StyledRating name="read-only" value={property.rating || 0} readOnly size="small" />
+          <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+            ${property.rentAmount?.toLocaleString()} / month
+          </Typography>
+          <StyledRating name={`rating-${propertyId}`} value={property.rating || 0} readOnly size="small" />
           <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
             <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
@@ -466,25 +572,30 @@ const Properties = () => {
           </Box>
         </CardContent>
         <CardActions sx={{ justifyContent: "space-between", p: 1 }}>
-          <Tooltip title={favoriteProperties.includes(property._id) ? "Remove from Favorites" : "Add to Favorites"}>
+          <Tooltip title={favoriteProperties.includes(propertyId) ? "Remove from Favorites" : "Add to Favorites"}>
             <IconButton onClick={(e) => {
               e.stopPropagation();
-              toggleFavorite(property._id);
+              toggleFavorite(propertyId);
             }}>
-              {favoriteProperties.includes(property._id) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
+              {favoriteProperties.includes(propertyId) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
             </IconButton>
           </Tooltip>
           <Tooltip title="Edit">
             <IconButton onClick={(e) => {
               e.stopPropagation();
+              console.log("Edit button clicked for property:", property);
               handleEditProperty(property);
-            }}><EditIcon /></IconButton>
+            }}>
+              <EditIcon />
+            </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
             <IconButton onClick={(e) => {
               e.stopPropagation();
-              handleDeleteProperty(property._id);
-            }}><DeleteIcon /></IconButton>
+              handleDeleteProperty(propertyId);
+            }}>
+              <DeleteIcon />
+            </IconButton>
           </Tooltip>
         </CardActions>
       </PropertyCard>
@@ -513,7 +624,7 @@ const Properties = () => {
         return (
           <Grid container spacing={3}>
             {properties.map((property) => (
-              <Grid item key={property._id} xs={12} sm={6} md={4} lg={3}>
+              <Grid item key={property._id || property.id} xs={12} sm={6} md={4} lg={3}>
                 {renderPropertyCard(property)}
               </Grid>
             ))}
@@ -522,83 +633,110 @@ const Properties = () => {
       case 'list':
         return (
           <List>
-            {properties.map((property) => (
-              <ListItem 
-                key={property._id} 
-                alignItems="flex-start" 
-                sx={{ mb: 2, border: 1, borderColor: "divider", borderRadius: 2, "&:hover": { backgroundColor: "action.hover" } }}
-                onClick={() => handlePropertyDetails(property)}
-              >
-                <ListItemAvatar sx={{ mr: 2 }}>
-                  <Avatar 
-                    src={property.images && property.images[0] ? `${process.env.REACT_APP_API_URL}/${property.images[0].path}` : "/placeholder-property.jpg"} 
-                    alt={property.name} 
-                    variant="rounded" 
-                    sx={{ width: 100, height: 100 }}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "/placeholder-property.jpg";
-                    }}
-                  >
-                    {(!property.images || !property.images[0]) && <HomeIcon />}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Box>
-                      <Typography variant="h6" component="div">{property.name}</Typography>
-                      <Typography variant="body2" color="text.secondary">{property.description}</Typography>
-                      <Typography variant="h6" color="primary" sx={{ mt: 1 }}>${property.rentAmount?.toLocaleString()} / month</Typography>
-                      <StyledRating name="read-only" value={property.rating || 0} readOnly size="small" />
-                      <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
-                        <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
-                        <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
-                      </Box>
-                    </Box>
-                  }
-                />
-                <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                  <Tooltip title={favoriteProperties.includes(property._id) ? "Remove from Favorites" : "Add to Favorites"}>
-                    <IconButton onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(property._id);
-                    }}>
-                      {favoriteProperties.includes(property._id) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Edit">
-                    <IconButton onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditProperty(property);
-                    }}><EditIcon /></IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteProperty(property._id);
-                    }}><DeleteIcon /></IconButton>
-                  </Tooltip>
-                </Box>
-              </ListItem>
-            ))}
+            {properties.map((property) => {
+              const propertyId = property._id || property.id;
+              const mainImage = property.images && property.images.length > 0
+                ? property.images.find(img => img.isMain) || property.images[0]
+                : null;
+
+              const imageUrl = mainImage
+                ? `${process.env.REACT_APP_API_URL}/uploads/properties/${mainImage.path}`
+                : "/placeholder-property.jpg";
+
+              return (
+                <ListItem
+                  key={propertyId}
+                  alignItems="flex-start"
+                  sx={{ mb: 2, border: 1, borderColor: "divider", borderRadius: 2, "&:hover": { backgroundColor: "action.hover" } }}
+                  onClick={() => handlePropertyDetails(property)}
+                >
+                  <ListItemAvatar sx={{ mr: 2 }}>
+                    <Avatar
+                      src={imageUrl}
+                      alt={property.name}
+                      variant="rounded"
+                      sx={{ width: 100, height: 100 }}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/placeholder-property.jpg";
+                      }}
+                    >
+                      {(!mainImage) && <HomeIcon />}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={<Typography variant="h6" component="div">{property.name}</Typography>}
+                    secondary={
+                      <>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          component="span"
+                          sx={{
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {property.description}
+                        </Typography>
+                        <Typography variant="h6" color="primary" component="div" sx={{ mt: 1 }}>
+                          ${property.rentAmount?.toLocaleString()} / month
+                        </Typography>
+                        <StyledRating name={`rating-${propertyId}`} value={property.rating || 0} readOnly size="small" />
+                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
+                          <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
+                          <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
+                        </Box>
+                      </>
+                    }
+                  />
+                  <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <Tooltip title={favoriteProperties.includes(propertyId) ? "Remove from Favorites" : "Add to Favorites"}>
+                      <IconButton onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(propertyId);
+                      }}>
+                        {favoriteProperties.includes(propertyId) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                      <IconButton onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditProperty(property);
+                      }}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProperty(propertyId);
+                      }}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </ListItem>
+              );
+            })}
           </List>
         );
       case 'map':
         return (
-          <Box sx={{ height: 600, width: '100%', borderRadius: theme.shape.borderRadius * 2, overflow: 'hidden' }}>
+          <Box sx={{ height: 600, width: '100%', borderRadius: theme.shape.borderRadius * 2, overflow: 'hidden', position: 'relative' }}>
             <MapContainer center={[40.7128, -74.006]} zoom={13} style={{ height: "100%", width: "100%" }}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {properties.map((property) => {
-                if (property.location && property.location.coordinates) {
+                if (property.latitude && property.longitude) {
                   return (
-                    <Marker 
-                      key={property._id} 
-                      position={[property.location.coordinates[1], property.location.coordinates[0]]} 
-                      icon={markerIcon}
-                      eventHandlers={{
-                        click: () => handlePropertyDetails(property),
-                      }}
+                    <Marker
+                      key={property._id || property.id}
+                      position={[property.latitude, property.longitude]}
+                      icon={customMarkerIcon}
                     >
                       <Popup>
                         <Typography variant="subtitle1">{property.name}</Typography>
@@ -632,22 +770,22 @@ const Properties = () => {
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Box sx={{ position: 'relative', width: '100%', paddingTop: '75%' }}>
-                  <img 
+                  <img
                     src={quickViewProperty.images && quickViewProperty.images.length > 0
-                      ? `${process.env.REACT_APP_API_URL}/${quickViewProperty.images[currentImageIndex].path}`
-                      : "/placeholder-property.jpg"} 
-                    alt={quickViewProperty.name} 
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                      ? `${process.env.REACT_APP_API_URL}/uploads/properties/${quickViewProperty.images[currentImageIndex].path}`
+                      : "/placeholder-property.jpg"}
+                    alt={quickViewProperty.name}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   {quickViewProperty.images && quickViewProperty.images.length > 1 && (
                     <>
-                      <IconButton 
+                      <IconButton
                         sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}
                         onClick={() => setCurrentImageIndex(prev => (prev - 1 + quickViewProperty.images.length) % quickViewProperty.images.length)}
                       >
                         <NavigateBefore />
                       </IconButton>
-                      <IconButton 
+                      <IconButton
                         sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}
                         onClick={() => setCurrentImageIndex(prev => (prev + 1) % quickViewProperty.images.length)}
                       >
@@ -661,7 +799,7 @@ const Properties = () => {
                     {quickViewProperty.images.map((img, index) => (
                       <ImageListItem key={img.path} onClick={() => setCurrentImageIndex(index)} sx={{ cursor: 'pointer' }}>
                         <img
-                          src={`${process.env.REACT_APP_API_URL}/${img.path}`}
+                          src={`${process.env.REACT_APP_API_URL}/uploads/properties/${img.path}`}
                           alt={`${quickViewProperty.name} - ${index + 1}`}
                           loading="lazy"
                           style={{ objectFit: 'cover', height: '100%' }}
@@ -705,7 +843,7 @@ const Properties = () => {
                     <ListItemText primary={`Pet Friendly: ${quickViewProperty.petFriendly ? 'Yes' : 'No'}`} />
                   </ListItem>
                   <ListItem>
-                    <ListItemIcon>{quickViewProperty.availableNow ? <CheckCircleIcon color="success" /> :<ScheduleIcon />}</ListItemIcon>
+                    <ListItemIcon>{quickViewProperty.availableNow ? <CheckCircleIcon color="success" /> : <ScheduleIcon />}</ListItemIcon>
                     <ListItemText primary={`Available: ${quickViewProperty.availableNow ? 'Now' : 'Soon'}`} />
                   </ListItem>
                 </List>
@@ -724,293 +862,318 @@ const Properties = () => {
     </Dialog>
   );
 
-  const renderAddEditPropertyModal = () => (
-    <Dialog
-      open={isAddPropertyModalOpen}
-      onClose={() => {
-        setIsAddPropertyModalOpen(false);
-        setSelectedProperty(null);
-        reset();
-        setUploadedImages([]);
-        setMainImageIndex(0);
-        setSelectedLocation(null);
-      }}
-      maxWidth="md"
-      fullWidth
-    >
-      <form onSubmit={handleSubmit(selectedProperty ? handleUpdateProperty : handleAddProperty)}>
-        <DialogTitle>{selectedProperty ? 'Edit Property' : 'Add New Property'}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <Controller
-                name="name"
-                control={control}
-                defaultValue={selectedProperty?.name || ''}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Property Name"
-                    fullWidth
-                    error={!!errors.name}
-                    helperText={errors.name?.message}
-                  />
+  const renderAddEditPropertyModal = () => {
+    return (
+      <Dialog
+        open={isAddPropertyModalOpen}
+        onClose={() => {
+          setIsAddPropertyModalOpen(false);
+          setSelectedProperty(null);
+          reset();
+          setUploadedImages([]);
+          setMainImageIndex(0);
+          setSelectedLocation(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <form onSubmit={handleSubmit(selectedProperty ? handleUpdateProperty : handleAddProperty)}>
+          <DialogTitle>{selectedProperty ? `Edit Property: ${selectedProperty._id}` : 'Add New Property'}</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Controller
+                  name="name"
+                  control={control}
+                  defaultValue={selectedProperty?.name || ''}
+                  rules={{ required: 'Property name is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Property Name"
+                      fullWidth
+                      error={!!errors.name}
+                      helperText={errors.name?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Controller
+                  name="description"
+                  control={control}
+                  defaultValue={selectedProperty?.description || ''}
+                  rules={{ required: 'Description is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Description"
+                      fullWidth
+                      multiline
+                      rows={3}
+                      error={!!errors.description}
+                      helperText={errors.description?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="rentAmount"
+                  control={control}
+                  defaultValue={selectedProperty?.rentAmount || ''}
+                  rules={{ required: 'Rent amount is required', min: { value: 0, message: 'Rent must be positive' } }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Rent Amount"
+                      fullWidth
+                      type="number"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      }}
+                      error={!!errors.rentAmount}
+                      helperText={errors.rentAmount?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="propertyType"
+                  control={control}
+                  defaultValue={selectedProperty?.propertyType || ''}
+                  rules={{ required: 'Property type is required' }}
+                  render={({ field }) => (
+                    <FormControl fullWidth error={!!errors.propertyType}>
+                      <InputLabel>Property Type</InputLabel>
+                      <Select {...field} label="Property Type">
+                        {["Apartment", "House", "Condo", "Townhouse"].map((type) => (
+                          <MenuItem key={type} value={type}>{type}</MenuItem>
+                        ))}
+                      </Select>
+                      {errors.propertyType && <FormHelperText>{errors.propertyType.message}</FormHelperText>}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Controller
+                  name="bedrooms"
+                  control={control}
+                  defaultValue={selectedProperty?.bedrooms || ''}
+                  rules={{ required: 'Number of bedrooms is required', min: { value: 0, message: 'Bedrooms must be non-negative' } }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Bedrooms"
+                      fullWidth
+                      type="number"
+                      error={!!errors.bedrooms}
+                      helperText={errors.bedrooms?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Controller
+                  name="bathrooms"
+                  control={control}
+                  defaultValue={selectedProperty?.bathrooms || ''}
+                  rules={{ required: 'Number of bathrooms is required', min: { value: 0, message: 'Bathrooms must be non-negative' } }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Bathrooms"
+                      fullWidth
+                      type="number"
+                      error={!!errors.bathrooms}
+                      helperText={errors.bathrooms?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Controller
+                  name="area"
+                  control={control}
+                  defaultValue={selectedProperty?.area || ''}
+                  rules={{ required: 'Area is required', min: { value: 0, message: 'Area must be non-negative' } }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Area (sqft)"
+                      fullWidth
+                      type="number"
+                      error={!!errors.area}
+                      helperText={errors.area?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Controller
+                      name="furnished"
+                      control={control}
+                      defaultValue={selectedProperty?.furnished || false}
+                      render={({ field }) => <Checkbox {...field} checked={field.value} />}
+                    />
+                  }
+                  label="Furnished"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Controller
+                      name="parking"
+                      control={control}
+                      defaultValue={selectedProperty?.parking || false}
+                      render={({ field }) => <Checkbox {...field} checked={field.value} />}
+                    />
+                  }
+                  label="Parking Available"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Controller
+                      name="petFriendly"
+                      control={control}
+                      defaultValue={selectedProperty?.petFriendly || false}
+                      render={({ field }) => <Checkbox {...field} checked={field.value} />}
+                    />
+                  }
+                  label="Pet Friendly"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Controller
+                      name="availableNow"
+                      control={control}
+                      defaultValue={selectedProperty?.availableNow || false}
+                      render={({ field }) => <Checkbox {...field} checked={field.value} />}
+                    />
+                  }
+                  label="Available Now"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1">Property Location</Typography>
+                <Box sx={{ height: 300, width: '100%' }}>
+                  <MapContainer center={selectedLocation || [40.7128, -74.006]} zoom={13} style={{ height: "100%", width: "100%" }}>
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <LocationPicker />
+                  </MapContainer>
+                </Box>
+                {selectedLocation && (
+                  <Typography variant="body2">
+                    Selected Location: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
+                  </Typography>
                 )}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Controller
-                name="description"
-                control={control}
-                defaultValue={selectedProperty?.description || ''}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Description"
-                    fullWidth
-                    multiline
-                    rows={3}
-                    error={!!errors.description}
-                    helperText={errors.description?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="rentAmount"
-                control={control}
-                defaultValue={selectedProperty?.rentAmount || ''}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Rent Amount"
-                    fullWidth
-                    type="number"
-                    error={!!errors.rentAmount}
-                    helperText={errors.rentAmount?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="propertyType"
-                control={control}
-                defaultValue={selectedProperty?.propertyType || ''}
-                render={({ field }) => (
-                  <FormControl fullWidth error={!!errors.propertyType}>
-                    <InputLabel>Property Type</InputLabel>
-                    <Select {...field} label="Property Type">
-                      {["Apartment", "House", "Condo", "Townhouse"].map((type) => (
-                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                      ))}
-                    </Select>
-                    {errors.propertyType && <Typography color="error">{errors.propertyType.message}</Typography>}
-                  </FormControl>
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="bedrooms"
-                control={control}
-                defaultValue={selectedProperty?.bedrooms || ''}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Bedrooms"
-                    fullWidth
-                    type="number"
-                    error={!!errors.bedrooms}
-                    helperText={errors.bedrooms?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="bathrooms"
-                control={control}
-                defaultValue={selectedProperty?.bathrooms || ''}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Bathrooms"
-                    fullWidth
-                    type="number"
-                    error={!!errors.bathrooms}
-                    helperText={errors.bathrooms?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="area"
-                control={control}
-                defaultValue={selectedProperty?.area || ''}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Area (sqft)"
-                    fullWidth
-                    type="number"
-                    error={!!errors.area}
-                    helperText={errors.area?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Controller
-                    name="furnished"
-                    control={control}
-                    defaultValue={selectedProperty?.furnished || false}
-                    render={({ field }) => <Checkbox {...field} checked={field.value} />}
-                  />
-                }
-                label="Furnished"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Controller
-                    name="parking"
-                    control={control}
-                    defaultValue={selectedProperty?.parking || false}
-                    render={({ field }) => <Checkbox {...field} checked={field.value} />}
-                  />
-                }
-                label="Parking Available"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Controller
-                    name="petFriendly"
-                    control={control}
-                    defaultValue={selectedProperty?.petFriendly || false}
-                    render={({ field }) => <Checkbox {...field} checked={field.value} />}
-                  />
-                }
-                label="Pet Friendly"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Controller
-                    name="availableNow"
-                    control={control}
-                    defaultValue={selectedProperty?.availableNow || false}
-                    render={({ field }) => <Checkbox {...field} checked={field.value} />}
-                  />
-                }
-                label="Available Now"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1">Property Location</Typography>
-              <Box sx={{ height: 300, width: '100%' }}>
-                <MapContainer center={selectedLocation || [40.7128, -74.006]} zoom={13} style={{ height: "100%", width: "100%" }}>
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <LocationPicker />
-                </MapContainer>
-              </Box>
-              {selectedLocation && (
-                <Typography variant="body2">
-                  Selected Location: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1">Property Images</Typography>
+                <input
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  id="raised-button-file"
+                  multiple
+                  type="file"
+                  onChange={handleImageUpload}
+                />
+                <label htmlFor="raised-button-file">
+                  <Button variant="contained" component="span" startIcon={<CloudUploadIcon />}>
+                    Upload Images
+                  </Button>
+                </label>
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Max 16 images, total size up to 200 MB
                 </Typography>
-              )}
+                <ImageList sx={{ width: '100%', height: 200, mt: 2 }} cols={4} rowHeight={100}>
+                  {uploadedImages.map((image, index) => (
+                    <ImageListItem key={index}>
+                      <img
+                        src={image instanceof File ? URL.createObjectURL(image) : `${process.env.REACT_APP_API_URL}/uploads/properties/${image.path}`}
+                        alt={`Uploaded ${index + 1}`}
+                        loading="lazy"
+                        style={{ objectFit: 'cover', height: '100%' }}
+                      />
+                      <ImageListItemBar
+                        position="top"
+                        actionIcon={
+                          <IconButton
+                            sx={{ color: 'white' }}
+                            onClick={() => handleRemoveImage(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        }
+                      />
+                      <ImageListItemBar
+                        position="bottom"
+                        actionIcon={
+                          <Checkbox
+                            checked={index === mainImageIndex}
+                            onChange={() => handleSetMainImage(index)}
+                            icon={<CropOriginal />}
+                            checkedIcon={<CropOriginal color="primary" />}
+                          />
+                        }
+                        actionPosition="left"
+                        title="Set as main image"
+                      />
+                    </ImageListItem>
+                  ))}
+                </ImageList>
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1">Property Images</Typography>
-              <input
-                accept="image/*"
-                style={{ display: 'none' }}
-                id="raised-button-file"
-                multiple
-                type="file"
-                onChange={handleImageUpload}
-              />
-              <label htmlFor="raised-button-file">
-                <Button variant="contained" component="span" startIcon={<CloudUploadIcon />}>
-                  Upload Images
-                </Button>
-              </label>
-              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                Max 16 images, total size up to 200 MB
-              </Typography>
-              <ImageList sx={{ width: '100%', height: 200, mt: 2 }} cols={4} rowHeight={100}>
-                {uploadedImages.map((image, index) => (
-                  <ImageListItem key={index}>
-                    <img
-                      src={image instanceof File ? URL.createObjectURL(image) : `${process.env.REACT_APP_API_URL}/${image.path}`}
-                      alt={`Uploaded ${index + 1}`}
-                      loading="lazy"
-                      style={{ objectFit: 'cover', height: '100%' }}
-                    />
-                    <ImageListItemBar
-                      position="top"
-                      actionIcon={
-                        <IconButton
-                          sx={{ color: 'white' }}
-                          onClick={() => handleRemoveImage(index)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      }
-                    />
-                    <ImageListItemBar
-                      position="bottom"
-                      actionIcon={
-                        <Checkbox
-                          checked={index === mainImageIndex}
-                          onChange={() => handleSetMainImage(index)}
-                          icon={<CropOriginal />}
-                          checkedIcon={<CropOriginal color="primary" />}
-                        />
-                      }
-                      actionPosition="left"
-                      title="Set as main image"
-                    />
-                  </ImageListItem>
-                ))}
-              </ImageList>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
-            setIsAddPropertyModalOpen(false);
-            setSelectedProperty(null);
-            reset();
-            setUploadedImages([]);
-            setMainImageIndex(0);
-            setSelectedLocation(null);
-          }}>Cancel</Button>
-          <Button type="submit" color="primary">{selectedProperty ? 'Update' : 'Add'} Property</Button>
-        </DialogActions>
-      </form>
-    </Dialog>
-  );
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => {
+              setIsAddPropertyModalOpen(false);
+              setSelectedProperty(null);
+              reset();
+              setUploadedImages([]);
+              setMainImageIndex(0);
+              setSelectedLocation(null);
+            }}>Cancel</Button>
+            <Button
+              type="submit"
+              color="primary"
+              onClick={() => console.log("Submit button clicked. selectedProperty:", selectedProperty)}
+            >
+              {selectedProperty ? 'Update' : 'Add'} Property
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+    );
+  };
 
   const renderAdvancedFilterDrawer = () => (
     <Drawer
       anchor="right"
       open={isAdvancedFilterOpen}
       onClose={() => setIsAdvancedFilterOpen(false)}
+      PaperProps={{
+        sx: {
+          width: { xs: '100%', sm: 300 },
+          height: 'calc(100% - 64px)',
+          top: 64,
+          overflowY: 'auto'
+        }
+      }}
     >
-      <Box sx={{ width: 300, p: 2 }}>
+      <Box sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Advanced Filters</Typography>
         <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Property Type</InputLabel>
-          <Select
+          <InputLabel>Property Type</InputLabel><Select
             value={selectedFilter}
             onChange={(e) => setSelectedFilter(e.target.value)}
           >
@@ -1149,49 +1312,54 @@ const Properties = () => {
 
       {totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
-        <Pagination
-          count={totalPages}
-          page={currentPage}
-          onChange={(_, page) => setCurrentPage(page)}
-          color="primary"
-          size={isMobile ? "small" : "medium"}
-        />
-      </Box>
-    )}
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={(_, page) => setCurrentPage(page)}
+            color="primary"
+            size={isMobile ? "small" : "medium"}
+          />
+        </Box>
+      )}
 
-    <Button
-      variant="contained"
-      color="primary"
-      startIcon={<AddIcon />}
-      onClick={() => {
-        setSelectedProperty(null);
-        setIsAddPropertyModalOpen(true);
-      }}
-      sx={{ position: 'fixed', bottom: 16, right: 16 }}
-    >
-      Add Property
-    </Button>
-
-    {renderAdvancedFilterDrawer()}
-    {renderQuickViewModal()}
-    {renderAddEditPropertyModal()}
-
-    <Snackbar
-      open={snackbar.open}
-      autoHideDuration={6000}
-      onClose={() => setSnackbar({ ...snackbar, open: false })}
-      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-    >
-      <Alert
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        severity={snackbar.severity}
-        sx={{ width: "100%" }}
+      <Button
+        variant="contained"
+        color="primary"
+        startIcon={<AddIcon />}
+        onClick={() => {
+          setSelectedProperty(null);
+          setIsAddPropertyModalOpen(true);
+        }}
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          zIndex: 1000,
+        }}
       >
-        {snackbar.message}
-      </Alert>
-    </Snackbar>
-  </PageWrapper>
-);
+        Add Property
+      </Button>
+
+      {renderAdvancedFilterDrawer()}
+      {renderQuickViewModal()}
+      {renderAddEditPropertyModal()}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </PageWrapper>
+  );
 };
 
-export default Properties;
+export default React.memo(Properties);

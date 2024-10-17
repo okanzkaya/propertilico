@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const { protect, admin } = require('../middleware/authMiddleware');
 const userController = require('../controllers/userController');
-
+const propertyController = require('../controllers/propertyController');
 // Multer configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/avatars/'),
@@ -40,5 +40,6 @@ router.put('/preferences', userController.updateUserPreferences);
 
 // Add this new route
 router.put('/', userController.updateUserProfile);
+router.post('/favorites/:propertyId', protect, propertyController.toggleFavorite);
 
 module.exports = router;

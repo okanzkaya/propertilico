@@ -7,7 +7,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'ownerId',
         as: 'owner'
       });
-      // Add more associations if needed
+
+      // Add this new association for favorites
+      Property.belongsToMany(models.User, {
+        through: 'UserFavorites',
+        as: 'favoritedBy',
+        foreignKey: 'propertyId'
+      });
     }
   }
 

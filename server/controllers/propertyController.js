@@ -57,6 +57,18 @@ exports.createProperty = async (req, res) => {
       return res.status(403).json({ message: 'You have reached the maximum number of properties for your subscription' });
     }
 
+    // Validate and sanitize coordinates
+    let latitude = parseFloat(req.body.latitude);
+    let longitude = parseFloat(req.body.longitude);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      latitude = null;
+      longitude = null;
+    } else {
+      latitude = Math.max(-90, Math.min(90, latitude));
+      longitude = (((longitude + 180) % 360) + 360) % 360 - 180;
+    }
+
     const newProperty = await models.Property.create({
       ...req.body,
       ownerId: req.user.id,
@@ -64,11 +76,13 @@ exports.createProperty = async (req, res) => {
       parking: req.body.parking === 'true',
       petFriendly: req.body.petFriendly === 'true',
       availableNow: req.body.availableNow === 'true',
-      location: req.body.latitude && req.body.longitude
-        ? sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', req.body.longitude, req.body.latitude), 4326)
+      latitude,
+      longitude,
+      location: latitude && longitude
+        ? sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', longitude, latitude), 4326)
         : null,
       images: req.files ? req.files.map((file, index) => ({
-        path: file.filename, // Save only the filename
+        path: file.filename,
         isMain: index.toString() === req.body.mainImageIndex
       })) : []
     }, { transaction: t });
@@ -167,8 +181,15 @@ exports.deleteProperty = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
+    const { id } = req.params;
+
+    if (!id || id === 'undefined') {
+      await t.rollback();
+      return res.status(400).json({ message: 'Invalid property ID' });
+    }
+
     const property = await models.Property.findOne({
-      where: { id: req.params.id, ownerId: req.user.id },
+      where: { id: id, ownerId: req.user.id },
       transaction: t
     });
 
@@ -202,28 +223,24 @@ exports.deleteProperty = async (req, res) => {
 };
 
 exports.toggleFavorite = async (req, res) => {
-  const t = await sequelize.transaction();
-
   try {
-    const property = await models.Property.findByPk(req.params.id, { transaction: t });
+    const user = await models.User.findByPk(req.user.id);
+    const property = await models.Property.findByPk(req.params.propertyId);
+
     if (!property) {
-      await t.rollback();
       return res.status(404).json({ message: 'Property not found' });
     }
 
-    const user = await models.User.findByPk(req.user.id, { transaction: t });
-    const isFavorite = await user.hasFavoriteProperty(property, { transaction: t });
+    const isFavorite = await user.hasFavoriteProperty(property);
 
     if (isFavorite) {
-      await user.removeFavoriteProperty(property, { transaction: t });
+      await user.removeFavoriteProperty(property);
     } else {
-      await user.addFavoriteProperty(property, { transaction: t });
+      await user.addFavoriteProperty(property);
     }
 
-    await t.commit();
     res.json({ isFavorite: !isFavorite });
   } catch (error) {
-    await t.rollback();
     console.error('Error toggling favorite:', error);
     res.status(500).json({ message: 'Error updating favorite status', error: error.message });
   }

@@ -188,7 +188,7 @@ module.exports = (sequelize, DataTypes) => {
 
   User.associate = (models) => {
     User.hasMany(models.Blog, { foreignKey: 'author_id', as: 'blogs' });
-    User.hasMany(models.Property, { foreignKey: 'owner_id', as: 'ownedProperties' }); // Changed 'properties' to 'ownedProperties'
+    User.hasMany(models.Property, { foreignKey: 'owner_id', as: 'ownedProperties' });
     User.hasMany(models.Contact, { foreignKey: 'user_id', as: 'contacts' });
     User.hasMany(models.Document, { foreignKey: 'user_id', as: 'documents' });
     User.hasMany(models.Feedback, { foreignKey: 'user_id', as: 'feedbacks' });
@@ -197,6 +197,13 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.Ticket, { foreignKey: 'assignee_id', as: 'assignedTickets' });
     User.hasMany(models.Transaction, { foreignKey: 'user_id', as: 'transactions' });
     User.hasMany(models.Report, { foreignKey: 'user_id', as: 'reports' });
+
+    // Add this new association for favorites
+    User.belongsToMany(models.Property, {
+      through: 'UserFavorites',
+      as: 'favoriteProperties',
+      foreignKey: 'userId'
+    });
   };
 
   return User;
