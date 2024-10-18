@@ -4,7 +4,8 @@ import {
   MenuItem, IconButton, InputAdornment, Tooltip, Select, FormControl,
   FormControlLabel, Checkbox, Slider, Dialog, DialogTitle, DialogContent,
   DialogActions, Pagination, Chip, useMediaQuery, Snackbar,
-  Alert, CircularProgress, Tabs, Tab, Paper, List, ListItem, ListItemText, Avatar, InputLabel, Rating, CardActions, Drawer, ListItemIcon,
+  Alert, CircularProgress, Tabs, Tab, Paper, List, ListItem, ListItemText,
+  ListItemIcon, InputLabel, Rating, CardActions, Drawer,
   ImageList, ImageListItem, ImageListItemBar, FormHelperText
 } from "@mui/material";
 import { useTheme, styled, alpha } from "@mui/material/styles";
@@ -14,9 +15,9 @@ import {
   BedroomParent as BedroomParentIcon, Bathtub as BathtubIcon,
   SquareFoot as SquareFootIcon, GridView as GridViewIcon, ViewList as ViewListIcon,
   Map as MapIcon, Home as HomeIcon, Edit as EditIcon,
-  CheckCircle as CheckCircleIcon, Schedule as ScheduleIcon, Cancel as CancelIcon,
   Delete as DeleteIcon, Add as AddIcon, CloudUpload as CloudUploadIcon,
-  NavigateBefore, NavigateNext, CropOriginal
+  RadioButtonUnchecked as RadioButtonUncheckedIcon,
+  RadioButtonChecked as RadioButtonCheckedIcon
 } from "@mui/icons-material";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -48,6 +49,35 @@ const PropertyCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 2,
   overflow: 'hidden',
 }));
+
+const PropertyImage = styled('img')({
+  width: '100%',
+  height: '200px',
+  objectFit: 'cover',
+});
+
+const PropertyContent = styled(CardContent)({
+  flexGrow: 1,
+  display: 'flex',
+  flexDirection: 'column',
+});
+
+const PropertyTitle = styled(Typography)({
+  fontWeight: 'bold',
+  marginBottom: '8px',
+});
+
+const PropertyPrice = styled(Typography)(({ theme }) => ({
+  color: theme.palette.primary.main,
+  fontWeight: 'bold',
+  marginBottom: '8px',
+}));
+
+const PropertyFeatures = styled(Box)({
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginBottom: '8px',
+});
 
 const StyledRating = styled(Rating)(({ theme }) => ({
   '& .MuiRating-iconFilled': {
@@ -111,9 +141,6 @@ const Properties = () => {
   const [uploadedImages, setUploadedImages] = useState([]);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [quickViewProperty, setQuickViewProperty] = useState(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [mapCenter, setMapCenter] = useState([40.7128, -74.006]);
-  const [mapZoom, setMapZoom] = useState(13);
 
   const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     resolver: yupResolver(propertySchema),
@@ -215,7 +242,6 @@ const Properties = () => {
 
   const handlePropertyDetails = useCallback((property) => {
     setQuickViewProperty(property);
-    setCurrentImageIndex(0);
   }, []);
 
   const handleImageUpload = (event) => {
@@ -257,24 +283,25 @@ const Properties = () => {
     setMainImageIndex(index);
   };
 
-  const LocationPicker = () => {
+  const LocationPicker = ({ onLocationSelect }) => {
     const map = useMap();
+    const [localSelectedLocation, setLocalSelectedLocation] = useState(null);
 
     useEffect(() => {
-      if (selectedLocation) {
-        map.flyTo([selectedLocation.lat, selectedLocation.lng], 15);
+      if (localSelectedLocation) {
+        map.flyTo([localSelectedLocation.lat, localSelectedLocation.lng], 15);
+        onLocationSelect(localSelectedLocation);
       }
-    }, [map]); // Remove selectedLocation from the dependency array
+    }, [map, localSelectedLocation, onLocationSelect]);
 
     useMapEvents({
       click(e) {
-        setSelectedLocation(e.latlng);
-        map.flyTo(e.latlng, 15); // Move the flyTo here to respond to clicks
+        setLocalSelectedLocation(e.latlng);
       },
     });
 
-    return selectedLocation ? (
-      <Marker position={selectedLocation} icon={customMarkerIcon}>
+    return localSelectedLocation ? (
+      <Marker position={localSelectedLocation} icon={customMarkerIcon}>
         <Popup>Selected location</Popup>
       </Marker>
     ) : null;
@@ -310,7 +337,6 @@ const Properties = () => {
       const response = await axiosInstance.post('/api/properties', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      console.log('New property added:', response.data);
       setProperties(prevProperties => [response.data, ...prevProperties]);
       setSnackbar({
         open: true,
@@ -322,8 +348,6 @@ const Properties = () => {
       setUploadedImages([]);
       setMainImageIndex(0);
       setSelectedLocation(null);
-      setMapCenter([40.7128, -74.006]);
-      setMapZoom(13);
     } catch (error) {
       console.error('Error adding property:', error.response?.data || error);
       setSnackbar({
@@ -335,33 +359,7 @@ const Properties = () => {
   };
 
   const handleEditProperty = useCallback((property) => {
-    console.log("Attempting to edit property:", property);
-
-    if (!property) {
-      console.error("Error: property is null or undefined");
-      setSnackbar({
-        open: true,
-        message: "Error: Invalid property data",
-        severity: "error"
-      });
-      return;
-    }
-
-    const propertyId = property._id || property.id;
-
-    if (!propertyId) {
-      console.error("Error: property is missing identifier", property);
-      setSnackbar({
-        open: true,
-        message: "Error: Property is missing identifier",
-        severity: "error"
-      });
-      return;
-    }
-
-    setEditingProperty({ ...property, _id: propertyId });
-
-    // Populate form fields immediately
+    setEditingProperty(property);
     const fieldsToSet = [
       'name', 'description', 'rentAmount', 'propertyType',
       'bedrooms', 'bathrooms', 'area', 'furnished',
@@ -369,7 +367,6 @@ const Properties = () => {
     ];
 
     fieldsToSet.forEach(field => {
-      console.log(`Setting ${field}:`, property[field]);
       setValue(field, property[field], { shouldValidate: true, shouldDirty: true });
     });
 
@@ -378,12 +375,8 @@ const Properties = () => {
         lat: parseFloat(property.latitude),
         lng: parseFloat(property.longitude)
       });
-      setMapCenter([parseFloat(property.latitude), parseFloat(property.longitude)]);
-      setMapZoom(15);
     } else {
       setSelectedLocation(null);
-      setMapCenter([40.7128, -74.006]);
-      setMapZoom(13);
     }
 
     if (property.images && Array.isArray(property.images)) {
@@ -397,14 +390,6 @@ const Properties = () => {
 
     setIsAddPropertyModalOpen(true);
   }, [setValue]);
-
-  // Modify the useEffect hook that watches for changes in editingProperty
-  useEffect(() => {
-    if (isAddPropertyModalOpen) {
-      const formValues = control._formValues;
-      console.log("Current form values:", formValues);
-    }
-  }, [isAddPropertyModalOpen, control._formValues]);
 
   const handleUpdateProperty = async (data) => {
     try {
@@ -450,14 +435,8 @@ const Properties = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      console.log("Update response:", response.data);
-
-      // Fetch the updated property data
-      const updatedPropertyResponse = await axiosInstance.get(`/api/properties/${propertyId}`);
-      const updatedProperty = updatedPropertyResponse.data;
-
       setProperties(prevProperties =>
-        prevProperties.map(p => (p._id || p.id) === propertyId ? updatedProperty : p)
+        prevProperties.map(p => (p._id || p.id) === propertyId ? response.data : p)
       );
 
       setSnackbar({
@@ -472,8 +451,6 @@ const Properties = () => {
       setUploadedImages([]);
       setMainImageIndex(0);
       setSelectedLocation(null);
-      setMapCenter([40.7128, -74.006]);
-      setMapZoom(13);
     } catch (error) {
       console.error('Error updating property:', error.response?.data || error.message);
       setSnackbar({
@@ -529,98 +506,34 @@ const Properties = () => {
       : "/placeholder-property.jpg";
 
     return (
-      <PropertyCard key={propertyId}>
-        <Box
-          sx={{
-            position: 'relative',
-            width: '100%',
-            height: 200,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            bgcolor: 'grey.200'
-          }}
+      <PropertyCard>
+        <PropertyImage
+          src={imageUrl}
+          alt={property.name}
           onClick={() => handlePropertyDetails(property)}
-        >
-          <img
-            src={imageUrl}
-            alt={property.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => {
-              console.error('Image failed to load:', imageUrl);
-              e.target.onerror = null;
-              e.target.src = "/placeholder-property.jpg";
-            }}
-          />
-        </Box>
-        <CardContent sx={{ flexGrow: 1 }}>
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{
-              height: '2.5em',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              lineHeight: '1.25em',
-              mb: 1
-            }}
-          >
-            {property.name}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            component="div"
-            sx={{
-              height: '3em',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical'
-            }}
-          >
-            {property.description}
-          </Typography>
-          <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-            ${property.rentAmount?.toLocaleString()} / month
-          </Typography>
-          <StyledRating name={`rating-${propertyId}`} value={property.rating || 0} readOnly size="small" />
-          <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+        />
+        <PropertyContent>
+          <PropertyTitle variant="h6">{property.name}</PropertyTitle>
+          <PropertyPrice variant="h5">${property.rentAmount?.toLocaleString()} / month</PropertyPrice>
+          <PropertyFeatures>
             <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
             <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
             <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
-          </Box>
-        </CardContent>
-        <CardActions sx={{ justifyContent: "space-between", p: 1 }}>
-          <Tooltip title={favoriteProperties.includes(propertyId) ? "Remove from Favorites" : "Add to Favorites"}>
-            <IconButton onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(propertyId);
-            }}>
-              {favoriteProperties.includes(propertyId) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Edit">
-            <IconButton onClick={(e) => {
-              e.stopPropagation();
-              console.log("Edit button clicked for property:", property);
-              handleEditProperty(property);
-            }}>
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteProperty(propertyId);
-            }}>
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
+          </PropertyFeatures>
+          <Typography variant="body2" color="text.secondary">
+            {property.description.substring(0, 100)}...
+          </Typography>
+        </PropertyContent>
+        <CardActions>
+          <IconButton onClick={() => toggleFavorite(propertyId)}>
+            {favoriteProperties.includes(propertyId) ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
+          </IconButton>
+          <IconButton onClick={() => handleEditProperty(property)}>
+            <EditIcon />
+          </IconButton>
+          <IconButton onClick={() => handleDeleteProperty(propertyId)}>
+            <DeleteIcon />
+          </IconButton>
         </CardActions>
       </PropertyCard>
     );
@@ -671,36 +584,45 @@ const Properties = () => {
                 <ListItem
                   key={propertyId}
                   alignItems="flex-start"
-                  sx={{ mb: 2, border: 1, borderColor: "divider", borderRadius: 2, "&:hover": { backgroundColor: "action.hover" } }}
+                  sx={{
+                    mb: 2,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    "&:hover": { backgroundColor: "action.hover" },
+                    transition: 'all 0.3s',
+                  }}
                   onClick={() => handlePropertyDetails(property)}
                 >
                   <Box sx={{ display: 'flex', width: '100%' }}>
-                    <Box sx={{ mr: 2 }}>
-                      <Avatar
+                    <Box sx={{ mr: 2, width: 150, height: 150, flexShrink: 0 }}>
+                      <img
                         src={imageUrl}
                         alt={property.name}
-                        variant="rounded"
-                        sx={{ width: 100, height: 100 }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: theme.shape.borderRadius }}
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = "/placeholder-property.jpg";
                         }}
-                      >
-                        {(!mainImage) && <HomeIcon />}
-                      </Avatar>
+                      />
                     </Box>
                     <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6">{property.name}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {property.description}
+                      <Typography variant="h6" gutterBottom>{property.name}</Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        {property.description.length > 150
+                          ? `${property.description.substring(0, 150)}...`
+                          : property.description}
                       </Typography>
-                      <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                      <Typography variant="h6" color="primary" gutterBottom>
                         ${property.rentAmount?.toLocaleString()} / month
                       </Typography>
-                      <Box sx={{ mt: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                         <StyledRating name={`rating-${propertyId}`} value={property.rating || 0} readOnly size="small" />
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                          {property.propertyType}
+                        </Typography>
                       </Box>
-                      <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
                         <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
                         <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
                         <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
@@ -741,7 +663,11 @@ const Properties = () => {
       case 'map':
         return (
           <Box sx={{ height: 600, width: '100%', borderRadius: theme.shape.borderRadius * 2, overflow: 'hidden', position: 'relative' }}>
-            <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: "100%", width: "100%" }}>
+            <MapContainer
+              center={[0, 0]}
+              zoom={2}
+              style={{ height: "100%", width: "100%" }}
+            >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {properties.map((property) => {
                 if (property.latitude && property.longitude) {
@@ -761,12 +687,32 @@ const Properties = () => {
                 }
                 return null;
               })}
+              <MapBoundsSetter properties={properties} />
             </MapContainer>
           </Box>
         );
       default:
         return null;
     }
+  };
+
+  const MapBoundsSetter = ({ properties }) => {
+    const map = useMap();
+
+    useEffect(() => {
+      if (properties.length > 0) {
+        const validLocations = properties
+          .filter(p => p.latitude && p.longitude)
+          .map(p => [p.latitude, p.longitude]);
+
+        if (validLocations.length > 0) {
+          const bounds = L.latLngBounds(validLocations);
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
+      }
+    }, [properties, map]);
+
+    return null;
   };
 
   const renderQuickViewModal = () => (
@@ -785,42 +731,12 @@ const Properties = () => {
                 <Box sx={{ position: 'relative', width: '100%', paddingTop: '75%' }}>
                   <img
                     src={quickViewProperty.images && quickViewProperty.images.length > 0
-                      ? `${process.env.REACT_APP_API_URL}/uploads/properties/${quickViewProperty.images[currentImageIndex].path}`
+                      ? `${process.env.REACT_APP_API_URL}/uploads/properties/${quickViewProperty.images[0].path}`
                       : "/placeholder-property.jpg"}
                     alt={quickViewProperty.name}
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                  {quickViewProperty.images && quickViewProperty.images.length > 1 && (
-                    <>
-                      <IconButton
-                        sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}
-                        onClick={() => setCurrentImageIndex(prev => (prev - 1 + quickViewProperty.images.length) % quickViewProperty.images.length)}
-                      >
-                        <NavigateBefore />
-                      </IconButton>
-                      <IconButton
-                        sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}
-                        onClick={() => setCurrentImageIndex(prev => (prev + 1) % quickViewProperty.images.length)}
-                      >
-                        <NavigateNext />
-                      </IconButton>
-                    </>
-                  )}
                 </Box>
-                {quickViewProperty.images && quickViewProperty.images.length > 1 && (
-                  <ImageList sx={{ width: '100%', height: 100, mt: 2 }} cols={4} rowHeight={100}>
-                    {quickViewProperty.images.map((img, index) => (
-                      <ImageListItem key={img.path} onClick={() => setCurrentImageIndex(index)} sx={{ cursor: 'pointer' }}>
-                        <img
-                          src={`${process.env.REACT_APP_API_URL}/uploads/properties/${img.path}`}
-                          alt={`${quickViewProperty.name} - ${index + 1}`}
-                          loading="lazy"
-                          style={{ objectFit: 'cover', height: '100%' }}
-                        />
-                      </ImageListItem>
-                    ))}
-                  </ImageList>
-                )}
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="h6" color="primary">${quickViewProperty.rentAmount?.toLocaleString()} / month</Typography>
@@ -842,22 +758,6 @@ const Properties = () => {
                   <ListItem>
                     <ListItemIcon><HomeIcon /></ListItemIcon>
                     <ListItemText primary={`Type: ${quickViewProperty.propertyType}`} />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>{quickViewProperty.furnished ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}</ListItemIcon>
-                    <ListItemText primary={`Furnished: ${quickViewProperty.furnished ? 'Yes' : 'No'}`} />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>{quickViewProperty.parking ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}</ListItemIcon>
-                    <ListItemText primary={`Parking: ${quickViewProperty.parking ? 'Available' : 'Not Available'}`} />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>{quickViewProperty.petFriendly ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}</ListItemIcon>
-                    <ListItemText primary={`Pet Friendly: ${quickViewProperty.petFriendly ? 'Yes' : 'No'}`} />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>{quickViewProperty.availableNow ? <CheckCircleIcon color="success" /> : <ScheduleIcon />}</ListItemIcon>
-                    <ListItemText primary={`Available: ${quickViewProperty.availableNow ? 'Now' : 'Soon'}`} />
                   </ListItem>
                 </List>
               </Grid>
@@ -886,14 +786,12 @@ const Properties = () => {
           setUploadedImages([]);
           setMainImageIndex(0);
           setSelectedLocation(null);
-          setMapCenter([40.7128, -74.006]);
-          setMapZoom(13);
         }}
         maxWidth="md"
         fullWidth
       >
         <form onSubmit={handleSubmit(editingProperty ? handleUpdateProperty : handleAddProperty)}>
-          <DialogTitle>{editingProperty ? `Edit Property: ${editingProperty._id}` : 'Add New Property'}</DialogTitle>
+          <DialogTitle>{editingProperty ? `Edit Property: ${editingProperty.name}` : 'Add New Property'}</DialogTitle>
           <DialogContent>
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -909,7 +807,7 @@ const Properties = () => {
                       fullWidth
                       error={!!errors.name}
                       helperText={errors.name?.message}
-                      value={field.value || ''} // Ensure a value is always provided
+                      margin="normal"
                     />
                   )}
                 />
@@ -929,6 +827,7 @@ const Properties = () => {
                       rows={3}
                       error={!!errors.description}
                       helperText={errors.description?.message}
+                      margin="normal"
                     />
                   )}
                 />
@@ -938,7 +837,7 @@ const Properties = () => {
                   name="rentAmount"
                   control={control}
                   defaultValue=""
-                  rules={{ required: 'Rent amount is required', min: { value: 0, message: 'Rent must be positive' } }}
+                  rules={{ required: 'Rent amount is required' }}
                   render={({ field }) => (
                     <TextField
                       {...field}
@@ -950,6 +849,7 @@ const Properties = () => {
                       }}
                       error={!!errors.rentAmount}
                       helperText={errors.rentAmount?.message}
+                      margin="normal"
                     />
                   )}
                 />
@@ -961,7 +861,7 @@ const Properties = () => {
                   defaultValue=""
                   rules={{ required: 'Property type is required' }}
                   render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.propertyType}>
+                    <FormControl fullWidth error={!!errors.propertyType} margin="normal">
                       <InputLabel>Property Type</InputLabel>
                       <Select {...field} label="Property Type">
                         {["Apartment", "House", "Condo", "Townhouse"].map((type) => (
@@ -978,7 +878,7 @@ const Properties = () => {
                   name="bedrooms"
                   control={control}
                   defaultValue=""
-                  rules={{ required: 'Number of bedrooms is required', min: { value: 0, message: 'Bedrooms must be non-negative' } }}
+                  rules={{ required: 'Number of bedrooms is required' }}
                   render={({ field }) => (
                     <TextField
                       {...field}
@@ -987,6 +887,7 @@ const Properties = () => {
                       type="number"
                       error={!!errors.bedrooms}
                       helperText={errors.bedrooms?.message}
+                      margin="normal"
                     />
                   )}
                 />
@@ -996,7 +897,7 @@ const Properties = () => {
                   name="bathrooms"
                   control={control}
                   defaultValue=""
-                  rules={{ required: 'Number of bathrooms is required', min: { value: 0, message: 'Bathrooms must be non-negative' } }}
+                  rules={{ required: 'Number of bathrooms is required' }}
                   render={({ field }) => (
                     <TextField
                       {...field}
@@ -1005,6 +906,7 @@ const Properties = () => {
                       type="number"
                       error={!!errors.bathrooms}
                       helperText={errors.bathrooms?.message}
+                      margin="normal"
                     />
                   )}
                 />
@@ -1014,7 +916,7 @@ const Properties = () => {
                   name="area"
                   control={control}
                   defaultValue=""
-                  rules={{ required: 'Area is required', min: { value: 0, message: 'Area must be non-negative' } }}
+                  rules={{ required: 'Area is required' }}
                   render={({ field }) => (
                     <TextField
                       {...field}
@@ -1023,6 +925,7 @@ const Properties = () => {
                       type="number"
                       error={!!errors.area}
                       helperText={errors.area?.message}
+                      margin="normal"
                     />
                   )}
                 />
@@ -1080,11 +983,11 @@ const Properties = () => {
                 />
               </Grid>
               <Grid item xs={12}>
-                <Typography variant="subtitle1">Property Location</Typography>
-                <Box sx={{ height: 300, width: '100%' }}>
-                  <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: "100%", width: "100%" }}>
+                <Typography variant="subtitle1" gutterBottom>Property Location</Typography>
+                <Box sx={{ height: 300, width: '100%', marginBottom: 2 }}>
+                  <MapContainer center={[0, 0]} zoom={2} style={{ height: "100%", width: "100%" }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <LocationPicker />
+                    <LocationPicker onLocationSelect={setSelectedLocation} />
                   </MapContainer>
                 </Box>
                 {selectedLocation && (
@@ -1094,7 +997,7 @@ const Properties = () => {
                 )}
               </Grid>
               <Grid item xs={12}>
-                <Typography variant="subtitle1">Property Images</Typography>
+                <Typography variant="subtitle1" gutterBottom>Property Images</Typography>
                 <input
                   accept="image/*"
                   style={{ display: 'none' }}
@@ -1137,8 +1040,8 @@ const Properties = () => {
                           <Checkbox
                             checked={index === mainImageIndex}
                             onChange={() => handleSetMainImage(index)}
-                            icon={<CropOriginal />}
-                            checkedIcon={<CropOriginal color="primary" />}
+                            icon={<RadioButtonUncheckedIcon />}
+                            checkedIcon={<RadioButtonCheckedIcon />}
                           />
                         }
                         actionPosition="left"
@@ -1158,13 +1061,11 @@ const Properties = () => {
               setUploadedImages([]);
               setMainImageIndex(0);
               setSelectedLocation(null);
-              setMapCenter([40.7128, -74.006]);
-              setMapZoom(13);
             }}>Cancel</Button>
             <Button
               type="submit"
               color="primary"
-              onClick={() => console.log("Submit button clicked. editingProperty:", editingProperty)}
+              variant="contained"
             >
               {editingProperty ? 'Update' : 'Add'} Property
             </Button>
@@ -1182,91 +1083,87 @@ const Properties = () => {
       PaperProps={{
         sx: {
           width: { xs: '100%', sm: 300 },
-          height: 'calc(100% - 64px)',
-          top: 64,
-          overflowY: 'auto'
+          padding: theme.spacing(2),
         }
       }}
     >
-      <Box sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>Advanced Filters</Typography>
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Property Type</InputLabel>
-          <Select
-            value={selectedFilter}
-            onChange={(e) => setSelectedFilter(e.target.value)}
-          >
-            <MenuItem value="">All Types</MenuItem>
-            {["Apartment", "House", "Condo", "Townhouse"].map((type) => (
-              <MenuItem key={type} value={type}>{type}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <Typography gutterBottom>Rent Amount ($)</Typography>
-        <Slider
-          value={filters.rentAmount}
-          onChange={(_, newValue) => setFilters(prev => ({ ...prev, rentAmount: newValue }))}
-          valueLabelDisplay="auto"
-          min={500}
-          max={10000}
-          step={100}
-        />
-        <Typography gutterBottom>Bedrooms</Typography>
-        <Slider
-          value={filters.bedrooms}
-          onChange={(_, newValue) => setFilters(prev => ({ ...prev, bedrooms: newValue }))}
-          valueLabelDisplay="auto"
-          min={1}
-          max={10}
-          step={1}
-        />
-        <Typography gutterBottom>Bathrooms</Typography>
-        <Slider
-          value={filters.bathrooms}
-          onChange={(_, newValue) => setFilters(prev => ({ ...prev, bathrooms: newValue }))}
-          valueLabelDisplay="auto"
-          min={1}
-          max={5}
-          step={0.5}
-        />
-        <Typography gutterBottom>Area (sqft)</Typography>
-        <Slider
-          value={filters.area}
-          onChange={(_, newValue) => setFilters(prev => ({ ...prev, area: newValue }))}
-          valueLabelDisplay="auto"
-          min={500}
-          max={10000}
-          step={100}
-        />
-        <FormControlLabel
-          control={<Checkbox checked={filters.furnished} onChange={(e) => setFilters(prev => ({ ...prev, furnished: e.target.checked }))} />}
-          label="Furnished"
-        />
-        <FormControlLabel
-          control={<Checkbox checked={filters.parking} onChange={(e) => setFilters(prev => ({ ...prev, parking: e.target.checked }))} />}
-          label="Parking Available"
-        />
-        <FormControlLabel
-          control={<Checkbox checked={filters.petFriendly} onChange={(e) => setFilters(prev => ({ ...prev, petFriendly: e.target.checked }))} />}
-          label="Pet Friendly"
-        />
-        <FormControlLabel
-          control={<Checkbox checked={filters.availableNow} onChange={(e) => setFilters(prev => ({ ...prev, availableNow: e.target.checked }))} />}
-          label="Available Now"
-        />
-        <Button
-          fullWidth
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            setIsAdvancedFilterOpen(false);
-            fetchProperties();
-          }}
-          sx={{ mt: 2 }}
+      <Typography variant="h6" gutterBottom>Advanced Filters</Typography>
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Property Type</InputLabel>
+        <Select
+          value={selectedFilter}
+          onChange={(e) => setSelectedFilter(e.target.value)}
         >
-          Apply Filters
-        </Button>
-      </Box>
+          <MenuItem value="">All Types</MenuItem>
+          {["Apartment", "House", "Condo", "Townhouse"].map((type) => (
+            <MenuItem key={type} value={type}>{type}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <Typography gutterBottom>Rent Amount ($)</Typography>
+      <Slider
+        value={filters.rentAmount}
+        onChange={(_, newValue) => setFilters(prev => ({ ...prev, rentAmount: newValue }))}
+        valueLabelDisplay="auto"
+        min={500}
+        max={10000}
+        step={100}
+      />
+      <Typography gutterBottom>Bedrooms</Typography>
+      <Slider
+        value={filters.bedrooms}
+        onChange={(_, newValue) => setFilters(prev => ({ ...prev, bedrooms: newValue }))}
+        valueLabelDisplay="auto"
+        min={1}
+        max={10}
+        step={1}
+      />
+      <Typography gutterBottom>Bathrooms</Typography>
+      <Slider
+        value={filters.bathrooms}
+        onChange={(_, newValue) => setFilters(prev => ({ ...prev, bathrooms: newValue }))}
+        valueLabelDisplay="auto"
+        min={1}
+        max={5}
+        step={0.5}
+      />
+      <Typography gutterBottom>Area (sqft)</Typography>
+      <Slider
+        value={filters.area}
+        onChange={(_, newValue) => setFilters(prev => ({ ...prev, area: newValue }))}
+        valueLabelDisplay="auto"
+        min={500}
+        max={10000}
+        step={100}
+      />
+      <FormControlLabel
+        control={<Checkbox checked={filters.furnished} onChange={(e) => setFilters(prev => ({ ...prev, furnished: e.target.checked }))} />}
+        label="Furnished"
+      />
+      <FormControlLabel
+        control={<Checkbox checked={filters.parking} onChange={(e) => setFilters(prev => ({ ...prev, parking: e.target.checked }))} />}
+        label="Parking Available"
+      />
+      <FormControlLabel
+        control={<Checkbox checked={filters.petFriendly} onChange={(e) => setFilters(prev => ({ ...prev, petFriendly: e.target.checked }))} />}
+        label="Pet Friendly"
+      />
+      <FormControlLabel
+        control={<Checkbox checked={filters.availableNow} onChange={(e) => setFilters(prev => ({ ...prev, availableNow: e.target.checked }))} />}
+        label="Available Now"
+      />
+      <Button
+        fullWidth
+        variant="contained"
+        color="primary"
+        onClick={() => {
+          setIsAdvancedFilterOpen(false);
+          fetchProperties();
+        }}
+        sx={{ mt: 2 }}
+      >
+        Apply Filters
+      </Button>
     </Drawer>
   );
 
