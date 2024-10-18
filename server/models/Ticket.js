@@ -1,5 +1,20 @@
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const Ticket = sequelize.define('Ticket', {
+  class Ticket extends Model {
+    static associate(models) {
+      Ticket.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user'
+      });
+      Ticket.belongsTo(models.User, {
+        foreignKey: 'assigneeId',
+        as: 'assignee'
+      });
+    }
+  }
+
+  Ticket.init({
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
@@ -47,14 +62,26 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       validate: {
         isDate: { msg: 'Invalid date format' },
-        isAfter: { args: new Date().toISOString(), msg: 'Due date must be in the future' }
+        isAfterToday(value) {
+          if (value && new Date(value) <= new Date()) {
+            throw new Error('Due date must be in the future');
+          }
+        }
       }
     },
     notes: {
       type: DataTypes.JSONB,
       defaultValue: []
+    },
+    isOverdue: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return this.dueDate && new Date(this.dueDate) < new Date();
+      }
     }
   }, {
+    sequelize,
+    modelName: 'Ticket',
     tableName: 'tickets',
     underscored: true,
     indexes: [
@@ -74,7 +101,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   });
 
-  Ticket.prototype.addNote = async function(content, userId) {
+  Ticket.prototype.addNote = async function (content, userId) {
     const note = {
       content,
       createdBy: userId,
@@ -82,17 +109,6 @@ module.exports = (sequelize, DataTypes) => {
     };
     this.notes = [...(this.notes || []), note];
     return this.save();
-  };
-
-  Ticket.associate = (models) => {
-    Ticket.belongsTo(models.User, {
-      foreignKey: 'userId',
-      as: 'user'
-    });
-    Ticket.belongsTo(models.User, {
-      foreignKey: 'assigneeId',
-      as: 'assignee'
-    });
   };
 
   return Ticket;

@@ -1,7 +1,9 @@
 const { models, sequelize } = require('../config/db');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
+const AppError = require('../utils/appError');
 
+// Ensure the encryption key is properly set
 const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'utf8');
 if (ENCRYPTION_KEY.length !== 32) {
   console.error('Invalid encryption key length. It must be exactly 32 bytes.');
@@ -9,21 +11,29 @@ if (ENCRYPTION_KEY.length !== 32) {
 }
 
 const IV_LENGTH = 16;
+const ENCRYPTION_ALGORITHM = 'aes-256-cbc';
 
-function encrypt(text) {
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
-  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
+function encrypt(buffer) {
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, ENCRYPTION_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+  return Buffer.concat([iv, encrypted]);
 }
 
 function decrypt(text) {
+  if (typeof text !== 'string') {
+    console.error('Decrypt error: Input is not a string', typeof text, text);
+    throw new AppError('Invalid input for decryption', 400);
+  }
   const textParts = text.split(':');
-  const iv = Buffer.from(textParts.shift(), 'hex');
-  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-  const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
-  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
-  return decrypted.toString();
+  if (textParts.length !== 2) {
+    console.error('Decrypt error: Invalid input format', text);
+    throw new AppError('Invalid encrypted data format', 400);
+  }
+  const iv = Buffer.from(textParts[0], 'hex');
+  const encryptedText = Buffer.from(textParts[1], 'hex');
+  const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, ENCRYPTION_KEY, iv);
+  return Buffer.concat([decipher.update(encryptedText), decipher.final()]);
 }
 
 function categorizeFile(fileName) {
@@ -34,7 +44,7 @@ function categorizeFile(fileName) {
   return 'other';
 }
 
-exports.getDocuments = async (req, res) => {
+exports.getDocuments = async (req, res, next) => {
   try {
     const documents = await models.Document.findAll({
       where: { userId: req.user.id, isDeleted: false },
@@ -43,24 +53,25 @@ exports.getDocuments = async (req, res) => {
     });
     res.json(documents);
   } catch (error) {
-    console.error('Error fetching documents:', error);
-    res.status(500).json({ message: 'Error fetching documents', error: error.message });
+    next(new AppError('Error fetching documents', 500));
   }
 };
 
-exports.uploadFile = async (req, res) => {
+exports.uploadFile = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+      throw new AppError('No file uploaded', 400);
     }
 
     const { originalname, buffer, mimetype, size } = req.file;
     const category = categorizeFile(originalname);
     
     if (size > 10 * 1024 * 1024) {
-      return res.status(400).json({ message: 'File size exceeds the limit (10MB)' });
+      throw new AppError('File size exceeds the limit (10MB)', 400);
     }
+
+    const encryptedContent = encrypt(buffer);
 
     const newFile = await models.Document.create({
       userId: req.user.id,
@@ -69,7 +80,7 @@ exports.uploadFile = async (req, res) => {
       category,
       mimeType: mimetype,
       size,
-      content: encrypt(buffer.toString('base64')),
+      content: encryptedContent,
       path: `/${originalname}`
     }, { transaction: t });
 
@@ -77,35 +88,57 @@ exports.uploadFile = async (req, res) => {
     res.status(201).json({ message: 'File uploaded successfully', file: newFile });
   } catch (error) {
     await t.rollback();
-    console.error('Error uploading file:', error);
-    res.status(500).json({ message: 'Error uploading file', error: error.message });
+    next(error);
   }
 };
 
-exports.downloadFile = async (req, res) => {
+function decryptBuffer(buffer) {
+  const iv = buffer.slice(0, 16);
+  const encryptedContent = buffer.slice(16);
+  const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, ENCRYPTION_KEY, iv);
+  return Buffer.concat([decipher.update(encryptedContent), decipher.final()]);
+}
+
+exports.downloadFile = async (req, res, next) => {
   try {
     const file = await models.Document.findOne({
       where: { id: req.params.id, userId: req.user.id, type: 'file' }
     });
     if (!file) {
-      return res.status(404).json({ message: 'File not found' });
+      throw new AppError('File not found', 404);
     }
 
-    const decryptedContent = Buffer.from(decrypt(file.content), 'base64');
+    console.log('File content type:', typeof file.content);
+    console.log('Is Buffer:', Buffer.isBuffer(file.content));
+
+    let decryptedContent;
+    try {
+      if (Buffer.isBuffer(file.content)) {
+        decryptedContent = decryptBuffer(file.content);
+      } else if (typeof file.content === 'string') {
+        decryptedContent = decrypt(file.content);
+      } else {
+        throw new Error('Unexpected content type');
+      }
+    } catch (decryptError) {
+      console.error('Decryption error:', decryptError);
+      throw new AppError('Unable to decrypt file content', 500);
+    }
 
     res.set({
       'Content-Type': file.mimeType,
-      'Content-Disposition': `attachment; filename="${file.name}"`
+      'Content-Disposition': `attachment; filename="${file.name}"`,
+      'Content-Security-Policy': "default-src 'self'",
+      'X-Content-Type-Options': 'nosniff'
     });
 
     res.send(decryptedContent);
   } catch (error) {
-    console.error('Error downloading file:', error);
-    res.status(500).json({ message: 'Error downloading file', error: error.message });
+    next(error);
   }
 };
 
-exports.deleteDocument = async (req, res) => {
+exports.deleteDocument = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const [updatedRowsCount] = await models.Document.update(
@@ -118,19 +151,18 @@ exports.deleteDocument = async (req, res) => {
 
     if (updatedRowsCount === 0) {
       await t.rollback();
-      return res.status(404).json({ message: 'Document not found' });
+      throw new AppError('Document not found', 404);
     }
 
     await t.commit();
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
     await t.rollback();
-    console.error('Error deleting document:', error);
-    res.status(500).json({ message: 'Error deleting document', error: error.message });
+    next(error);
   }
 };
 
-exports.updateDocument = async (req, res) => {
+exports.updateDocument = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { name } = req.body;
@@ -145,19 +177,18 @@ exports.updateDocument = async (req, res) => {
 
     if (updatedRowsCount === 0) {
       await t.rollback();
-      return res.status(404).json({ message: 'Document not found' });
+      throw new AppError('Document not found', 404);
     }
 
     await t.commit();
     res.json({ message: 'Document updated successfully', document: updatedDocuments[0] });
   } catch (error) {
     await t.rollback();
-    console.error('Error updating document:', error);
-    res.status(500).json({ message: 'Error updating document', error: error.message });
+    next(error);
   }
 };
 
-exports.toggleFavorite = async (req, res) => {
+exports.toggleFavorite = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const document = await models.Document.findOne({
@@ -166,7 +197,7 @@ exports.toggleFavorite = async (req, res) => {
     });
     if (!document) {
       await t.rollback();
-      return res.status(404).json({ message: 'Document not found' });
+      throw new AppError('Document not found', 404);
     }
     document.isFavorite = !document.isFavorite;
     await document.save({ transaction: t });
@@ -174,12 +205,11 @@ exports.toggleFavorite = async (req, res) => {
     res.json({ message: 'Favorite status updated', isFavorite: document.isFavorite });
   } catch (error) {
     await t.rollback();
-    console.error('Error updating favorite status:', error);
-    res.status(500).json({ message: 'Error updating favorite status', error: error.message });
+    next(error);
   }
 };
 
-exports.getStorageInfo = async (req, res) => {
+exports.getStorageInfo = async (req, res, next) => {
   try {
     const totalSize = await models.Document.sum('size', {
       where: { userId: req.user.id, isDeleted: false, type: 'file' }
@@ -189,7 +219,10 @@ exports.getStorageInfo = async (req, res) => {
 
     res.json({ used: totalSize || 0, limit });
   } catch (error) {
-    console.error('Error fetching storage information:', error);
-    res.status(500).json({ message: 'Error fetching storage information', error: error.message });
+    next(new AppError('Error fetching storage information', 500));
   }
 };
+
+
+
+module.exports = exports;

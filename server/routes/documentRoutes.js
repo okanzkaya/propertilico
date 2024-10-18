@@ -9,7 +9,7 @@ const {
   deleteDocument,
   updateDocument,
   toggleFavorite,
-  getStorageInfo
+  getStorageInfo,
 } = require('../controllers/documentController');
 
 const storage = multer.memoryStorage();

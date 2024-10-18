@@ -33,13 +33,19 @@ exports.getTickets = async (req, res) => {
         { model: models.User, as: 'assignee', attributes: ['id', 'name', 'email'] }
       ]
     });
-    res.json(tickets);
+
+    const currentDate = new Date();
+    const ticketsWithOverdueStatus = tickets.map(ticket => ({
+      ...ticket.toJSON(),
+      isOverdue: ticket.dueDate && new Date(ticket.dueDate) < currentDate
+    }));
+
+    res.json(ticketsWithOverdueStatus);
   } catch (error) {
     console.error('Error fetching tickets:', error);
     res.status(500).json({ message: 'Error fetching tickets', error: error.message });
   }
 };
-
 exports.getTicketById = async (req, res) => {
   try {
     const ticket = await models.Ticket.findOne({
@@ -58,30 +64,43 @@ exports.getTicketById = async (req, res) => {
   }
 };
 
+// In ticketController.js
 exports.updateTicket = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const [updatedRowsCount, updatedTickets] = await models.Ticket.update(req.body, {
-      where: { id: req.params.id, userId: req.user.id },
+    const { id } = req.params;
+    
+    if (!id) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Ticket ID is required' });
+    }
+
+    const ticket = await models.Ticket.findOne({
+      where: { id, userId: req.user.id },
+      transaction: t
+    });
+
+    if (!ticket) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Ticket not found or you do not have permission to update it' });
+    }
+
+    // Remove id from req.body to prevent its modification
+    const { id: removedId, ...updateData } = req.body;
+
+    const [updatedRowsCount, [updatedTicket]] = await models.Ticket.update(updateData, {
+      where: { id, userId: req.user.id },
       returning: true,
       transaction: t
     });
 
     if (updatedRowsCount === 0) {
       await t.rollback();
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: 'Ticket not found or no changes made' });
     }
 
     await t.commit();
-    
-    const updatedTicket = await models.Ticket.findOne({
-      where: { id: req.params.id },
-      include: [
-        { model: models.User, as: 'assignee', attributes: ['id', 'name', 'email'] }
-      ]
-    });
-    
     res.json(updatedTicket);
   } catch (error) {
     await t.rollback();
@@ -94,14 +113,21 @@ exports.deleteTicket = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
+    const { id } = req.params;
+    
+    if (!id || id === 'undefined') {
+      await t.rollback();
+      return res.status(400).json({ message: 'Invalid ticket ID' });
+    }
+
     const deletedRowsCount = await models.Ticket.destroy({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id, userId: req.user.id },
       transaction: t
     });
 
     if (deletedRowsCount === 0) {
       await t.rollback();
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: 'Ticket not found or you do not have permission to delete it' });
     }
 
     await t.commit();

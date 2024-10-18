@@ -35,18 +35,18 @@ const apiCall = async (method, url, data = null, options = {}) => {
     return response.data;
   } catch (error) {
     console.error(`API Error: ${url}`, error.response?.data || error.message);
-    
+
     if (error.code === 'ECONNABORTED') {
       console.error('Request timed out');
       return fallbackData[url.split('/').pop()] || null;
     }
-    
+
     if (error.response) {
       if (error.response.status === 403 && error.response.data.redirect === '/my-plan') {
         window.location.href = '/my-plan';
         throw new Error('Subscription required');
       }
-      
+
       console.error('Response error:', error.response.status, error.response.data);
       throw new Error(error.response.data.message || 'An error occurred');
     } else if (error.request) {
@@ -105,8 +105,19 @@ export const checkFeedbackLimit = () => apiCall('get', '/api/feedback/check-limi
 export const createTicket = (ticketData) => apiCall('post', '/api/tickets', ticketData);
 export const getTickets = () => apiCall('get', '/api/tickets');
 export const getTicketById = (id) => apiCall('get', `/api/tickets/${id}`);
-export const updateTicket = (id, ticketData) => apiCall('put', `/api/tickets/${id}`, ticketData);
-export const deleteTicket = (id) => apiCall('delete', `/api/tickets/${id}`);
+export const updateTicket = (id, ticketData) => {
+  if (!id) {
+    return Promise.reject(new Error('Ticket ID is required'));
+  }
+  return apiCall('put', `/api/tickets/${id}`, ticketData);
+};
+
+export const deleteTicket = (id) => {
+  if (!id) {
+    return Promise.reject(new Error('Ticket ID is required'));
+  }
+  return apiCall('delete', `/api/tickets/${id}`);
+};
 export const addNoteToTicket = (id, noteContent) => apiCall('post', `/api/tickets/${id}/notes`, { content: noteContent });
 
 // Finance API
@@ -138,32 +149,35 @@ export const deleteTask = (id) => apiCall('delete', `/api/tasks/${id}`);
 
 // Contact API
 export const getContacts = () => apiCall('get', '/api/contacts');
-export const createContact = (contactData) => apiCall('post', '/api/contacts', contactData);
+export const createContact = (contactData) =>
+  apiCall('post', '/api/contacts', contactData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
 export const getContactById = (id) => apiCall('get', `/api/contacts/${id}`);
 export const updateContact = (id, contactData) => apiCall('put', `/api/contacts/${id}`, contactData);
 export const deleteContact = (id) => apiCall('delete', `/api/contacts/${id}`);
 
 // Grouped API objects
-export const authApi = { 
-  registerUser, 
-  loginUser, 
-  logout, 
-  checkAuthStatus, 
-  requestPasswordReset, 
+export const authApi = {
+  registerUser,
+  loginUser,
+  logout,
+  checkAuthStatus,
+  requestPasswordReset,
   resetPassword,
   changePassword,
   googleLogin,
   refreshToken
 };
 
-export const userApi = { 
+export const userApi = {
   getProtectedData,
-  getUserProfile, 
-  updateUserProfile, 
-  getSubscriptionDetails, 
-  extendSubscription, 
-  reduceSubscription, 
-  getNotifications, 
+  getUserProfile,
+  updateUserProfile,
+  getSubscriptionDetails,
+  extendSubscription,
+  reduceSubscription,
+  getNotifications,
   markNotificationAsRead,
   updateUserPreferences,
   changeEmail,

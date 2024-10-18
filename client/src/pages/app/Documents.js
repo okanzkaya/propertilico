@@ -9,7 +9,7 @@ import {
   Search as SearchIcon, InsertDriveFile as FileIcon, CloudUpload as UploadIcon,
   Delete as DeleteIcon, GetApp as DownloadIcon, Star as StarIcon,
   StarBorder as StarBorderIcon, Sort as SortIcon, FilterList as FilterIcon,
-  Edit as EditIcon, Lock as LockIcon, Image as ImageIcon, 
+  Edit as EditIcon, Lock as LockIcon, Image as ImageIcon,
   VideoFile as VideoFileIcon, Description as DocumentIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/system';
@@ -89,7 +89,10 @@ const Documents = () => {
   const [renameProgress, setRenameProgress] = useState(0);
 
   const { data: documentsData, isLoading, error } = useQuery('documents', () =>
-    axiosInstance.get('/api/documents').then(res => res.data)
+    axiosInstance.get('/api/documents').then(res => {
+      console.log('Documents fetched:', res.data);
+      return res.data;
+    })
   );
 
   const { data: storageData } = useQuery('storage', () =>
@@ -151,7 +154,7 @@ const Documents = () => {
   );
 
   const updateDocumentMutation = useMutation(
-    (updatedDoc) => axiosInstance.put(`/api/documents/${updatedDoc._id}`, updatedDoc),
+    (updatedDoc) => axiosInstance.put(`/api/documents/${updatedDoc.id}`, updatedDoc),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('documents');
@@ -181,16 +184,33 @@ const Documents = () => {
   }, [uploadFile, uploadFileMutation]);
 
   const handleDeleteDocument = useCallback((id) => {
+    console.log('Delete document:', id);  // Debug log
+    if (!id) {
+      console.error('Document ID is undefined');
+      setSnackbar({ open: true, message: 'Error: Document ID is missing', severity: 'error' });
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this document?')) {
       deleteDocumentMutation.mutate(id);
     }
   }, [deleteDocumentMutation]);
 
   const handleToggleFavorite = useCallback((id) => {
+    console.log('Toggle favorite:', id);  // Debug log
+    if (!id) {
+      console.error('Document ID is undefined');
+      setSnackbar({ open: true, message: 'Error: Document ID is missing', severity: 'error' });
+      return;
+    }
     toggleFavoriteMutation.mutate(id);
   }, [toggleFavoriteMutation]);
 
   const handleDownload = useCallback(async (id, fileName) => {
+    if (!id || !fileName) {
+      console.error('Document ID or file name is undefined');
+      setSnackbar({ open: true, message: 'Error: Document information is missing', severity: 'error' });
+      return;
+    }
     try {
       const response = await axiosInstance.get(`/api/documents/${id}/download`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -207,12 +227,14 @@ const Documents = () => {
   }, []);
 
   const handleFileDetails = useCallback((file) => {
+    console.log('File details:', file);  // Debug log
     setSelectedFile(file);
     setIsFileDetailsOpen(true);
   }, []);
 
   const handleUpdateDocument = useCallback(() => {
-    if (selectedFile) {
+    console.log('Update document:', selectedFile);  // Debug log
+    if (selectedFile && selectedFile.id) {
       setRenameProgress(0);
       const interval = setInterval(() => {
         setRenameProgress((prevProgress) => {
@@ -228,7 +250,7 @@ const Documents = () => {
       const nameParts = updatedFile.name.split('.');
       const extension = nameParts.pop();
       updatedFile.name = `${nameParts.join('.')}.${extension}`;
-      
+
       updateDocumentMutation.mutate(updatedFile, {
         onSuccess: () => {
           clearInterval(interval);
@@ -239,6 +261,9 @@ const Documents = () => {
           setRenameProgress(0);
         }
       });
+    } else {
+      console.error('Selected file or file ID is undefined');
+      setSnackbar({ open: true, message: 'Error: File information is missing', severity: 'error' });
     }
   }, [selectedFile, updateDocumentMutation]);
 
@@ -246,9 +271,9 @@ const Documents = () => {
     return (
       <FileIconWrapper>
         {file.category === 'document' ? <DocumentIcon fontSize="large" color="primary" sx={{ fontSize: 100 }} /> :
-         file.category === 'image' ? <ImageIcon fontSize="large" color="secondary" sx={{ fontSize: 100 }} /> :
-         file.category === 'video' ? <VideoFileIcon fontSize="large" color="error" sx={{ fontSize: 100 }} /> :
-         <FileIcon fontSize="large" color="action" sx={{ fontSize: 100 }} />}
+          file.category === 'image' ? <ImageIcon fontSize="large" color="secondary" sx={{ fontSize: 100 }} /> :
+            file.category === 'video' ? <VideoFileIcon fontSize="large" color="error" sx={{ fontSize: 100 }} /> :
+              <FileIcon fontSize="large" color="action" sx={{ fontSize: 100 }} />}
       </FileIconWrapper>
     );
   }, []);
@@ -256,7 +281,7 @@ const Documents = () => {
   const filteredAndSortedDocuments = useMemo(() => {
     if (!Array.isArray(documentsData)) return [];
 
-    let result = documentsData.filter(doc => 
+    let result = documentsData.filter(doc =>
       doc.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -272,8 +297,8 @@ const Documents = () => {
       const isDesc = sortBy.startsWith('-');
       const field = isDesc ? sortBy.slice(1) : sortBy;
       const compareResult = field === 'name' ? a.name.localeCompare(b.name) :
-                            field === 'size' ? a.size - b.size :
-                            new Date(a.createdAt) - new Date(b.createdAt);
+        field === 'size' ? a.size - b.size :
+          new Date(a.createdAt) - new Date(b.createdAt);
       return isDesc ? -compareResult : compareResult;
     });
 
@@ -282,47 +307,50 @@ const Documents = () => {
 
   const renderDocumentGrid = useCallback(() => (
     <Grid container spacing={3}>
-      {filteredAndSortedDocuments.map((doc) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={doc._id}>
-          <StyledCard onClick={() => handleFileDetails(doc)}>
-            {renderFilePreview(doc)}
-            <CardContent>
-              <Typography variant="h6" noWrap>{doc.name}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {`${(doc.size / 1024 / 1024).toFixed(2)} MB`}
-              </Typography>
-              <Chip 
-                label={doc.category} 
-                size="small" 
-                sx={{ mt: 1 }}
-                color={doc.category === 'document' ? 'primary' : doc.category === 'image' ? 'secondary' : doc.category === 'video' ? 'error' : 'default'}
-              />
-            </CardContent>
-            <CardActions>
-              <Tooltip title={doc.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
-                <IconButton onClick={(e) => { e.stopPropagation(); handleToggleFavorite(doc._id); }}>
-                  {doc.isFavorite ? <StarIcon color="warning" /> : <StarBorderIcon />}
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Download">
-                <IconButton onClick={(e) => { e.stopPropagation(); handleDownload(doc._id, doc.name); }}>
-                  <DownloadIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Delete">
-                <IconButton onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc._id); }}>
-                  <DeleteIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Edit">
-                <IconButton onClick={(e) => { e.stopPropagation(); handleFileDetails(doc); }}>
-                  <EditIcon />
-                </IconButton>
-              </Tooltip>
-            </CardActions>
-          </StyledCard>
-        </Grid>
-      ))}
+      {filteredAndSortedDocuments.map((doc) => {
+        console.log('Document in grid:', doc);  // Debug log
+        return (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={doc.id || doc._id}>
+            <StyledCard onClick={() => handleFileDetails(doc)}>
+              {renderFilePreview(doc)}
+              <CardContent>
+                <Typography variant="h6" noWrap>{doc.name}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {`${(doc.size / 1024 / 1024).toFixed(2)} MB`}
+                </Typography>
+                <Chip
+                  label={doc.category}
+                  size="small"
+                  sx={{ mt: 1 }}
+                  color={doc.category === 'document' ? 'primary' : doc.category === 'image' ? 'secondary' : doc.category === 'video' ? 'error' : 'default'}
+                />
+              </CardContent>
+              <CardActions>
+                <Tooltip title={doc.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
+                  <IconButton onClick={(e) => { e.stopPropagation(); handleToggleFavorite(doc.id || doc._id); }}>
+                    {doc.isFavorite ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Download">
+                  <IconButton onClick={(e) => { e.stopPropagation(); handleDownload(doc.id || doc._id, doc.name); }}>
+                    <DownloadIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete">
+                  <IconButton onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id || doc._id); }}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Edit">
+                  <IconButton onClick={(e) => { e.stopPropagation(); handleFileDetails(doc); }}>
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              </CardActions>
+            </StyledCard>
+          </Grid>
+        );
+      })}
     </Grid>
   ), [filteredAndSortedDocuments, handleToggleFavorite, handleDeleteDocument, handleDownload, handleFileDetails, renderFilePreview]);
 
@@ -436,8 +464,8 @@ const Documents = () => {
           renderDocumentGrid()
         )}
 
-        <Dialog 
-          open={isUploadDialogOpen} 
+        <Dialog
+          open={isUploadDialogOpen}
           onClose={() => setIsUploadDialogOpen(false)}
         >
           <DialogTitle>Upload Document</DialogTitle>
@@ -450,8 +478,8 @@ const Documents = () => {
                 id="raised-button-file"
               />
               <label htmlFor="raised-button-file">
-                <Button 
-                  variant="outlined" 
+                <Button
+                  variant="outlined"
                   component="span"
                   startIcon={<UploadIcon />}
                 >
@@ -475,9 +503,9 @@ const Documents = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleUploadSubmit} 
-              color="primary" 
+            <Button
+              onClick={handleUploadSubmit}
+              color="primary"
               disabled={!uploadFile || uploadProgress > 0}
               variant="contained"
             >
@@ -486,8 +514,8 @@ const Documents = () => {
           </DialogActions>
         </Dialog>
 
-        <Dialog 
-          open={isFileDetailsOpen} 
+        <Dialog
+          open={isFileDetailsOpen}
           onClose={() => setIsFileDetailsOpen(false)}
           maxWidth="md"
           fullWidth
@@ -532,7 +560,7 @@ const Documents = () => {
                 thickness={4}
                 style={{ marginRight: 10 }}
               />
-              <Button 
+              <Button
                 onClick={handleUpdateDocument}
                 color="primary"
                 variant="contained"
@@ -553,12 +581,12 @@ const Documents = () => {
           <DialogTitle>About Encryption</DialogTitle>
           <DialogContent>
             <Typography variant="body1" paragraph>
-              Your files are encrypted using AES-256 encryption before being stored on our servers. 
-              This means that even if someone were to gain unauthorized access to our servers, 
+              Your files are encrypted using AES-256 encryption before being stored on our servers.
+              This means that even if someone were to gain unauthorized access to our servers,
               they wouldn't be able to read your files without the encryption key.
             </Typography>
             <Typography variant="body1">
-              Files are only decrypted when you request to download them, ensuring they remain 
+              Files are only decrypted when you request to download them, ensuring they remain
               secure at all times while stored in our system.
             </Typography>
           </DialogContent>

@@ -116,7 +116,14 @@ const Tickets = () => {
   const handleOpenDialog = useCallback((type, ticket = null) => {
     setDialogType(type);
     setSelectedTicket(ticket);
-    setFormData(ticket || { status: 'Open', priority: 'Low' });
+    if (type === 'edit' && ticket) {
+      setFormData({
+        ...ticket,
+        dueDate: ticket.dueDate ? new Date(ticket.dueDate).toISOString().split('T')[0] : ''
+      });
+    } else {
+      setFormData({ status: 'Open', priority: 'Low' });
+    }
     setDialogOpen(true);
   }, []);
 
@@ -136,7 +143,7 @@ const Tickets = () => {
       if (dialogType === 'add') {
         await createTicket(formData);
       } else if (dialogType === 'edit') {
-        await updateTicket(selectedTicket._id, formData);
+        await updateTicket(selectedTicket.id, formData);
       }
       setSnackbar({ open: true, message: `Ticket ${dialogType === 'add' ? 'created' : 'updated'} successfully`, severity: 'success' });
       handleCloseDialog();
@@ -148,8 +155,14 @@ const Tickets = () => {
   }, [dialogType, formData, selectedTicket, handleCloseDialog, fetchTickets]);
 
   const handleDeleteTicket = useCallback(async () => {
+    if (!selectedTicket || !selectedTicket.id) {
+      setSnackbar({ open: true, message: 'Invalid ticket selected', severity: 'error' });
+      handleCloseDialog();
+      return;
+    }
+
     try {
-      await deleteTicket(selectedTicket._id);
+      await deleteTicket(selectedTicket.id);
       setSnackbar({ open: true, message: 'Ticket deleted successfully', severity: 'success' });
       handleCloseDialog();
       fetchTickets();
@@ -161,7 +174,7 @@ const Tickets = () => {
 
   const handleAddNote = useCallback(async () => {
     try {
-      await addNoteToTicket(selectedTicket._id, noteContent);
+      await addNoteToTicket(selectedTicket.id, noteContent);
       setSnackbar({ open: true, message: 'Note added successfully', severity: 'success' });
       handleCloseDialog();
       fetchTickets();
@@ -186,7 +199,7 @@ const Tickets = () => {
   }, []);
 
   const renderTicketCard = useCallback((ticket) => (
-    <Grid item xs={12} sm={6} md={4} key={ticket._id}>
+    <Grid item xs={12} sm={6} md={4} key={ticket.id}>
       <Fade in={true} timeout={500}>
         <StyledCard onClick={() => handleOpenDialog('view', ticket)}>
           <CardHeader>
@@ -363,6 +376,13 @@ const Tickets = () => {
                 InputLabelProps={{
                   shrink: true,
                 }}
+                inputProps={{
+                  min: (() => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    return tomorrow.toISOString().split('T')[0];
+                  })()
+                }}
                 value={formData.dueDate || ''}
                 onChange={handleInputChange}
               />
@@ -378,252 +398,252 @@ const Tickets = () => {
       case 'addNote':
         return (
           <TextField
-          autoFocus
-          margin="dense"
-          name="noteContent"
-          label="Note Content"
-          type="text"
-          fullWidth
-          variant="outlined"
-          multiline
-          rows={4}
-          value={noteContent}
-          onChange={(e) => setNoteContent(e.target.value)}
-        />
-      );
-    default:
-      return null;
-  }
-}, [dialogType, selectedTicket, formData, handleInputChange, noteContent, renderStatusChip, renderPriorityIcon]);
-
-return (
-  <PageWrapper>
-    <AppBar position="static" color="primary" elevation={0}>
-      <Toolbar>
-        <IconButton
-          edge="start"
-          color="inherit"
-          aria-label="menu"
-          onClick={() => setDrawerOpen(true)}
-          sx={{ mr: 2, display: { sm: 'none' } }}
-        >
-          <MenuIcon />
-        </IconButton>
-        <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'white' }}>
-          Ticket Management
-        </Typography>
-        <Button
-          variant="contained"
-          color="secondary"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog('add')}
-        >
-          New Ticket
-        </Button>
-      </Toolbar>
-    </AppBar>
-
-    <Drawer
-      anchor="left"
-      open={drawerOpen}
-      onClose={() => setDrawerOpen(false)}
-    >
-      <Box
-        sx={{ width: 250 }}
-        role="presentation"
-        onClick={() => setDrawerOpen(false)}
-        onKeyDown={() => setDrawerOpen(false)}
-      >
-        <List>
-          {['All Tickets', 'Open Tickets', 'In Progress Tickets', 'Closed Tickets'].map((text, index) => (
-            <ListItem button key={text} onClick={() => setCurrentTab(index)}>
-              <ListItemText primary={text} />
-            </ListItem>
-          ))}
-        </List>
-      </Box>
-    </Drawer>
-
-    <Box sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3} alignItems="center">
-        <Grid item xs={12} md={4}>
-          <SearchBar
+            autoFocus
+            margin="dense"
+            name="noteContent"
+            label="Note Content"
+            type="text"
             fullWidth
             variant="outlined"
-            placeholder="Search Tickets"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            multiline
+            rows={4}
+            value={noteContent}
+            onChange={(e) => setNoteContent(e.target.value)}
           />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Sort</InputLabel>
-            <Select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              label="Sort"
-              startAdornment={
-                <InputAdornment position="start">
-                  <SortIcon />
-                </InputAdornment>
-              }
-            >
-              <MenuItem value="dateDesc">Newest First</MenuItem>
-              <MenuItem value="dateAsc">Oldest First</MenuItem>
-              <MenuItem value="priority">Priority</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Filter Priority</InputLabel>
-            <Select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              label="Filter Priority"
-              startAdornment={
-                <InputAdornment position="start">
-                  <FilterListIcon />
-                </InputAdornment>
-              }
-            >
-              <MenuItem value="All">All Priorities</MenuItem>
-              <MenuItem value="Low">Low</MenuItem>
-              <MenuItem value="Medium">Medium</MenuItem>
-              <MenuItem value="High">High</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
-    </Box>
+        );
+      default:
+        return null;
+    }
+  }, [dialogType, selectedTicket, formData, handleInputChange, noteContent, renderStatusChip, renderPriorityIcon]);
 
-    <Tabs
-      value={currentTab}
-      onChange={(e, newValue) => setCurrentTab(newValue)}
-      indicatorColor="primary"
-      textColor="primary"
-      centered={!isMobile}
-      variant={isMobile ? "scrollable" : "standard"}
-      sx={{ 
-        mb: 4,
-        backgroundColor: theme.palette.background.paper,
-        borderRadius: '16px',
-        '& .MuiTab-root': {
-          minWidth: 'auto',
-          px: 3,
-          py: 2,
-        }
-      }}
-    >
-      <Tab label="All" />
-      <Tab label="Open" />
-      <Tab label="In Progress" />
-      <Tab label="Closed" />
-    </Tabs>
-
-    {loading ? (
-      <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
-        <CircularProgress />
-      </Box>
-    ) : (
-      <>
-        {filteredTickets.length === 0 ? (
-          <Typography variant="h6" align="center" sx={{ mt: 4 }}>
-            No tickets found. Try adjusting your filters or create a new ticket.
+  return (
+    <PageWrapper>
+      <AppBar position="static" color="primary" elevation={0}>
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            onClick={() => setDrawerOpen(true)}
+            sx={{ mr: 2, display: { sm: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'white' }}>
+            Ticket Management
           </Typography>
-        ) : (
-          <Grid container spacing={3}>
-            {filteredTickets.map(renderTicketCard)}
-          </Grid>
-        )}
-      </>
-    )}
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog('add')}
+          >
+            New Ticket
+          </Button>
+        </Toolbar>
+      </AppBar>
 
-    <Dialog
-      open={dialogOpen}
-      onClose={handleCloseDialog}
-      fullWidth
-      maxWidth="md"
-      PaperProps={{
-        sx: {
-          borderRadius: '16px',
-          overflow: 'hidden',
-        }
-      }}
-    >
-      <DialogTitle sx={{ backgroundColor: theme.palette.primary.main, color: 'white' }}>
-        {dialogType === 'add'
-          ? 'Create New Ticket'
-          : dialogType === 'edit'
-          ? 'Edit Ticket'
-          : dialogType === 'view'
-          ? selectedTicket?.title
-          : dialogType === 'addNote'
-          ? 'Add Note'
-          : 'Confirm Delete'}
-        <IconButton
-          aria-label="close"
-          onClick={handleCloseDialog}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: 'white',
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent dividers>{dialogContent()}</DialogContent>
-      <DialogActions>
-        <Button onClick={handleCloseDialog} color="primary" variant="outlined">Cancel</Button>
-        {dialogType === 'add' || dialogType === 'edit' ? (
-          <Button onClick={handleSubmit} color="primary" variant="contained">
-            {dialogType === 'add' ? 'Create Ticket' : 'Save Changes'}
-          </Button>
-        ) : dialogType === 'delete' ? (
-          <Button onClick={handleDeleteTicket} color="error" variant="contained">
-            Delete
-          </Button>
-        ) : dialogType === 'addNote' ? (
-          <Button onClick={handleAddNote} color="primary" variant="contained">
-            Add Note
-          </Button>
-        ) : dialogType === 'view' ? (
-          <>
-            <Button onClick={() => handleOpenDialog('edit', selectedTicket)} color="primary" variant="contained">
-              Edit Ticket
-            </Button>
-            <Button onClick={() => handleOpenDialog('delete', selectedTicket)} color="error" variant="contained">
-              Delete Ticket
-            </Button>
-          </>
-        ) : null}
-      </DialogActions>
-    </Dialog>
-
-    <Snackbar
-      open={snackbar.open}
-      autoHideDuration={6000}
-      onClose={() => setSnackbar({ ...snackbar, open: false })}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-    >
-      <Alert
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        severity={snackbar.severity}
-        sx={{ width: '100%' }}
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
       >
-        {snackbar.message}
-      </Alert>
-    </Snackbar>
-  </PageWrapper>
-);
+        <Box
+          sx={{ width: 250 }}
+          role="presentation"
+          onClick={() => setDrawerOpen(false)}
+          onKeyDown={() => setDrawerOpen(false)}
+        >
+          <List>
+            {['All Tickets', 'Open Tickets', 'In Progress Tickets', 'Closed Tickets'].map((text, index) => (
+              <ListItem button key={text} onClick={() => setCurrentTab(index)}>
+                <ListItemText primary={text} />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
+
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Grid container spacing={3} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <SearchBar
+              fullWidth
+              variant="outlined"
+              placeholder="Search Tickets"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Sort</InputLabel>
+              <Select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                label="Sort"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <SortIcon />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="dateDesc">Newest First</MenuItem>
+                <MenuItem value="dateAsc">Oldest First</MenuItem>
+                <MenuItem value="priority">Priority</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Filter Priority</InputLabel>
+              <Select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                label="Filter Priority"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <FilterListIcon />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="All">All Priorities</MenuItem>
+                <MenuItem value="Low">Low</MenuItem>
+                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="High">High</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Box>
+
+      <Tabs
+        value={currentTab}
+        onChange={(e, newValue) => setCurrentTab(newValue)}
+        indicatorColor="primary"
+        textColor="primary"
+        centered={!isMobile}
+        variant={isMobile ? "scrollable" : "standard"}
+        sx={{
+          mb: 4,
+          backgroundColor: theme.palette.background.paper,
+          borderRadius: '16px',
+          '& .MuiTab-root': {
+            minWidth: 'auto',
+            px: 3,
+            py: 2,
+          }
+        }}
+      >
+        <Tab label="All" />
+        <Tab label="Open" />
+        <Tab label="In Progress" />
+        <Tab label="Closed" />
+      </Tabs>
+
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          {filteredTickets.length === 0 ? (
+            <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+              No tickets found. Try adjusting your filters or create a new ticket.
+            </Typography>
+          ) : (
+            <Grid container spacing={3}>
+              {filteredTickets.map(renderTicketCard)}
+            </Grid>
+          )}
+        </>
+      )}
+
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            overflow: 'hidden',
+          }
+        }}
+      >
+        <DialogTitle sx={{ backgroundColor: theme.palette.primary.main, color: 'white' }}>
+          {dialogType === 'add'
+            ? 'Create New Ticket'
+            : dialogType === 'edit'
+              ? 'Edit Ticket'
+              : dialogType === 'view'
+                ? selectedTicket?.title
+                : dialogType === 'addNote'
+                  ? 'Add Note'
+                  : 'Confirm Delete'}
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseDialog}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'white',
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>{dialogContent()}</DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="primary" variant="outlined">Cancel</Button>
+          {dialogType === 'add' || dialogType === 'edit' ? (
+            <Button onClick={handleSubmit} color="primary" variant="contained">
+              {dialogType === 'add' ? 'Create Ticket' : 'Save Changes'}
+            </Button>
+          ) : dialogType === 'delete' ? (
+            <Button onClick={handleDeleteTicket} color="error" variant="contained">
+              Delete
+            </Button>
+          ) : dialogType === 'addNote' ? (
+            <Button onClick={handleAddNote} color="primary" variant="contained">
+              Add Note
+            </Button>
+          ) : dialogType === 'view' ? (
+            <>
+              <Button onClick={() => handleOpenDialog('edit', selectedTicket)} color="primary" variant="contained">
+                Edit Ticket
+              </Button>
+              <Button onClick={() => handleOpenDialog('delete', selectedTicket)} color="error" variant="contained">
+                Delete Ticket
+              </Button>
+            </>
+          ) : null}
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </PageWrapper>
+  );
 };
 
 export default Tickets;

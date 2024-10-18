@@ -91,7 +91,7 @@ app.use('/api/tasks', limiter, protect, require('./routes/taskRoutes'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, path, stat) => {
-    res.set('Access-Control-Allow-Origin', process.env.CLIENT_URL || 'http://localhost:3000');
+    res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   }
