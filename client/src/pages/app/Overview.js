@@ -330,11 +330,10 @@ const Dashboard = () => {
 
   const mapBounds = useMemo(() => {
     if (!properties || properties.length === 0) return null;
-    const validProperties = properties.filter(p => p.location && Array.isArray(p.location.coordinates) && p.location.coordinates.length === 2);
+    const validProperties = properties.filter(p => p.latitude && p.longitude);
     if (validProperties.length === 0) return null;
-    const latitudes = validProperties.map(p => p.location.coordinates[1]);
-    const longitudes = validProperties.map(p => p.location.coordinates[0]);
-    if (latitudes.length === 0 || longitudes.length === 0) return null;
+    const latitudes = validProperties.map(p => parseFloat(p.latitude));
+    const longitudes = validProperties.map(p => parseFloat(p.longitude));
     return [
       [Math.min(...latitudes), Math.min(...longitudes)],
       [Math.max(...latitudes), Math.max(...longitudes)]
@@ -507,12 +506,10 @@ const Dashboard = () => {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 {properties.map((property) => (
-                  property.location &&
-                    Array.isArray(property.location.coordinates) &&
-                    property.location.coordinates.length === 2 ? (
+                  property.latitude && property.longitude ? (
                     <Marker
                       key={property.id}
-                      position={[property.location.coordinates[1], property.location.coordinates[0]]}
+                      position={[parseFloat(property.latitude), parseFloat(property.longitude)]}
                       icon={propertyIcon}
                     >
                       <Popup>

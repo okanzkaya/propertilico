@@ -59,15 +59,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     dueDate: {
       type: DataTypes.DATE,
-      allowNull: true,
-      validate: {
-        isDate: { msg: 'Invalid date format' },
-        isAfterToday(value) {
-          if (value && new Date(value) <= new Date()) {
-            throw new Error('Due date must be in the future');
-          }
-        }
-      }
+      allowNull: true
     },
     notes: {
       type: DataTypes.JSONB,
@@ -91,14 +83,7 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['assignee_id'] },
       { fields: ['due_date'] },
       { fields: ['created_at'] }
-    ],
-    hooks: {
-      beforeValidate: (ticket) => {
-        if (ticket.dueDate && !(ticket.dueDate instanceof Date)) {
-          ticket.dueDate = new Date(ticket.dueDate);
-        }
-      }
-    }
+    ]
   });
 
   Ticket.prototype.addNote = async function (content, userId) {
