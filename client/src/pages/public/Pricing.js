@@ -11,12 +11,12 @@ const gradientAnimation = keyframes`
 
 const float = keyframes`
   0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(5deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
   100% { transform: translateY(0px) rotate(0deg); }
 `;
 
 const PricingContainer = styled.div`
-  padding: 100px 20px;
+  padding: 60px 20px;
   background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
   background-size: 400% 400%;
   animation: ${gradientAnimation} 15s ease infinite;
@@ -46,21 +46,21 @@ const GlassPanes = styled.div`
   &::after {
     content: '';
     position: absolute;
-    width: 200px;
-    height: 200px;
+    width: 150px;
+    height: 150px;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 50%;
   }
 
   &::before {
-    top: -100px;
-    left: -100px;
+    top: -75px;
+    left: -75px;
   }
 
   &::after {
-    bottom: -100px;
-    right: -100px;
+    bottom: -75px;
+    right: -75px;
   }
 `;
 
@@ -68,12 +68,12 @@ const ContentWrapper = styled.div`
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1000px;
 `;
 
 const Header = styled.h1`
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  margin-bottom: 30px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin-bottom: 20px;
   color: #ffffff;
   font-weight: 800;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
@@ -81,57 +81,57 @@ const Header = styled.h1`
 `;
 
 const Description = styled.p`
-  font-size: clamp(1rem, 3vw, 1.3rem);
-  margin-bottom: 60px;
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  margin-bottom: 30px;
   color: #ffffff;
-  max-width: 800px;
-  margin: 0 auto 60px;
-  line-height: 1.8;
+  max-width: 700px;
+  margin: 0 auto 30px;
+  line-height: 1.6;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 `;
 
 const PlansWrapper = styled.div`
   display: flex;
   justify-content: center;
-  gap: 40px;
+  gap: 30px;
   flex-wrap: wrap;
 `;
 
 const PlanCard = styled.div`
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
-  padding: 40px 30px;
-  border-radius: 30px;
+  padding: 30px 20px;
+  border-radius: 20px;
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
   border: 1px solid rgba(255, 255, 255, 0.18);
   width: 100%;
-  max-width: 480px;
+  max-width: 400px;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 850px;
+  height: 700px;
 
   ${props => props.$featured && css`
-    transform: scale(1.05);
+    transform: scale(1.03);
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.5);
   `}
 
   &:hover {
-    transform: translateY(-10px);
+    transform: translateY(-5px);
     box-shadow: 0 12px 48px rgba(31, 38, 135, 0.6);
   }
 
   @media (max-width: 768px) {
     max-width: 100%;
     height: auto;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
   }
 `;
 
 const PlanHeader = styled.h2`
-  font-size: 2.2rem;
-  margin-bottom: 20px;
+  font-size: 1.8rem;
+  margin-bottom: 15px;
   color: #ffffff;
   font-weight: 700;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
@@ -141,18 +141,18 @@ const PriceContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 `;
 
 const OriginalPrice = styled.span`
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.7);
   text-decoration: line-through;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 `;
 
 const DiscountedPrice = styled.span`
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: #ffffff;
   font-weight: 800;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
@@ -161,61 +161,61 @@ const DiscountedPrice = styled.span`
 const FeatureList = styled.ul`
   list-style: none;
   padding: 0;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   text-align: left;
 `;
 
 const Feature = styled.li`
-  font-size: 1rem;
-  margin-bottom: 15px;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   color: ${props => props.$included ? '#ffffff' : 'rgba(255, 255, 255, 0.6)'};
 `;
 
 const FeatureIcon = styled.span`
-  margin-right: 10px;
+  margin-right: 8px;
   color: ${props => props.$included ? '#4ded30' : '#ff6b6b'};
-  font-size: 1.1rem;
+  font-size: 1rem;
 `;
 
 const PopularLabel = styled.span`
   background-color: #4ded30;
   color: #1a1a1a;
-  padding: 8px 15px;
-  border-radius: 20px;
-  font-size: 1rem;
-  font-weight: 700;
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-`;
-
-const DiscountLabel = styled.span`
-  background-color: #ff6b6b;
-  color: #ffffff;
   padding: 6px 12px;
   border-radius: 15px;
   font-size: 0.9rem;
   font-weight: 700;
   position: absolute;
-  top: 15px;
-  right: 15px;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const DiscountLabel = styled.span`
+  background-color: #ff6b6b;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  position: absolute;
+  top: 12px;
+  right: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
 
 const CTAButton = styled.button`
   background-color: #4ded30;
   color: #1a1a1a;
-  padding: 15px 30px;
-  border-radius: 50px;
+  padding: 12px 24px;
+  border-radius: 25px;
   border: none;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -225,7 +225,7 @@ const CTAButton = styled.button`
 
   &:hover {
     background-color: #3aba20;
-    transform: translateY(-5px);
+    transform: translateY(-3px);
     box-shadow: 0 15px 30px rgba(77, 237, 48, 0.4);
   }
 
@@ -235,9 +235,9 @@ const CTAButton = styled.button`
 `;
 
 const TrialText = styled.p`
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.8);
-  margin-top: 15px;
+  margin-top: 10px;
   font-weight: 600;
 `;
 
@@ -245,11 +245,11 @@ const ComparisonToggle = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0 auto 60px;
+  margin: 0 auto 40px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(5px);
-  border-radius: 50px;
-  padding: 5px;
+  border-radius: 25px;
+  padding: 4px;
   width: fit-content;
 `;
 
@@ -257,12 +257,12 @@ const ToggleButton = styled.button`
   background-color: ${props => props.$active ? 'rgba(255, 255, 255, 0.2)' : 'transparent'};
   color: #ffffff;
   border: none;
-  padding: 10px 20px;
-  font-size: 1rem;
+  padding: 8px 16px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  border-radius: 25px;
+  border-radius: 20px;
 
   &:hover {
     background-color: ${props => props.$active ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
@@ -271,7 +271,7 @@ const ToggleButton = styled.button`
 
 const FloatingIcon = styled.div`
   position: absolute;
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: rgba(255, 255, 255, 0.3);
   animation: ${float} 6s ease-in-out infinite;
   z-index: 1;
@@ -348,7 +348,7 @@ const Pricing = () => {
       <ContentWrapper>
         <Header>Revolutionary Property Management</Header>
         <Description>
-          Experience the future of property management with our innovative plans. 
+          Experience the future of property management with our innovative plans.
           Start your 30-day free trial and transform your property portfolio today.
         </Description>
         <ComparisonToggle>

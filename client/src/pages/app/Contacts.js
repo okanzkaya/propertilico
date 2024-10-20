@@ -11,7 +11,7 @@ import {
   Email as EmailIcon, Work as WorkIcon, Save as SaveIcon, Search as SearchIcon,
   Sort as SortIcon, Clear as ClearIcon, MoreVert as MoreVertIcon,
   GetApp as DownloadIcon, ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon, Close as CloseIcon
 } from '@mui/icons-material';
 import { contactApi } from '../../api';
 
@@ -42,6 +42,59 @@ const roles = [
   'Tenant', 'Landlord', 'Agent', 'Broker', 'Appraiser', 'Inspector'
 ];
 
+const ContactDetailsDialog = ({ open, onClose, contact, handleOpenDialog }) => {
+  if (!contact) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>
+        Contact Details
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{ position: 'absolute', right: 8, top: 8 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+          <Avatar
+            src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''}
+            sx={{ width: 100, height: 100, mb: 2 }}
+          />
+          <Typography variant="h5">{contact.name}</Typography>
+          <Typography variant="subtitle1" color="textSecondary">{contact.role}</Typography>
+        </Box>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Chip icon={<EmailIcon />} label={contact.email} />
+          </Grid>
+          <Grid item xs={12}>
+            <Chip icon={<PhoneIcon />} label={contact.phone} />
+          </Grid>
+          {contact.address && (
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Address:</strong> {contact.address}</Typography>
+            </Grid>
+          )}
+          {contact.notes && (
+            <Grid item xs={12}>
+              <Typography variant="body1"><strong>Notes:</strong> {contact.notes}</Typography>
+            </Grid>
+          )}
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => handleOpenDialog(contact)} color="primary">
+          Edit
+        </Button>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const Contacts = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -61,6 +114,8 @@ const Contacts = () => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [expandedContact, setExpandedContact] = useState(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -94,8 +149,7 @@ const Contacts = () => {
   const handleSaveContact = async (event) => {
     event.preventDefault();
     const formData = new FormData();
-    
-    // Add all form fields to formData
+
     const formFields = event.target.elements;
     for (let i = 0; i < formFields.length; i++) {
       const field = formFields[i];
@@ -103,21 +157,17 @@ const Contacts = () => {
         formData.append(field.name, field.value);
       }
     }
-  
-    // Add avatar file if it exists
+
     if (avatarFile) {
       formData.append('avatar', avatarFile);
-      console.log('Appending avatar file:', avatarFile);
     }
-  
+
     try {
-      let response;
       if (currentContact) {
-        response = await contactApi.updateContact(currentContact.id, formData);
+        await contactApi.updateContact(currentContact.id, formData);
       } else {
-        response = await contactApi.createContact(formData);
+        await contactApi.createContact(formData);
       }
-      console.log('Contact saved:', response);
       setSnackbar({ open: true, message: `Contact ${currentContact ? 'updated' : 'created'} successfully`, severity: 'success' });
       fetchContacts();
       handleCloseDialog();
@@ -193,9 +243,19 @@ END:VCARD`;
     document.body.removeChild(link);
   }, []);
 
+  const handleOpenDetailsDialog = useCallback((contact) => {
+    setSelectedContact(contact);
+    setDetailsDialogOpen(true);
+  }, []);
+
+  const handleCloseDetailsDialog = useCallback(() => {
+    setDetailsDialogOpen(false);
+    setSelectedContact(null);
+  }, []);
+
   const renderContactCard = useCallback((contact) => (
     <Grid item xs={12} sm={6} md={4} lg={3} key={contact.id}>
-      <StyledCard onClick={() => handleOpenDialog(contact)}>
+      <StyledCard onClick={() => handleOpenDetailsDialog(contact)}>
         <CardContent>
           <StyledAvatar src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''} alt={contact.name} />
           <Typography variant="h6" align="center" gutterBottom>{contact.name}</Typography>
@@ -216,7 +276,7 @@ END:VCARD`;
         </CardActions>
       </StyledCard>
     </Grid>
-  ), [handleOpenDialog]);
+  ), [handleOpenDialog, handleOpenDetailsDialog]);
 
   const renderContactList = useCallback(() => (
     <Paper elevation={3}>
@@ -257,8 +317,8 @@ END:VCARD`;
             <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
               <Typography variant="body2"><strong>Email:</strong> {contact.email}</Typography>
               <Typography variant="body2"><strong>Phone:</strong> {contact.phone}</Typography>
-              <Typography variant="body2"><strong>Address:</strong> {contact.address || 'N/A'}</Typography>
-              <Typography variant="body2"><strong>Notes:</strong> {contact.notes || 'N/A'}</Typography>
+              <Typography variant="body2"><strong>Address:</strong> {contact.address || 'Not Available'}</Typography>
+              <Typography variant="body2"><strong>Notes:</strong> {contact.notes || 'Not Available'}</Typography>
             </Box>
           </Collapse>
         </Box>
@@ -419,6 +479,12 @@ END:VCARD`;
           </DialogActions>
         </form>
       </Dialog>
+      <ContactDetailsDialog
+        open={detailsDialogOpen}
+        onClose={handleCloseDetailsDialog}
+        contact={selectedContact}
+        handleOpenDialog={handleOpenDialog}
+      />
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}

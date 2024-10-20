@@ -1,158 +1,221 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaTrash, FaClock, FaUser } from 'react-icons/fa';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { ErrorBoundary } from 'react-error-boundary';
 import { debounce } from 'lodash';
+import { Helmet } from 'react-helmet';
 
-const BlogListContainer = styled(motion.div)`
-  padding: 2rem;
-  max-width: 1200px;
+const BlogListContainer = styled(motion.main)`
+  max-width: 1400px;
   margin: 0 auto;
-  background: #f8f9fa;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 4rem 2rem;
+  background: #fff;
+  color: #333;
+  font-family: 'Playfair Display', serif;
 
   @media (max-width: 768px) {
-    padding: 1rem;
+    padding: 2rem 1rem;
   }
 `;
 
-const Header = styled.h1`
-  font-size: 2.5rem;
-  color: #343a40;
+const Header = styled.header`
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 4rem;
+`;
+
+const Title = styled.h1`
+  font-size: 3.5rem;
   font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+  letter-spacing: -1px;
 
   @media (max-width: 768px) {
-    font-size: 2rem;
+    font-size: 2.5rem;
   }
 `;
 
-const SearchBarContainer = styled.div`
-  position: relative;
-  width: 100%;
-  margin-bottom: 1.5rem;
-`;
-
-const SearchBar = styled.input`
-  width: 100%;
-  padding: 0.75rem 2.5rem 0.75rem 1.25rem;
-  font-size: 1rem;
-  border: 2px solid #ced4da;
-  border-radius: 25px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: border-color 0.3s, box-shadow 0.3s;
-
-  &:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-  }
-`;
-
-const SearchIcon = styled(FaSearch)`
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #6c757d;
+const Subtitle = styled.p`
   font-size: 1.2rem;
+  color: #666;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
 `;
 
 const ControlsContainer = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 3rem;
 
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
+    gap: 1rem;
   }
 `;
 
-const SortButton = styled.button`
-  background: #fff;
-  border: 2px solid #007bff;
-  padding: 0.5rem 1rem;
-  border-radius: 25px;
-  cursor: pointer;
+const SearchBarContainer = styled.div`
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+`;
+
+const SearchBar = styled.input`
+  width: 100%;
+  padding: 0.8rem 2.5rem 0.8rem 1rem;
+  font-size: 1rem;
+  border: none;
+  border-bottom: 2px solid #ddd;
+  transition: border-color 0.3s;
+
+  &:focus {
+    outline: none;
+    border-color: #1a1a1a;
+  }
+`;
+
+const SearchIcon = styled(FaSearch)`
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+`;
+
+const Button = styled.button`
+  background: ${props => props.primary ? '#1a1a1a' : 'transparent'};
+  color: ${props => props.primary ? '#fff' : '#1a1a1a'};
+  border: 2px solid #1a1a1a;
+  padding: 0.8rem 1.5rem;
   font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  transition: all 0.3s;
-  color: #007bff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 
   &:hover {
-    background: #007bff;
-    color: #fff;
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
+    background: ${props => props.primary ? '#333' : '#f0f0f0'};
   }
 
   svg {
-    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+`;
+
+const PostsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2rem;
+`;
+
+const FeaturedPost = styled(motion.article)`
+  grid-column: span 8;
+  display: flex;
+  background: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 1024px) {
+    grid-column: span 12;
+  }
+`;
+
+const FeaturedImage = styled.div`
+  flex: 1;
+  background-image: url(${props => props.src || 'https://via.placeholder.com/600x400'});
+  background-size: cover;
+  background-position: center;
+`;
+
+const FeaturedContent = styled.div`
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
+
+const RegularPost = styled(motion.article)`
+  grid-column: span 4;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
   }
 
   @media (max-width: 768px) {
-    margin-top: 1rem;
+    grid-column: span 12;
   }
 `;
 
-const CreateButton = styled(SortButton)`
-  background: #28a745;
-  border-color: #28a745;
-  color: #fff;
-
-  &:hover {
-    background: #218838;
-    border-color: #1e7e34;
-  }
+const PostImage = styled.div`
+  height: 200px;
+  background-image: url(${props => props.src || 'https://via.placeholder.com/400x200'});
+  background-size: cover;
+  background-position: center;
 `;
 
-const PostCard = styled(motion.article)`
-  background: #fff;
+const PostContent = styled.div`
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s;
-
-  &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 `;
 
 const PostTitle = styled(Link)`
   font-size: 1.5rem;
   font-weight: 700;
-  color: #007bff;
+  color: #1a1a1a;
   text-decoration: none;
+  margin-bottom: 0.5rem;
   transition: color 0.3s;
 
   &:hover {
-    color: #0056b3;
+    color: #666;
   }
 `;
 
 const PostMeta = styled.div`
-  color: #6c757d;
+  display: flex;
+  align-items: center;
   font-size: 0.9rem;
-  margin: 0.5rem 0;
+  color: #666;
+  margin-bottom: 1rem;
+`;
+
+const MetaItem = styled.span`
+  display: flex;
+  align-items: center;
+  margin-right: 1rem;
+
+  svg {
+    margin-right: 0.3rem;
+  }
 `;
 
 const PostExcerpt = styled.p`
   font-size: 1rem;
-  color: #495057;
+  color: #333;
   line-height: 1.6;
+  margin-bottom: 1rem;
 `;
 
 const TagList = styled.ul`
@@ -161,33 +224,57 @@ const TagList = styled.ul`
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: auto;
 `;
 
 const Tag = styled.li`
-  background: #e9ecef;
-  color: #495057;
-  padding: 0.25rem 0.75rem;
+  background: #f0f0f0;
+  color: #666;
+  padding: 0.3rem 0.8rem;
   border-radius: 20px;
   font-size: 0.8rem;
-  transition: background 0.3s, color 0.3s;
+  transition: all 0.3s ease;
 
   &:hover {
-    background: #007bff;
+    background: #1a1a1a;
     color: #fff;
   }
 `;
 
+const ActionButtons = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+`;
+
+const ActionButton = styled.button`
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.3s;
+
+  &:hover {
+    color: #1a1a1a;
+  }
+`;
+
 const ErrorMessage = styled.div`
-  color: #dc3545;
+  background: #fff0f0;
+  color: #d63031;
+  padding: 1rem;
+  border-radius: 8px;
   text-align: center;
   margin: 2rem 0;
-  font-size: 1.2rem;
+  font-size: 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 `;
 
 const LoadingSpinner = styled.div`
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1a1a1a;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -200,31 +287,20 @@ const LoadingSpinner = styled.div`
   }
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
-`;
-
-const ActionButton = styled.button`
-  background: none;
-  border: none;
-  color: #6c757d;
-  cursor: pointer;
-  font-size: 1rem;
-  margin-left: 1rem;
-  transition: color 0.3s;
-
-  &:hover {
-    color: #007bff;
-  }
+const PullQuote = styled.blockquote`
+  font-size: 1.5rem;
+  font-style: italic;
+  color: #1a1a1a;
+  border-left: 4px solid #1a1a1a;
+  padding-left: 1rem;
+  margin: 2rem 0;
 `;
 
 const ErrorFallback = ({ error, resetErrorBoundary }) => (
   <ErrorMessage>
-    <p>Something went wrong:</p>
-    <pre>{error.message}</pre>
-    <button onClick={resetErrorBoundary}>Try again</button>
+    <h2>Oops! Something went wrong</h2>
+    <p>{error.message}</p>
+    <Button onClick={resetErrorBoundary}>Try again</Button>
   </ErrorMessage>
 );
 
@@ -290,71 +366,143 @@ const BlogList = () => {
     }
 
     return (
-      <AnimatePresence>
-        {posts.map((post) => (
-          <PostCard
-            key={post.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <PostTitle to={`/blog/${post.id}`}>{post.title}</PostTitle>
-            <PostMeta>
-              By {post.author?.name || 'Unknown'} on {new Date(post.createdAt).toLocaleDateString()}
-            </PostMeta>
-            <PostExcerpt>{post.excerpt}</PostExcerpt>
-            <TagList>
-              {post.tags?.map((tag, index) => (
-                <Tag key={index}>{tag}</Tag>
-              ))}
-            </TagList>
-            {user?.isBlogger && (
-              <ActionButtons>
-                <ActionButton onClick={() => handleEditBlog(post.id)} aria-label="Edit blog post">
-                  <FaEdit />
-                </ActionButton>
-                <ActionButton onClick={() => handleDeleteBlog(post.id)} aria-label="Delete blog post">
-                  <FaTrash />
-                </ActionButton>
-              </ActionButtons>
-            )}
-          </PostCard>
-        ))}
-      </AnimatePresence>
+      <PostsGrid>
+        <AnimatePresence>
+          {posts.map((post, index) => (
+            index === 0 ? (
+              <FeaturedPost
+                key={post.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+              >
+                <FeaturedImage src={post.imageUrl} />
+                <FeaturedContent>
+                  <PostTitle to={`/blog/${post.id}`}>{post.title}</PostTitle>
+                  <PostMeta>
+                    <MetaItem><FaUser /> {post.author?.name || 'Unknown'}</MetaItem>
+                    <MetaItem><FaClock /> {new Date(post.createdAt).toLocaleDateString()}</MetaItem>
+                  </PostMeta>
+                  <PostExcerpt>{post.excerpt}</PostExcerpt>
+                  <TagList>
+                    {post.tags?.map((tag, index) => (
+                      <Tag key={index}>{tag}</Tag>
+                    ))}
+                  </TagList>
+                  {user?.isBlogger && (
+                    <ActionButtons>
+                      <ActionButton onClick={() => handleEditBlog(post.id)} aria-label="Edit blog post">
+                        <FaEdit />
+                      </ActionButton>
+                      <ActionButton onClick={() => handleDeleteBlog(post.id)} aria-label="Delete blog post">
+                        <FaTrash />
+                      </ActionButton>
+                    </ActionButtons>
+                  )}
+                </FeaturedContent>
+              </FeaturedPost>
+            ) : (
+              <RegularPost
+                key={post.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <PostImage src={post.imageUrl} />
+                <PostContent>
+                  <PostTitle to={`/blog/${post.id}`}>{post.title}</PostTitle>
+                  <PostMeta>
+                    <MetaItem><FaUser /> {post.author?.name || 'Unknown'}</MetaItem>
+                    <MetaItem><FaClock /> {new Date(post.createdAt).toLocaleDateString()}</MetaItem>
+                  </PostMeta>
+                  <PostExcerpt>{post.excerpt}</PostExcerpt>
+                  <TagList>
+                    {post.tags?.map((tag, index) => (
+                      <Tag key={index}>{tag}</Tag>
+                    ))}
+                  </TagList>
+                  {user?.isBlogger && (
+                    <ActionButtons>
+                      <ActionButton onClick={() => handleEditBlog(post.id)} aria-label="Edit blog post">
+                        <FaEdit />
+                      </ActionButton>
+                      <ActionButton onClick={() => handleDeleteBlog(post.id)} aria-label="Delete blog post">
+                        <FaTrash />
+                      </ActionButton>
+                    </ActionButtons>
+                  )}
+                </PostContent>
+              </RegularPost>
+            )
+          ))}
+        </AnimatePresence>
+      </PostsGrid>
     );
   };
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback} onReset={fetchPosts}>
+      <Helmet>
+        <title>Property Management Insights - Latest Blog Posts</title>
+        <meta name="description" content="Explore the latest insights and trends in property management. Our expert bloggers share valuable tips and strategies to help you succeed in real estate." />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "http://schema.org",
+            "@type": "Blog",
+            "name": "Property Management Insights",
+            "description": "Expert insights and trends in property management",
+            "url": window.location.href,
+            "blogPost": posts.map(post => ({
+              "@type": "BlogPosting",
+              "headline": post.title,
+              "datePublished": post.createdAt,
+              "author": {
+                "@type": "Person",
+                "name": post.author?.name || "Unknown"
+              },
+              "url": `${window.location.origin}/blog/${post.id}`
+            }))
+          })}
+        </script>
+      </Helmet>
       <BlogListContainer
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <Header>Property Management Insights</Header>
-        <SearchBarContainer>
-          <SearchBar
-            type="text"
-            placeholder="Search blog posts..."
-            onChange={handleSearchChange}
-            aria-label="Search blog posts"
-          />
-          <SearchIcon aria-hidden="true" />
-        </SearchBarContainer>
+        <Header>
+          <Title>Property Management Insights</Title>
+          <Subtitle>Discover expert tips, trends, and strategies to excel in property management</Subtitle>
+        </Header>
         <ControlsContainer>
-          <SortButton onClick={toggleSortOption} aria-label={`Sort by ${sortOption === 'newest' ? 'oldest' : 'newest'}`}>
-            {sortOption === 'newest' ? 'Newest' : 'Oldest'}
-            {sortOption === 'newest' ? <FaSortAmountDown aria-hidden="true" /> : <FaSortAmountUp aria-hidden="true" />}
-          </SortButton>
-          {user?.isBlogger && (
-            <CreateButton onClick={handleCreateBlog}>
-              <FaPlus /> Create New Blog
-            </CreateButton>
-          )}
+          <SearchBarContainer>
+            <SearchBar
+              type="text"
+              placeholder="Search blog posts..."
+              onChange={handleSearchChange}
+              aria-label="Search blog posts"
+            />
+            <SearchIcon aria-hidden="true" />
+          </SearchBarContainer>
+          <div>
+            <Button onClick={toggleSortOption} aria-label={`Sort by ${sortOption === 'newest' ? 'oldest' : 'newest'}`}>
+              {sortOption === 'newest' ? <FaSortAmountDown /> : <FaSortAmountUp />}
+              {sortOption === 'newest' ? 'Newest' : 'Oldest'}
+            </Button>
+            {user?.isBlogger && (
+              <Button primary onClick={handleCreateBlog}>
+                <FaPlus /> Create New Blog
+              </Button>
+            )}
+          </div>
         </ControlsContainer>
         {error && <ErrorMessage>{error}</ErrorMessage>}
         {isLoading ? <LoadingSpinner /> : renderPosts()}
+        <PullQuote>
+          "Effective property management is the cornerstone of successful real estate investment. Stay informed, stay ahead."
+        </PullQuote>
       </BlogListContainer>
     </ErrorBoundary>
   );

@@ -156,6 +156,14 @@ export const createContact = (contactData) =>
 export const getContactById = (id) => apiCall('get', `/api/contacts/${id}`);
 export const updateContact = (id, contactData) => apiCall('put', `/api/contacts/${id}`, contactData);
 export const deleteContact = (id) => apiCall('delete', `/api/contacts/${id}`);
+// Tax API
+export const getTaxes = () => apiCall('get', '/api/taxes');
+export const addTax = (taxData) => apiCall('post', '/api/taxes', taxData);
+export const updateTax = ({ id, ...taxData }) => apiCall('put', `/api/taxes/${id}`, taxData);
+export const deleteTax = (id) => apiCall('delete', `/api/taxes/${id}`);
+export const importTaxes = (formData) => apiCall('post', '/api/taxes/import', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
 
 // Grouped API objects
 export const authApi = {
@@ -200,6 +208,7 @@ export const reportApi = {
   getFinancialStats,
   getOccupancyStats
 };
+export const taxApi = { getTaxes, addTax, updateTax, deleteTax, importTaxes };
 export const propertyApi = { getProperties };
 export const taskApi = { getTasks, addTask, updateTask, deleteTask };
 export const contactApi = { getContacts, createContact, getContactById, updateContact, deleteContact };

@@ -1,212 +1,171 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Typography, Grid, Box, Button, TextField, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel,
   Select, MenuItem, IconButton, Dialog, DialogActions, DialogContent,
   DialogContentText, DialogTitle, Snackbar, TablePagination, Chip, Tooltip,
-  LinearProgress, Card, CardContent, Alert, Drawer, List, ListItem, ListItemText,
-  useMediaQuery, useTheme, Fab
+  LinearProgress, Card, CardContent, Alert, useMediaQuery, useTheme
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import {
   Delete as DeleteIcon, Edit as EditIcon, FileCopy as FileCopyIcon,
   Archive as ArchiveIcon, Unarchive as UnarchiveIcon, Calculate as CalculateIcon,
   Add as AddIcon, Search as SearchIcon, CloudUpload as CloudUploadIcon,
-  CloudDownload as CloudDownloadIcon, FilterList as FilterListIcon
+  Visibility as VisibilityIcon, Warning as WarningIcon
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { taxApi } from '../../api';
+import { format, isAfter, subDays } from 'date-fns';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-const StyledCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-}));
-
-const StyledButton = styled(Button)(({ theme }) => ({
-  margin: theme.spacing(1),
-}));
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-}));
-
-const FloatingActionButton = styled(Fab)(({ theme }) => ({
-  position: 'fixed',
-  bottom: theme.spacing(2),
-  right: theme.spacing(2),
-  zIndex: theme.zIndex.drawer + 2,
-}));
-
 const Taxes = () => {
-  const [taxes, setTaxes] = useState([]);
   const [tax, setTax] = useState({
     name: '', rate: '', type: 'Property Tax', status: 'active', category: 'Residential',
-    thresholds: [], applicableProperties: [], effectiveDate: '', expirationDate: '', description: '',
+    effectiveDate: '', expirationDate: '', description: ''
   });
   const [filters, setFilters] = useState({ status: '', type: '', search: '' });
   const [pagination, setPagination] = useState({ page: 0, rowsPerPage: 10 });
-  const [calculatorInput, setCalculatorInput] = useState({ amount: '', property: '', currency: 'USD' });
-  const [calculatedTax, setCalculatedTax] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [openDialogs, setOpenDialogs] = useState({ addEdit: false, delete: false, import: false });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [openDialogs, setOpenDialogs] = useState({ addEdit: false, delete: false, import: false, calculator: false, details: false, importHelp: false });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [editingId, setEditingId] = useState(null);
   const [importFile, setImportFile] = useState(null);
+  const [calculatorInput, setCalculatorInput] = useState({ propertyValue: '', taxId: '' });
+  const [calculationResult, setCalculationResult] = useState(null);
+  const [selectedTaxDetails, setSelectedTaxDetails] = useState(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const queryClient = useQueryClient();
 
-  const taxTypes = useMemo(() => [
-    'Property Tax', 'Income Tax', 'Sales Tax', 'Corporate Tax', 'Custom Tax',
-  ], []);
-  const taxCategories = ['Residential', 'Commercial', 'Industrial', 'Agricultural', 'Luxury', 'Mixed-Use'];
-  const currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
-  const properties = [
-    { id: 1, name: 'Sunset Apartments' },
-    { id: 2, name: 'Downtown Office Complex' },
-    { id: 3, name: 'Greenview Residential Park' },
-  ];
+  const taxTypes = useMemo(() => ['Property Tax', 'Income Tax', 'Sales Tax', 'Transfer Tax', 'Capital Gains Tax'], []);
+  const taxCategories = useMemo(() => ['Residential', 'Commercial', 'Industrial', 'Agricultural', 'Mixed-Use'], []);
 
-  useEffect(() => {
-    fetchTaxes();
-  }, []);
+  const { data: taxes, isLoading, isError, error } = useQuery('taxes', taxApi.getTaxes);
 
-  const fetchTaxes = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const mockTaxes = [
-        { 
-          id: 1, name: 'Standard Property Tax', rate: '1.5', type: 'Property Tax', status: 'active', 
-          category: 'Residential', effectiveDate: '2024-01-01', expirationDate: '2024-12-31', 
-          description: 'Standard tax rate for residential properties', applicableProperties: [1, 3] 
-        },
-        { 
-          id: 2, name: 'Commercial Property Tax', rate: '2.0', type: 'Property Tax', status: 'active', 
-          category: 'Commercial', effectiveDate: '2024-01-01', expirationDate: '2024-12-31', 
-          description: 'Tax rate for commercial properties', applicableProperties: [2] 
-        },
-        { 
-          id: 3, name: 'Luxury Property Tax', rate: '3.0', type: 'Property Tax', status: 'inactive', 
-          category: 'Luxury', effectiveDate: '2024-06-01', expirationDate: '2024-12-31', 
-          description: 'Higher tax rate for luxury properties', applicableProperties: [] 
-        },
-      ];
-      setTaxes(mockTaxes);
-      setLoading(false);
-    }, 1000);
-  };
+  const addTaxMutation = useMutation(taxApi.addTax, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('taxes');
+      showSnackbar('Tax added successfully!', 'success');
+      setOpenDialogs({ ...openDialogs, addEdit: false });
+      resetTaxForm();
+    },
+    onError: (error) => {
+      showSnackbar(`Failed to add tax: ${error.message}`, 'error');
+    }
+  });
+
+  const updateTaxMutation = useMutation(taxApi.updateTax, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('taxes');
+      showSnackbar('Tax updated successfully!', 'success');
+      setOpenDialogs({ ...openDialogs, addEdit: false });
+      resetTaxForm();
+    },
+    onError: (error) => {
+      showSnackbar(`Failed to update tax: ${error.message}`, 'error');
+    }
+  });
+
+  const deleteTaxMutation = useMutation(taxApi.deleteTax, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('taxes');
+      showSnackbar('Tax deleted successfully!', 'success');
+      setOpenDialogs({ ...openDialogs, delete: false });
+    },
+    onError: (error) => {
+      showSnackbar(`Failed to delete tax: ${error.message}`, 'error');
+    }
+  });
+
+  const importTaxesMutation = useMutation(taxApi.importTaxes, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('taxes');
+      showSnackbar('Taxes imported successfully!', 'success');
+      setOpenDialogs({ ...openDialogs, import: false });
+      setImportFile(null);
+    },
+    onError: (error) => {
+      showSnackbar(`Failed to import taxes: ${error.message}`, 'error');
+    }
+  });
 
   const handleAddEditTax = () => {
     if (!tax.name || !tax.rate) {
-      showSnackbar('Please fill in all required fields.');
+      showSnackbar('Please fill in all required fields.', 'error');
       return;
     }
 
-    setLoading(true);
-    setTimeout(() => {
-      const updatedTaxes = editingIndex !== null
-        ? taxes.map((t, i) => (i === editingIndex ? {...tax, id: t.id} : t))
-        : [...taxes, {...tax, id: taxes.length + 1}];
-      setTaxes(updatedTaxes);
-      resetTaxForm();
-      showSnackbar(editingIndex !== null ? 'Tax updated successfully!' : 'Tax added successfully!');
-      setOpenDialogs({ ...openDialogs, addEdit: false });
-      setLoading(false);
-    }, 500);
+    if (editingId) {
+      updateTaxMutation.mutate({ id: editingId, ...tax });
+    } else {
+      addTaxMutation.mutate(tax);
+    }
+  };
+
+  const handleDeleteTax = () => {
+    if (editingId) {
+      deleteTaxMutation.mutate(editingId);
+    }
+  };
+
+  const handleArchiveTax = (id, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    updateTaxMutation.mutate({ id, status: newStatus });
+  };
+
+  const handleDuplicateTax = (taxToDuplicate) => {
+    const { id, ...taxWithoutId } = taxToDuplicate;
+    addTaxMutation.mutate({ ...taxWithoutId, name: `${taxWithoutId.name} (Copy)` });
+  };
+
+  const handleCalculateTax = () => {
+    if (!calculatorInput.propertyValue || !calculatorInput.taxId) {
+      showSnackbar('Please enter a property value and select a tax to calculate.', 'error');
+      return;
+    }
+
+    const selectedTax = taxes.find(t => t.id === calculatorInput.taxId);
+    if (!selectedTax) {
+      showSnackbar('Invalid tax selection.', 'error');
+      return;
+    }
+
+    const taxAmount = (parseFloat(calculatorInput.propertyValue) * selectedTax.rate) / 100;
+    setCalculationResult({
+      taxName: selectedTax.name,
+      propertyValue: parseFloat(calculatorInput.propertyValue).toFixed(2),
+      taxRate: selectedTax.rate,
+      taxAmount: taxAmount.toFixed(2)
+    });
+    setOpenDialogs({ ...openDialogs, calculator: true });
+  };
+
+  const handleImportTaxes = () => {
+    if (!importFile) {
+      showSnackbar('Please select a file to import.', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', importFile);
+    importTaxesMutation.mutate(formData);
   };
 
   const resetTaxForm = () => {
     setTax({
       name: '', rate: '', type: 'Property Tax', status: 'active', category: 'Residential',
-      thresholds: [], applicableProperties: [], effectiveDate: '', expirationDate: '', description: '',
+      effectiveDate: '', expirationDate: '', description: ''
     });
-    setEditingIndex(null);
+    setEditingId(null);
   };
 
-  const handleDeleteTax = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setTaxes(taxes.filter((_, i) => i !== editingIndex));
-      resetTaxForm();
-      setOpenDialogs({ ...openDialogs, delete: false });
-      showSnackbar('Tax deleted successfully!');
-      setLoading(false);
-    }, 500);
-  };
-
-  const handleArchiveTax = (index) => {
-    setLoading(true);
-    setTimeout(() => {
-      const updatedTaxes = [...taxes];
-      updatedTaxes[index].status = updatedTaxes[index].status === 'active' ? 'inactive' : 'active';
-      setTaxes(updatedTaxes);
-      showSnackbar(`Tax ${updatedTaxes[index].status === 'active' ? 'activated' : 'archived'} successfully!`);
-      setLoading(false);
-    }, 500);
-  };
-
-  const handleDuplicateTax = (index) => {
-    setLoading(true);
-    setTimeout(() => {
-      const taxToDuplicate = { ...taxes[index], name: `${taxes[index].name} (Copy)`, id: taxes.length + 1 };
-      setTaxes([...taxes, taxToDuplicate]);
-      showSnackbar('Tax duplicated successfully!');
-      setLoading(false);
-    }, 500);
-  };
-
-  const handleCalculateTax = () => {
-    if (!calculatorInput.amount || !calculatorInput.property) {
-      showSnackbar('Please enter an amount and select a property to calculate tax.');
-      return;
-    }
-
-    setLoading(true);
-    setTimeout(() => {
-      let totalTax = 0;
-      taxes.forEach((t) => {
-        if (t.status === 'active' && t.applicableProperties.includes(parseInt(calculatorInput.property))) {
-          totalTax += (parseFloat(calculatorInput.amount) * parseFloat(t.rate)) / 100;
-        }
-      });
-      setCalculatedTax(totalTax);
-      setLoading(false);
-    }, 500);
-  };
-
-  const handleImportTaxes = () => {
-    if (!importFile) {
-      showSnackbar('Please select a file to import.');
-      return;
-    }
-
-    setLoading(true);
-    setTimeout(() => {
-      showSnackbar('Taxes imported successfully!');
-      setOpenDialogs({ ...openDialogs, import: false });
-      setImportFile(null);
-      setLoading(false);
-      fetchTaxes();
-    }, 1500);
-  };
-
-  const handleExportTaxes = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(JSON.stringify(taxes))}`;
-      const link = document.createElement('a');
-      link.href = jsonString;
-      link.download = 'taxes_export.json';
-      link.click();
-      showSnackbar('Taxes exported successfully!');
-      setLoading(false);
-    }, 1000);
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
   };
 
   const filteredTaxes = useMemo(() => {
+    if (!taxes) return [];
     return taxes.filter((t) => {
       const matchesStatus = filters.status ? t.status === filters.status : true;
       const matchesType = filters.type ? t.type === filters.type : true;
@@ -220,40 +179,63 @@ const Taxes = () => {
     return filteredTaxes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   }, [filteredTaxes, pagination]);
 
-  const showSnackbar = (message) => {
-    setSnackbar({ open: true, message });
+  const taxDistributionData = useMemo(() => {
+    if (!taxes) return [];
+    return taxTypes
+      .map(type => ({
+        name: type,
+        value: taxes.filter(t => t.type === type && t.status === 'active').length
+      }))
+      .filter(item => item.value > 0);
+  }, [taxes, taxTypes]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return format(new Date(dateString), 'MM/dd/yyyy');
   };
 
-const taxDistributionData = useMemo(() => {
-  return taxTypes
-    .map(type => ({
-      name: type,
-      value: taxes.filter(t => t.type === type && t.status === 'active').length
-    }))
-    .filter(item => item.value > 0); // Only include non-zero values
-}, [taxes, taxTypes]);
+  const isExpiringSoon = useCallback((expirationDate) => {
+    if (!expirationDate) return false;
+    const today = new Date();
+    const expDate = new Date(expirationDate);
+    return isAfter(expDate, today) && isAfter(expDate, subDays(today, 30));
+  }, []);
+
   const renderMobileView = () => (
-    <List>
-      {paginatedTaxes.map((tax, index) => (
-        <ListItem key={tax.id} divider>
-          <ListItemText
-            primary={tax.name}
-            secondary={`${tax.type} | ${tax.category} | ${tax.rate}% | ${tax.status}`}
-          />
-          <Box>
-            <IconButton onClick={() => {setTax(tax); setEditingIndex(index); setOpenDialogs({ ...openDialogs, addEdit: true })}}>
-              <EditIcon />
-            </IconButton>
-            <IconButton onClick={() => {setEditingIndex(index); setOpenDialogs({ ...openDialogs, delete: true })}}>
-              <DeleteIcon />
-            </IconButton>
-            <IconButton onClick={() => handleArchiveTax(index)}>
-              {tax.status === 'active' ? <ArchiveIcon /> : <UnarchiveIcon />}
-            </IconButton>
-          </Box>
-        </ListItem>
+    <Box>
+      {paginatedTaxes.map((tax) => (
+        <Card key={tax.id} sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="h6">{tax.name}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {`${tax.type} | ${tax.category} | ${tax.rate}% | ${tax.status}`}
+            </Typography>
+            <Typography variant="body2">
+              Effective: {formatDate(tax.effectiveDate)}
+            </Typography>
+            {isExpiringSoon(tax.expirationDate) && (
+              <Alert severity="warning" icon={<WarningIcon />}>
+                This tax is expiring soon on {formatDate(tax.expirationDate)}
+              </Alert>
+            )}
+            <Box mt={2}>
+              <IconButton onClick={() => { setTax(tax); setEditingId(tax.id); setOpenDialogs({ ...openDialogs, addEdit: true }) }}>
+                <EditIcon />
+              </IconButton>
+              <IconButton onClick={() => { setEditingId(tax.id); setOpenDialogs({ ...openDialogs, delete: true }) }}>
+                <DeleteIcon />
+              </IconButton>
+              <IconButton onClick={() => handleArchiveTax(tax.id, tax.status)}>
+                {tax.status === 'active' ? <ArchiveIcon /> : <UnarchiveIcon />}
+              </IconButton>
+              <IconButton onClick={() => { setSelectedTaxDetails(tax); setOpenDialogs({ ...openDialogs, details: true }) }}>
+                <VisibilityIcon />
+              </IconButton>
+            </Box>
+          </CardContent>
+        </Card>
       ))}
-    </List>
+    </Box>
   );
 
   const renderDesktopView = () => (
@@ -267,11 +249,12 @@ const taxDistributionData = useMemo(() => {
             <TableCell>Rate</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Effective Date</TableCell>
+            <TableCell>Expiration</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {paginatedTaxes.map((tax, index) => (
+          {paginatedTaxes.map((tax) => (
             <TableRow key={tax.id}>
               <TableCell>{tax.name}</TableCell>
               <TableCell>{tax.type}</TableCell>
@@ -280,26 +263,39 @@ const taxDistributionData = useMemo(() => {
               <TableCell>
                 <Chip label={tax.status} color={tax.status === 'active' ? 'success' : 'default'} />
               </TableCell>
-              <TableCell>{tax.effectiveDate}</TableCell>
+              <TableCell>{formatDate(tax.effectiveDate)}</TableCell>
+              <TableCell>
+                {formatDate(tax.expirationDate)}
+                {isExpiringSoon(tax.expirationDate) && (
+                  <Tooltip title="Expiring Soon">
+                    <WarningIcon color="warning" sx={{ ml: 1 }} />
+                  </Tooltip>
+                )}
+              </TableCell>
               <TableCell>
                 <Tooltip title="Edit">
-                  <IconButton onClick={() => {setTax(tax); setEditingIndex(index); setOpenDialogs({ ...openDialogs, addEdit: true })}}>
+                  <IconButton onClick={() => { setTax(tax); setEditingId(tax.id); setOpenDialogs({ ...openDialogs, addEdit: true }) }}>
                     <EditIcon />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Delete">
-                  <IconButton onClick={() => {setEditingIndex(index); setOpenDialogs({ ...openDialogs, delete: true })}}>
+                  <IconButton onClick={() => { setEditingId(tax.id); setOpenDialogs({ ...openDialogs, delete: true }) }}>
                     <DeleteIcon />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Duplicate">
-                  <IconButton onClick={() => handleDuplicateTax(index)}>
+                  <IconButton onClick={() => handleDuplicateTax(tax)}>
                     <FileCopyIcon />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title={tax.status === 'active' ? 'Archive' : 'Activate'}>
-                  <IconButton onClick={() => handleArchiveTax(index)}>
+                  <IconButton onClick={() => handleArchiveTax(tax.id, tax.status)}>
                     {tax.status === 'active' ? <ArchiveIcon /> : <UnarchiveIcon />}
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="View Details">
+                  <IconButton onClick={() => { setSelectedTaxDetails(tax); setOpenDialogs({ ...openDialogs, details: true }) }}>
+                    <VisibilityIcon />
                   </IconButton>
                 </Tooltip>
               </TableCell>
@@ -310,44 +306,73 @@ const taxDistributionData = useMemo(() => {
     </TableContainer>
   );
 
+  const renderChart = () => (
+    <Box mt={4}>
+      <Typography variant="subtitle1" gutterBottom>Tax Distribution</Typography>
+      {taxDistributionData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={taxDistributionData}
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+            >
+              {taxDistributionData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <RechartsTooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <Typography variant="body1" color="textSecondary" align="center">
+          No active taxes to display.
+        </Typography>
+      )}
+    </Box>
+  );
+
+  if (isLoading) return <LinearProgress />;
+  if (isError) return <Alert severity="error">{error.message}</Alert>;
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>Tax Management</Typography>
-      {loading && <LinearProgress sx={{ mb: 2 }} />}
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
-          <StyledCard>
+          <Card>
             <CardContent>
-              <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" gutterBottom={isMobile}>Manage Taxes</Typography>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Manage Taxes</Typography>
                 <Box>
-                  <StyledButton variant="contained" startIcon={<AddIcon />} onClick={() => setOpenDialogs({ ...openDialogs, addEdit: true })}>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => { resetTaxForm(); setOpenDialogs({ ...openDialogs, addEdit: true }) }} sx={{ mr: 1 }}>
                     Add New Tax
-                  </StyledButton>
-                  <StyledButton variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => setOpenDialogs({ ...openDialogs, import: true })}>
+                  </Button>
+                  <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => setOpenDialogs({ ...openDialogs, import: true })} sx={{ mr: 1 }}>
                     Import
-                  </StyledButton>
-                  <StyledButton variant="outlined" startIcon={<CloudDownloadIcon />} onClick={handleExportTaxes}>
-                    Export
-                  </StyledButton>
+                  </Button>
                 </Box>
               </Box>
 
-              <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" mb={2}>
-              <StyledTextField
-  label="Search Taxes"
-  value={filters.search}
-  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-  variant="outlined"
-  size="small"
-  fullWidth={isMobile}
-  sx={{ mb: isMobile ? 2 : 0, width: isMobile ? '100%' : '40%' }}
-  InputProps={{
-    startAdornment: <SearchIcon color="action" />
-  }}
-/>
-                <Box display="flex" justifyContent={isMobile ? 'space-between' : 'flex-end'} width={isMobile ? '100%' : 'auto'}>
+              <Box display="flex" justifyContent="space-between" mb={2}>
+                <TextField
+                  label="Search Taxes"
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  variant="outlined"
+                  size="small"
+                  sx={{ width: '30%' }}
+                  InputProps={{
+                    startAdornment: <SearchIcon color="action" />
+                  }}
+                />
+                <Box>
                   <FormControl variant="outlined" size="small" sx={{ mr: 1, minWidth: 120 }}>
                     <InputLabel>Status</InputLabel>
                     <Select
@@ -388,111 +413,69 @@ const taxDistributionData = useMemo(() => {
                 onRowsPerPageChange={(e) => setPagination({ page: 0, rowsPerPage: parseInt(e.target.value, 10) })}
               />
             </CardContent>
-          </StyledCard>
+          </Card>
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <StyledCard>
+          <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>Tax Calculator & Distribution</Typography>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Select Property</InputLabel>
+              <Typography variant="h6" gutterBottom>Tax Calculator</Typography>
+              <TextField
+                label="Property Value"
+                type="number"
+                value={calculatorInput.propertyValue}
+                onChange={(e) => setCalculatorInput({ ...calculatorInput, propertyValue: e.target.value })}
+                fullWidth
+                margin="normal"
+              />
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Select Tax</InputLabel>
                 <Select
-                  value={calculatorInput.property}
-                  onChange={(e) => setCalculatorInput({ ...calculatorInput, property: e.target.value })}
-                  label="Select Property"
+                  value={calculatorInput.taxId}
+                  onChange={(e) => setCalculatorInput({ ...calculatorInput, taxId: e.target.value })}
+                  label="Select Tax"
                 >
-                  {properties.map((property) => (
-                    <MenuItem key={property.id} value={property.id}>{property.name}</MenuItem>
+                  {taxes.filter(t => t.status === 'active').map((tax) => (
+                    <MenuItem key={tax.id} value={tax.id}>{tax.name}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
-              <Box display="flex" alignItems="center" mb={2}>
-                <TextField
-                  label="Amount"
-                  type="number"
-                  value={calculatorInput.amount}
-                  onChange={(e) => setCalculatorInput({ ...calculatorInput, amount: e.target.value })}
-                  fullWidth
-                  sx={{ mr: 1 }}
-                />
-                <FormControl sx={{ minWidth: 80 }}>
-                  <Select
-                    value={calculatorInput.currency}
-                    onChange={(e) => setCalculatorInput({ ...calculatorInput, currency: e.target.value })}
-                  >
-                    {currencies.map((curr) => (
-                      <MenuItem key={curr} value={curr}>{curr}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              <StyledButton
+              <Button
                 variant="contained"
                 startIcon={<CalculateIcon />}
                 onClick={handleCalculateTax}
                 fullWidth
+                sx={{ mt: 2 }}
               >
                 Calculate Tax
-              </StyledButton>
-              {calculatedTax !== null && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  Calculated Tax: {calculatorInput.currency} {calculatedTax.toFixed(2)}
-                </Alert>
-              )}
-              
-              <Box mt={4}>
-  <Typography variant="subtitle1" gutterBottom>Tax Distribution</Typography>
-  {taxDistributionData.length > 0 ? (
-    <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie
-          data={taxDistributionData}
-          cx="50%"
-          cy="50%"
-          outerRadius={80}
-          fill="#8884d8"
-          dataKey="value"
-          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-        >
-          {taxDistributionData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <RechartsTooltip formatter={(value) => [`${value} active taxes`, 'Count']} />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
-  ) : (
-    <Typography variant="body1" color="textSecondary" align="center">
-      No active taxes to display.
-    </Typography>
-  )}
-</Box>
+              </Button>
 
+              {renderChart()}
             </CardContent>
-          </StyledCard>
+          </Card>
         </Grid>
       </Grid>
 
       {/* Add/Edit Tax Dialog */}
       <Dialog open={openDialogs.addEdit} onClose={() => setOpenDialogs({ ...openDialogs, addEdit: false })}>
-        <DialogTitle>{editingIndex !== null ? 'Edit Tax' : 'Add New Tax'}</DialogTitle>
+        <DialogTitle>{editingId ? 'Edit Tax' : 'Add New Tax'}</DialogTitle>
         <DialogContent>
-          <StyledTextField
+          <TextField
             label="Tax Name"
             value={tax.name}
             onChange={(e) => setTax({ ...tax, name: e.target.value })}
             fullWidth
+            margin="normal"
           />
-          <StyledTextField
+          <TextField
             label="Tax Rate (%)"
             type="number"
             value={tax.rate}
             onChange={(e) => setTax({ ...tax, rate: e.target.value })}
             fullWidth
+            margin="normal"
           />
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControl fullWidth margin="normal">
             <InputLabel>Tax Type</InputLabel>
             <Select
               value={tax.type}
@@ -504,7 +487,7 @@ const taxDistributionData = useMemo(() => {
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControl fullWidth margin="normal">
             <InputLabel>Category</InputLabel>
             <Select
               value={tax.category}
@@ -516,57 +499,38 @@ const taxDistributionData = useMemo(() => {
               ))}
             </Select>
           </FormControl>
-          <StyledTextField
+          <TextField
             label="Effective Date"
             type="date"
             value={tax.effectiveDate}
             onChange={(e) => setTax({ ...tax, effectiveDate: e.target.value })}
             fullWidth
+            margin="normal"
             InputLabelProps={{ shrink: true }}
           />
-          <StyledTextField
+          <TextField
             label="Expiration Date"
             type="date"
             value={tax.expirationDate}
             onChange={(e) => setTax({ ...tax, expirationDate: e.target.value })}
             fullWidth
+            margin="normal"
             InputLabelProps={{ shrink: true }}
           />
-          <StyledTextField
+          <TextField
             label="Description"
             value={tax.description}
             onChange={(e) => setTax({ ...tax, description: e.target.value })}
             fullWidth
+            margin="normal"
             multiline
             rows={3}
           />
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Applicable Properties</InputLabel>
-            <Select
-              multiple
-              value={tax.applicableProperties}
-              onChange={(e) => setTax({ ...tax, applicableProperties: e.target.value })}
-              label="Applicable Properties"
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={properties.find(p => p.id === value)?.name} />
-                  ))}
-                </Box>
-              )}
-            >
-              {properties.map((property) => (
-                <MenuItem key={property.id} value={property.id}>
-                  {property.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialogs({ ...openDialogs, addEdit: false })}>Cancel</Button>
           <Button onClick={handleAddEditTax} variant="contained">
-            {editingIndex !== null ? 'Update' : 'Add'} Tax
+            {editingId ? 'Update' : 'Add'} Tax
           </Button>
         </DialogActions>
       </Dialog>
@@ -590,8 +554,11 @@ const taxDistributionData = useMemo(() => {
         <DialogTitle>Import Taxes</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Upload a JSON file containing tax data to import.
+            Upload a JSON file containing tax data to import. The file should contain an array of tax objects.
           </DialogContentText>
+          <Button onClick={() => setOpenDialogs({ ...openDialogs, importHelp: true })} sx={{ mt: 1 }}>
+            View Import Format
+          </Button>
           <input
             type="file"
             accept=".json"
@@ -605,81 +572,83 @@ const taxDistributionData = useMemo(() => {
         </DialogActions>
       </Dialog>
 
+      {/* Import Help Dialog */}
+      <Dialog open={openDialogs.importHelp} onClose={() => setOpenDialogs({ ...openDialogs, importHelp: false })}>
+        <DialogTitle>Tax Import Format</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            The JSON file should contain an array of tax objects with the following structure:
+          </DialogContentText>
+          <pre>
+            {JSON.stringify([
+              {
+                name: "Example Tax",
+                rate: 5.5,
+                type: "Property Tax",
+                category: "Residential",
+                status: "active",
+                effectiveDate: "2023-01-01",
+                expirationDate: "2023-12-31",
+                description: "Example description"
+              }
+            ], null, 2)}
+          </pre>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialogs({ ...openDialogs, importHelp: false })}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Tax Details Dialog */}
+      <Dialog open={openDialogs.details} onClose={() => setOpenDialogs({ ...openDialogs, details: false })}>
+        <DialogTitle>Tax Details</DialogTitle>
+        <DialogContent>
+          {selectedTaxDetails && (
+            <Box>
+              <Typography><strong>Name:</strong> {selectedTaxDetails.name}</Typography>
+              <Typography><strong>Type:</strong> {selectedTaxDetails.type}</Typography>
+              <Typography><strong>Category:</strong> {selectedTaxDetails.category}</Typography>
+              <Typography><strong>Rate:</strong> {selectedTaxDetails.rate}%</Typography>
+              <Typography><strong>Status:</strong> {selectedTaxDetails.status}</Typography>
+              <Typography><strong>Effective Date:</strong> {formatDate(selectedTaxDetails.effectiveDate)}</Typography>
+              <Typography><strong>Expiration Date:</strong> {formatDate(selectedTaxDetails.expirationDate)}</Typography>
+              <Typography><strong>Description:</strong> {selectedTaxDetails.description}</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialogs({ ...openDialogs, details: false })}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Tax Calculation Result Dialog */}
+      <Dialog open={openDialogs.calculator} onClose={() => setOpenDialogs({ ...openDialogs, calculator: false })}>
+        <DialogTitle>Tax Calculation Result</DialogTitle>
+        <DialogContent>
+          {calculationResult && (
+            <Box>
+              <Typography><strong>Tax Name:</strong> {calculationResult.taxName}</Typography>
+              <Typography><strong>Property Value:</strong> ${calculationResult.propertyValue}</Typography>
+              <Typography><strong>Tax Rate:</strong> {calculationResult.taxRate}%</Typography>
+              <Typography><strong>Tax Amount:</strong> ${calculationResult.taxAmount}</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialogs({ ...openDialogs, calculator: false })}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        message={snackbar.message}
-      />
-
-      {/* Floating Action Button for mobile */}
-      {isMobile && (
-        <FloatingActionButton color="primary" aria-label="add" onClick={() => setOpenDialogs({ ...openDialogs, addEdit: true })}>
-          <AddIcon />
-        </FloatingActionButton>
-      )}
-
-      {/* Drawer for mobile filters */}
-      <Drawer
-        anchor="left"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        PaperProps={{
-          sx: { width: '80%', maxWidth: 300 },
-        }}
       >
-        <Box
-          sx={{ width: '100%', pt: 8 }} // Add top padding to account for the topbar
-          role="presentation"
-          onClick={() => setDrawerOpen(false)}
-          onKeyDown={() => setDrawerOpen(false)}
-        >
-          <List>
-            <ListItem>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  label="Status"
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                </Select>
-              </FormControl>
-            </ListItem>
-            <ListItem>
-              <FormControl fullWidth>
-                <InputLabel>Type</InputLabel>
-                <Select
-                  value={filters.type}
-                  onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-                  label="Type"
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {taxTypes.map((type) => (
-                    <MenuItem key={type} value={type}>{type}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </ListItem>
-          </List>
-        </Box>
-      </Drawer>
-
-      {/* Filter button for mobile */}
-      {isMobile && (
-        <Fab
-          color="primary"
-          aria-label="filter"
-          onClick={() => setDrawerOpen(true)}
-          sx={{ position: 'fixed', bottom: 80, right: 16, zIndex: theme.zIndex.drawer + 1 }}
-        >
-          <FilterListIcon />
-        </Fab>
-      )}
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

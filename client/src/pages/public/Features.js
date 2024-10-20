@@ -1,43 +1,34 @@
 import React from 'react';
-import { Box, Typography, Grid, Container } from '@mui/material';
-import { styled, keyframes } from '@mui/material/styles';
+import { Box, Typography, Grid, Container, useTheme } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import {
   Analytics, Security, BuildCircle, People, LightbulbOutlined, Headset,
-  CloudQueue, Settings, PhoneAndroid, Autorenew, LocationOn, Receipt,
-  NotificationsActive, PieChart, Storage
+  CloudQueue, Settings, PhoneAndroid, Autorenew, LocationOn, Receipt
 } from '@mui/icons-material';
 
-const gradientShift = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`;
-
-const StyledPaper = styled(motion.div)(({ theme }) => ({
-  padding: theme.spacing(4),
-  textAlign: 'center',
+const FeatureCard = styled(motion.div)(({ theme }) => ({
+  background: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(3),
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  borderRadius: theme.shape.borderRadius * 2,
-  background: `linear-gradient(135deg, 
-    ${theme.palette.background.paper} 0%, 
-    ${theme.palette.grey[100]} 100%)`,
-  backdropFilter: 'blur(10px)',
-  boxShadow: '0 8px 32px rgba(31, 38, 135, 0.15)',
-  border: '1px solid rgba(255, 255, 255, 0.18)',
-  transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+  textAlign: 'center',
+  transition: 'all 0.3s ease-in-out',
+  cursor: 'pointer',
+  '&:hover': {
+    transform: 'translateY(-10px)',
+    boxShadow: '0 20px 30px rgba(0, 0, 0, 0.2)',
+  },
 }));
 
 const IconWrapper = styled(Box)(({ theme }) => ({
+  fontSize: '3rem',
+  color: theme.palette.primary.main,
   marginBottom: theme.spacing(2),
-  '& .MuiSvgIcon-root': {
-    fontSize: '4rem',
-    filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))',
-  },
 }));
 
 const features = [
@@ -46,73 +37,45 @@ const features = [
   { icon: <BuildCircle />, title: 'Intuitive Management', description: 'Streamline operations with our smart management suite.' },
   { icon: <People />, title: 'User-Centric Design', description: 'An interface so intuitive, it feels like an extension of you.' },
   { icon: <LightbulbOutlined />, title: 'Seamless Ecosystem', description: 'Integrate effortlessly with your favorite tools and services.' },
-  { icon: <Headset />, title: 'Round-the-Clock Support', description: 'Expert assistance available 24/7, because we never sleep.' },
-  { icon: <CloudQueue />, title: 'Infinite Cloud Storage', description: 'Limitless secure storage for all your crucial documents.' },
-  { icon: <Settings />, title: 'Tailored Experience', description: 'Customize every aspect to fit your unique workflow.' },
+  { icon: <Headset />, title: '24/7 Support', description: 'Expert assistance available round the clock, because we never sleep.' },
+  { icon: <CloudQueue />, title: 'Cloud Storage', description: 'Secure and limitless storage for all your crucial documents.' },
+  { icon: <Settings />, title: 'Customization', description: 'Tailor every aspect to fit your unique workflow perfectly.' },
   { icon: <PhoneAndroid />, title: 'Mobile Mastery', description: 'Full-featured mobile app for management on the move.' },
-  { icon: <Autorenew />, title: 'AI-Powered Automation', description: 'Let our AI handle repetitive tasks while you focus on growth.' },
+  { icon: <Autorenew />, title: 'AI Automation', description: 'Let our AI handle repetitive tasks while you focus on growth.' },
   { icon: <LocationOn />, title: 'Geo-Intelligence', description: 'Location-based insights for strategic property management.' },
-  { icon: <Receipt />, title: 'Financial Wizardry', description: 'Simplified billing and invoicing with smart financial tools.' },
-  { icon: <NotificationsActive />, title: 'Intelligent Alerts', description: 'Stay ahead with predictive and actionable notifications.' },
-  { icon: <PieChart />, title: 'Visual Insights', description: 'Transform complex data into clear, actionable visualizations.' },
-  { icon: <Storage />, title: 'Bulletproof Infrastructure', description: 'Rely on our ultra-resilient systems for 99.99% uptime.' },
+  { icon: <Receipt />, title: 'Financial Tools', description: 'Simplified billing and invoicing with smart financial wizardry.' },
 ];
 
 const FeatureItem = ({ feature, index }) => (
-  <Grid item xs={12} sm={6} md={4} component={motion.div}>
-    <StyledPaper
+  <Grid item xs={12} sm={6} md={4} lg={3}>
+    <FeatureCard
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ scale: 1.05, boxShadow: '0 12px 40px rgba(31, 38, 135, 0.25)' }}
     >
-      <IconWrapper>
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{
-            type: "spring",
-            stiffness: 260,
-            damping: 20,
-            delay: 0.1 + index * 0.05
-          }}
-        >
-          {feature.icon}
-        </motion.div>
-      </IconWrapper>
-      <Typography
-        variant="h6"
-        component="h3"
-        gutterBottom
-        sx={{
-          fontWeight: 'bold',
-          background: 'linear-gradient(45deg, #3f51b5, #2196f3)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}
-      >
+      <IconWrapper>{feature.icon}</IconWrapper>
+      <Typography variant="h6" component="h3" gutterBottom fontWeight="bold" color="primary">
         {feature.title}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+      <Typography variant="body2" color="text.secondary">
         {feature.description}
       </Typography>
-    </StyledPaper>
+    </FeatureCard>
   </Grid>
 );
 
 const Features = () => {
+  const theme = useTheme();
+
   return (
     <Box
       component="section"
       sx={{
-        flexGrow: 1,
         py: { xs: 8, md: 12 },
-        background: `linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)`,
-        backgroundSize: '400% 400%',
-        animation: `${gradientShift} 15s ease infinite`,
+        background: theme.palette.background.default,
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth="xl">
         <Typography
           variant="h2"
           component="h1"
@@ -120,10 +83,9 @@ const Features = () => {
           gutterBottom
           sx={{
             fontWeight: 900,
-            fontSize: { xs: '2.5rem', md: '3.75rem' },
-            textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-            color: 'white',
-            mb: 4,
+            fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+            color: theme.palette.primary.main,
+            mb: 2,
           }}
         >
           Revolutionize Your Property Management
@@ -136,12 +98,13 @@ const Features = () => {
             maxWidth: '800px',
             margin: '0 auto',
             mb: 8,
-            color: 'rgba(255,255,255,0.9)',
+            color: theme.palette.text.secondary,
             fontWeight: 300,
           }}
         >
-          Unlock the full potential of your properties with our state-of-the-art features designed to streamline, optimize, and elevate your management experience.
+          Unlock the full potential of your properties with our cutting-edge features
         </Typography>
+
         <Grid container spacing={4}>
           {features.map((feature, index) => (
             <FeatureItem key={index} feature={feature} index={index} />

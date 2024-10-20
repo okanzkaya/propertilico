@@ -87,6 +87,9 @@ app.use('/api/finances', limiter, protect, require('./routes/financeRoutes'));
 app.use('/api/reports', limiter, protect, require('./routes/reportRoutes'));
 app.use('/api/tasks', limiter, protect, require('./routes/taskRoutes'));
 
+// Add the new tax routes
+app.use('/api/taxes', limiter, protect, require('./routes/taxRoutes'));
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
