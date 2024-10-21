@@ -1,23 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useCallback, useMemo } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Drawer, List, ListItem, ListItemIcon, Typography, Box, AppBar, IconButton,
   Badge, Popover, useTheme, Menu, MenuItem, Avatar, Divider, Tooltip, Toolbar,
   useMediaQuery, ListItemText, ListItemAvatar, Button
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-import HomeIcon from '@mui/icons-material/Home';
-import EmailIcon from '@mui/icons-material/Email';
-import MenuIcon from '@mui/icons-material/Menu';
 import {
-  Dashboard as DashboardIcon, AccountBalance as FinancesIcon, Home as PropertiesIcon,
-  ConfirmationNumber as TicketsIcon, Contacts as ContactsIcon, Receipt as TaxesIcon,
-  Description as DocumentsIcon, BarChart as ReportsIcon, Settings as SettingsIcon,
-  Feedback as FeedbackIcon, Check as CheckIcon, Error as ErrorIcon, Warning as WarningIcon,
+  Notifications as NotificationsIcon,
+  Brightness4 as Brightness4Icon,
+  Brightness7 as Brightness7Icon,
+  ExitToApp as ExitToAppIcon,
+  Home as HomeIcon,
+  Menu as MenuIcon,
+  Dashboard as DashboardIcon,
+  AccountBalance as FinancesIcon,
+  Home as PropertiesIcon,
+  ConfirmationNumber as TicketsIcon,
+  Contacts as ContactsIcon,
+  Receipt as TaxesIcon,
+  Description as DocumentsIcon,
+  BarChart as ReportsIcon,
+  Settings as SettingsIcon,
+  Feedback as FeedbackIcon,
+  Check as CheckIcon,
+  Error as ErrorIcon,
+  Warning as WarningIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
 import { useUser } from '../../context/UserContext';
@@ -34,7 +42,7 @@ const AppBarStyled = styled(AppBar)(({ theme }) => ({
 }));
 
 const DrawerStyled = styled(Drawer, {
-  shouldForwardProp: (prop) => prop !== 'isMobile',
+  shouldForwardProp: (prop) => prop !== 'isMobile' && prop !== 'open',
 })(({ theme, open, isMobile }) => ({
   width: isMobile ? mobileDrawerWidth : drawerWidth,
   flexShrink: 0,
@@ -117,7 +125,7 @@ const SidebarContent = React.memo(({ isMobile, handleDrawerClose }) => (
   </List>
 ));
 
-const NotificationItem = ({ type, message, date, handleClose }) => {
+const NotificationItem = React.memo(({ type, message, date, handleClose }) => {
   const getIcon = () => {
     switch (type) {
       case 'success': return <CheckIcon color="success" />;
@@ -144,7 +152,7 @@ const NotificationItem = ({ type, message, date, handleClose }) => {
       />
     </ListItem>
   );
-};
+});
 
 const Sidebar = ({ themeMode, toggleTheme }) => {
   const [open, setOpen] = useState(false);
@@ -152,12 +160,11 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
   const [userMenuAnchorEl, setUserMenuAnchorEl] = useState(null);
   const [logoutMenuAnchorEl, setLogoutMenuAnchorEl] = useState(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user, logout } = useUser();
 
-  const [notifications, setNotifications] = useState([
+  const [notifications] = useState([
     { id: 1, type: 'success', message: 'Payment received for Property A', date: new Date() },
     { id: 2, type: 'warning', message: 'Maintenance request for Property B', date: new Date(Date.now() - 86400000) },
     { id: 3, type: 'error', message: 'Failed to process rent for Tenant C', date: new Date(Date.now() - 172800000) },
@@ -169,12 +176,6 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
     setOpen(false);
   }, []);
 
-  useEffect(() => {
-    if (isMobile) {
-      handleDrawerClose();
-    }
-  }, [location, isMobile, handleDrawerClose]);
-
   const handleDrawerToggle = useCallback(() => {
     setOpen((prevOpen) => !prevOpen);
   }, []);
@@ -185,7 +186,7 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
   const handleUserMenuClose = useCallback(() => setUserMenuAnchorEl(null), []);
   const handleLogoutMenuClick = useCallback((event) => setLogoutMenuAnchorEl(event.currentTarget), []);
   const handleLogoutMenuClose = useCallback(() => setLogoutMenuAnchorEl(null), []);
-  
+
   const handleLogout = useCallback(() => {
     logout();
     navigate('/');
@@ -193,13 +194,26 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
 
   const handleReturnToHomepage = useCallback(() => navigate('/'), [navigate]);
 
-  const handleNotificationDismiss = useCallback((id) => {
-    setNotifications((prevNotifications) => prevNotifications.filter((notification) => notification.id !== id));
-  }, []);
-
-  const handleDismissAll = useCallback(() => {
-    setNotifications([]);
-  }, []);
+  const notificationsList = useMemo(() => (
+    <List>
+      {notifications.length > 0 ? (
+        notifications.map((notification) => (
+          <React.Fragment key={notification.id}>
+            <NotificationItem
+              type={notification.type}
+              message={notification.message}
+              date={notification.date}
+            />
+            <Divider variant="inset" component="li" />
+          </React.Fragment>
+        ))
+      ) : (
+        <ListItem>
+          <ListItemText primary="No new notifications" />
+        </ListItem>
+      )}
+    </List>
+  ), [notifications]);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -220,7 +234,13 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
             Dashboard
           </Typography>
           <IconButton color="inherit" onClick={handleUserMenuClick}>
-            <Avatar src={user?.avatar} alt={user?.name} sx={{ width: 32, height: 32 }} />
+            <Avatar
+              src={user?.avatar ? `${process.env.REACT_APP_API_URL}${user.avatar}` : undefined}
+              alt={user?.name}
+              sx={{ width: 32, height: 32 }}
+            >
+              {!user?.avatar && user?.name ? user.name.charAt(0).toUpperCase() : null}
+            </Avatar>
           </IconButton>
           <IconButton color="inherit" onClick={handleNotificationsClick}>
             <Badge badgeContent={notifications.length > 9 ? '9+' : notifications.length} color="error">
@@ -251,9 +271,9 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
         <Toolbar />
         <SidebarContent isMobile={isMobile} handleDrawerClose={handleDrawerClose} />
       </DrawerStyled>
-      <Box component="main" sx={{ 
-        flexGrow: 1, 
-        p: 0, 
+      <Box component="main" sx={{
+        flexGrow: 1,
+        p: 0,
         width: isMobile ? '100%' : `calc(100% - ${drawerWidth}px)`,
         marginTop: '64px',
         height: 'calc(100vh - 64px)',
@@ -271,29 +291,11 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
         <Box sx={{ width: '350px', maxHeight: '500px', overflow: 'auto' }}>
           <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
             <Typography variant="h6">Notifications</Typography>
-            <Button color="primary" onClick={handleDismissAll} disabled={notifications.length === 0}>
+            <Button color="primary" onClick={() => { }} disabled={notifications.length === 0}>
               Dismiss All
             </Button>
           </Box>
-          <List>
-            {notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <React.Fragment key={notification.id}>
-                  <NotificationItem
-                    type={notification.type}
-                    message={notification.message}
-                    date={notification.date}
-                    handleClose={() => handleNotificationDismiss(notification.id)}
-                  />
-                  <Divider variant="inset" component="li" />
-                </React.Fragment>
-              ))
-            ) : (
-              <ListItem>
-                <ListItemText primary="No new notifications" />
-              </ListItem>
-            )}
-          </List>
+          {notificationsList}
         </Box>
       </Popover>
       <Menu
@@ -305,11 +307,19 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
       >
         <MenuItem>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
-            <Avatar src={user?.avatar} alt={user?.name} sx={{ width: 64, height: 64, mb: 1 }} />
+            <Avatar
+              src={user?.avatar ? `${process.env.REACT_APP_API_URL}${user.avatar}` : undefined}
+              alt={user?.name}
+              sx={{ width: 64, height: 64, mb: 1 }}
+            >
+              {!user?.avatar && user?.name ? user.name.charAt(0).toUpperCase() : null}
+            </Avatar>
             <Typography variant="subtitle1">{user?.name}</Typography>
             <Typography variant="body2" color="text.secondary">{user?.role}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <EmailIcon fontSize="small" sx={{ mr: 1 }} />
+              <IconButton size="small" sx={{ mr: 1 }}>
+                <HomeIcon fontSize="small" />
+              </IconButton>
               <Typography variant="body2">{user?.email}</Typography>
             </Box>
           </Box>
@@ -321,8 +331,7 @@ const Sidebar = ({ themeMode, toggleTheme }) => {
         onClose={handleLogoutMenuClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <MenuItem onClick={handleReturnToHomepage}>
+      ><MenuItem onClick={handleReturnToHomepage}>
           <ListItemIcon>
             <HomeIcon fontSize="small" />
           </ListItemIcon>
