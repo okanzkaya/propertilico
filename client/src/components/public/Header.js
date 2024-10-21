@@ -117,6 +117,11 @@ const Button = styled(Link)`
     box-shadow: 0 6px 8px rgba(52, 152, 219, 0.3);
     outline: none;
   }
+
+  @media (max-width: 1024px) {
+    margin: 10px 0;
+    width: 100%;
+  }
 `;
 
 const LogoutButton = styled.button`
@@ -138,6 +143,11 @@ const LogoutButton = styled.button`
     background-color: #333;
     color: white;
     outline: none;
+  }
+
+  @media (max-width: 1024px) {
+    margin: 10px 0;
+    width: 100%;
   }
 `;
 
@@ -258,6 +268,13 @@ const DropdownContent = styled.div`
   ${ResourcesDropdown}:hover & {
     display: block;
   }
+
+  @media (max-width: 1024px) {
+    position: static;
+    box-shadow: none;
+    display: block;
+    animation: none;
+  }
 `;
 
 const DropdownLink = styled(Link)`
@@ -272,10 +289,16 @@ const DropdownLink = styled(Link)`
     color: #3498db;
     outline: none;
   }
+
+  @media (max-width: 1024px) {
+    padding: 10px;
+    font-size: 1.1em;
+  }
 `;
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileResourcesOpen, setMobileResourcesOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useUser();
@@ -334,7 +357,11 @@ const Header = () => {
           {user ? (
             <>
               <NavLink to="/my-plan" className={location.pathname === '/my-plan' ? 'active' : ''}>My Plan</NavLink>
-              <Button to="/app/dashboard">Dashboard</Button>
+              {user.hasActiveSubscription ? (
+                <Button to="/app/dashboard">Dashboard</Button>
+              ) : (
+                <Button to="/subscription">Get Subscription</Button>
+              )}
               <LogoutButton onClick={handleLogout}>
                 <FaSignOutAlt style={{ marginRight: '5px' }} />
                 Logout
@@ -354,20 +381,39 @@ const Header = () => {
           <CloseButton onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
             <FaTimes />
           </CloseButton>
-          {navItems.concat(resourceItems).map(({ to, text, icon }) => (
+          {navItems.map(({ to, text, icon }) => (
             <MobileNavLink key={to} to={to} onClick={() => setMobileMenuOpen(false)} className={location.pathname === to ? 'active' : ''}>
               {icon}
               {text}
             </MobileNavLink>
           ))}
+          <ResourcesButton onClick={() => setMobileResourcesOpen(!mobileResourcesOpen)}>
+            Resources <FaChevronDown style={{ transform: mobileResourcesOpen ? 'rotate(180deg)' : 'none' }} />
+          </ResourcesButton>
+          {mobileResourcesOpen && (
+            <DropdownContent>
+              {resourceItems.map(({ to, text, icon }) => (
+                <MobileNavLink key={to} to={to} onClick={() => setMobileMenuOpen(false)}>
+                  {icon}
+                  {text}
+                </MobileNavLink>
+              ))}
+            </DropdownContent>
+          )}
           {user ? (
             <>
               <MobileNavLink to="/my-plan" onClick={() => setMobileMenuOpen(false)} className={location.pathname === '/my-plan' ? 'active' : ''}>
                 <FaDollarSign /> My Plan
               </MobileNavLink>
-              <Button to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                <FaHome /> Dashboard
-              </Button>
+              {user.hasActiveSubscription ? (
+                <Button to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                  <FaHome /> Dashboard
+                </Button>
+              ) : (
+                <Button to="/subscription" onClick={() => setMobileMenuOpen(false)}>
+                  <FaDollarSign /> Get Subscription
+                </Button>
+              )}
               <LogoutButton onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
                 <FaSignOutAlt style={{ marginRight: '5px' }} />
                 Logout

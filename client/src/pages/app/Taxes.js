@@ -7,15 +7,18 @@ import {
   LinearProgress, Card, CardContent, Alert, useMediaQuery, useTheme
 } from '@mui/material';
 import {
-  Delete as DeleteIcon, Edit as EditIcon, FileCopy as FileCopyIcon,
+  Delete as DeleteIcon, Edit as EditIcon,
   Archive as ArchiveIcon, Unarchive as UnarchiveIcon, Calculate as CalculateIcon,
   Add as AddIcon, Search as SearchIcon, CloudUpload as CloudUploadIcon,
   Visibility as VisibilityIcon, Warning as WarningIcon
 } from '@mui/icons-material';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { taxApi } from '../../api';
 import { format, isAfter, subDays } from 'date-fns';
+import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, ChartTooltip, Legend);
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -114,11 +117,6 @@ const Taxes = () => {
     updateTaxMutation.mutate({ id, status: newStatus });
   };
 
-  const handleDuplicateTax = (taxToDuplicate) => {
-    const { id, ...taxWithoutId } = taxToDuplicate;
-    addTaxMutation.mutate({ ...taxWithoutId, name: `${taxWithoutId.name} (Copy)` });
-  };
-
   const handleCalculateTax = () => {
     if (!calculatorInput.propertyValue || !calculatorInput.taxId) {
       showSnackbar('Please enter a property value and select a tax to calculate.', 'error');
@@ -206,30 +204,30 @@ const Taxes = () => {
       {paginatedTaxes.map((tax) => (
         <Card key={tax.id} sx={{ mb: 2 }}>
           <CardContent>
-            <Typography variant="h6">{tax.name}</Typography>
+            <Typography variant="subtitle1">{tax.name}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {`${tax.type} | ${tax.category} | ${tax.rate}% | ${tax.status}`}
+              {`${tax.type} | ${tax.rate}% | ${tax.status}`}
             </Typography>
             <Typography variant="body2">
               Effective: {formatDate(tax.effectiveDate)}
             </Typography>
             {isExpiringSoon(tax.expirationDate) && (
-              <Alert severity="warning" icon={<WarningIcon />}>
-                This tax is expiring soon on {formatDate(tax.expirationDate)}
+              <Alert severity="warning" icon={<WarningIcon />} sx={{ mt: 1 }}>
+                Expiring on {formatDate(tax.expirationDate)}
               </Alert>
             )}
-            <Box mt={2}>
-              <IconButton onClick={() => { setTax(tax); setEditingId(tax.id); setOpenDialogs({ ...openDialogs, addEdit: true }) }}>
-                <EditIcon />
+            <Box mt={1}>
+              <IconButton size="small" onClick={() => { setTax(tax); setEditingId(tax.id); setOpenDialogs({ ...openDialogs, addEdit: true }) }}>
+                <EditIcon fontSize="small" />
               </IconButton>
-              <IconButton onClick={() => { setEditingId(tax.id); setOpenDialogs({ ...openDialogs, delete: true }) }}>
-                <DeleteIcon />
+              <IconButton size="small" onClick={() => { setEditingId(tax.id); setOpenDialogs({ ...openDialogs, delete: true }) }}>
+                <DeleteIcon fontSize="small" />
               </IconButton>
-              <IconButton onClick={() => handleArchiveTax(tax.id, tax.status)}>
-                {tax.status === 'active' ? <ArchiveIcon /> : <UnarchiveIcon />}
+              <IconButton size="small" onClick={() => handleArchiveTax(tax.id, tax.status)}>
+                {tax.status === 'active' ? <ArchiveIcon fontSize="small" /> : <UnarchiveIcon fontSize="small" />}
               </IconButton>
-              <IconButton onClick={() => { setSelectedTaxDetails(tax); setOpenDialogs({ ...openDialogs, details: true }) }}>
-                <VisibilityIcon />
+              <IconButton size="small" onClick={() => { setSelectedTaxDetails(tax); setOpenDialogs({ ...openDialogs, details: true }) }}>
+                <VisibilityIcon fontSize="small" />
               </IconButton>
             </Box>
           </CardContent>
@@ -239,17 +237,15 @@ const Taxes = () => {
   );
 
   const renderDesktopView = () => (
-    <TableContainer component={Paper}>
-      <Table>
+    <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
+      <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
             <TableCell>Name</TableCell>
             <TableCell>Type</TableCell>
-            <TableCell>Category</TableCell>
             <TableCell>Rate</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Effective Date</TableCell>
-            <TableCell>Expiration</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -258,44 +254,30 @@ const Taxes = () => {
             <TableRow key={tax.id}>
               <TableCell>{tax.name}</TableCell>
               <TableCell>{tax.type}</TableCell>
-              <TableCell>{tax.category}</TableCell>
               <TableCell>{tax.rate}%</TableCell>
               <TableCell>
-                <Chip label={tax.status} color={tax.status === 'active' ? 'success' : 'default'} />
+                <Chip label={tax.status} color={tax.status === 'active' ? 'success' : 'default'} size="small" />
               </TableCell>
               <TableCell>{formatDate(tax.effectiveDate)}</TableCell>
               <TableCell>
-                {formatDate(tax.expirationDate)}
-                {isExpiringSoon(tax.expirationDate) && (
-                  <Tooltip title="Expiring Soon">
-                    <WarningIcon color="warning" sx={{ ml: 1 }} />
-                  </Tooltip>
-                )}
-              </TableCell>
-              <TableCell>
                 <Tooltip title="Edit">
-                  <IconButton onClick={() => { setTax(tax); setEditingId(tax.id); setOpenDialogs({ ...openDialogs, addEdit: true }) }}>
-                    <EditIcon />
+                  <IconButton size="small" onClick={() => { setTax(tax); setEditingId(tax.id); setOpenDialogs({ ...openDialogs, addEdit: true }) }}>
+                    <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Delete">
-                  <IconButton onClick={() => { setEditingId(tax.id); setOpenDialogs({ ...openDialogs, delete: true }) }}>
-                    <DeleteIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Duplicate">
-                  <IconButton onClick={() => handleDuplicateTax(tax)}>
-                    <FileCopyIcon />
+                  <IconButton size="small" onClick={() => { setEditingId(tax.id); setOpenDialogs({ ...openDialogs, delete: true }) }}>
+                    <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title={tax.status === 'active' ? 'Archive' : 'Activate'}>
-                  <IconButton onClick={() => handleArchiveTax(tax.id, tax.status)}>
-                    {tax.status === 'active' ? <ArchiveIcon /> : <UnarchiveIcon />}
+                  <IconButton size="small" onClick={() => handleArchiveTax(tax.id, tax.status)}>
+                    {tax.status === 'active' ? <ArchiveIcon fontSize="small" /> : <UnarchiveIcon fontSize="small" />}
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="View Details">
-                  <IconButton onClick={() => { setSelectedTaxDetails(tax); setOpenDialogs({ ...openDialogs, details: true }) }}>
-                    <VisibilityIcon />
+                  <IconButton size="small" onClick={() => { setSelectedTaxDetails(tax); setOpenDialogs({ ...openDialogs, details: true }) }}>
+                    <VisibilityIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               </TableCell>
@@ -306,36 +288,55 @@ const Taxes = () => {
     </TableContainer>
   );
 
-  const renderChart = () => (
-    <Box mt={4}>
-      <Typography variant="subtitle1" gutterBottom>Tax Distribution</Typography>
-      {taxDistributionData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={taxDistributionData}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-            >
-              {taxDistributionData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <RechartsTooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      ) : (
-        <Typography variant="body1" color="textSecondary" align="center">
-          No active taxes to display.
-        </Typography>
-      )}
-    </Box>
-  );
+  const renderChart = () => {
+    const chartData = {
+      labels: taxDistributionData.map(item => item.name),
+      datasets: [
+        {
+          data: taxDistributionData.map(item => item.value),
+          backgroundColor: COLORS,
+          borderColor: COLORS.map(color => `${color}88`),
+          borderWidth: 1,
+        },
+      ],
+    };
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const label = context.label || '';
+              const value = context.raw || 0;
+              const total = context.dataset.data.reduce((acc, curr) => acc + curr, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${label}: ${value} (${percentage}%)`;
+            },
+          },
+        },
+      },
+    };
+
+    return (
+      <Box mt={2} display="flex" flexDirection="column" alignItems="center">
+        <Typography variant="h6" gutterBottom align="center">Tax Distribution</Typography>
+        {taxDistributionData.length > 0 ? (
+          <Box height={200} width="100%">
+            <Pie data={chartData} options={options} />
+          </Box>
+        ) : (
+          <Typography variant="body2" color="textSecondary" align="center">
+            No active taxes to display.
+          </Typography>
+        )}
+      </Box>
+    );
+  };
 
   if (isLoading) return <LinearProgress />;
   if (isError) return <Alert severity="error">{error.message}</Alert>;
@@ -351,10 +352,10 @@ const Taxes = () => {
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h6">Manage Taxes</Typography>
                 <Box>
-                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => { resetTaxForm(); setOpenDialogs({ ...openDialogs, addEdit: true }) }} sx={{ mr: 1 }}>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => { resetTaxForm(); setOpenDialogs({ ...openDialogs, addEdit: true }) }} size="small" sx={{ mr: 1 }}>
                     Add New Tax
                   </Button>
-                  <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => setOpenDialogs({ ...openDialogs, import: true })} sx={{ mr: 1 }}>
+                  <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => setOpenDialogs({ ...openDialogs, import: true })} size="small">
                     Import
                   </Button>
                 </Box>
@@ -369,7 +370,7 @@ const Taxes = () => {
                   size="small"
                   sx={{ width: '30%' }}
                   InputProps={{
-                    startAdornment: <SearchIcon color="action" />
+                    startAdornment: <SearchIcon color="action" fontSize="small" />
                   }}
                 />
                 <Box>
@@ -419,7 +420,7 @@ const Taxes = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>Tax Calculator</Typography>
+              <Typography variant="h6" gutterBottom align="center">Tax Calculator</Typography>
               <TextField
                 label="Property Value"
                 type="number"
@@ -427,8 +428,9 @@ const Taxes = () => {
                 onChange={(e) => setCalculatorInput({ ...calculatorInput, propertyValue: e.target.value })}
                 fullWidth
                 margin="normal"
+                size="small"
               />
-              <FormControl fullWidth margin="normal">
+              <FormControl fullWidth margin="normal" size="small">
                 <InputLabel>Select Tax</InputLabel>
                 <Select
                   value={calculatorInput.taxId}
@@ -446,6 +448,7 @@ const Taxes = () => {
                 onClick={handleCalculateTax}
                 fullWidth
                 sx={{ mt: 2 }}
+                size="small"
               >
                 Calculate Tax
               </Button>
@@ -466,6 +469,7 @@ const Taxes = () => {
             onChange={(e) => setTax({ ...tax, name: e.target.value })}
             fullWidth
             margin="normal"
+            size="small"
           />
           <TextField
             label="Tax Rate (%)"
@@ -474,8 +478,9 @@ const Taxes = () => {
             onChange={(e) => setTax({ ...tax, rate: e.target.value })}
             fullWidth
             margin="normal"
+            size="small"
           />
-          <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal" size="small">
             <InputLabel>Tax Type</InputLabel>
             <Select
               value={tax.type}
@@ -487,7 +492,7 @@ const Taxes = () => {
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal" size="small">
             <InputLabel>Category</InputLabel>
             <Select
               value={tax.category}
@@ -507,6 +512,7 @@ const Taxes = () => {
             fullWidth
             margin="normal"
             InputLabelProps={{ shrink: true }}
+            size="small"
           />
           <TextField
             label="Expiration Date"
@@ -516,6 +522,7 @@ const Taxes = () => {
             fullWidth
             margin="normal"
             InputLabelProps={{ shrink: true }}
+            size="small"
           />
           <TextField
             label="Description"
@@ -525,6 +532,7 @@ const Taxes = () => {
             margin="normal"
             multiline
             rows={3}
+            size="small"
           />
         </DialogContent>
         <DialogActions>
