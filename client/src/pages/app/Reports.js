@@ -17,12 +17,15 @@ import {
   CloudDownload as DownloadIcon,
   Image as ImageIcon
 } from "@mui/icons-material";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import { jsPDF } from "jspdf";
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { CSVLink } from "react-csv";
 import html2canvas from 'html2canvas';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 const PageWrapper = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -157,8 +160,8 @@ const Reports = () => {
 
   const filteredReports = useMemo(() => {
     return sampleReports.filter((report) => {
-      const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            report.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        report.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = !filterType || report.type === filterType;
       const matchesTags = filterTags.length === 0 || filterTags.every((tag) => report.tags.includes(tag));
       return matchesSearch && matchesType && matchesTags;
@@ -173,75 +176,50 @@ const Reports = () => {
   const handlePageChange = (_, value) => setCurrentPage(value);
 
   const renderChart = useCallback((type, data, chartType) => {
+    const labels = data.map(item => item.month);
+    const datasets = Object.keys(data[0])
+      .filter(key => key !== 'month')
+      .map((key, index) => ({
+        label: key,
+        data: data.map(item => item[key]),
+        backgroundColor: COLORS[index % COLORS.length],
+        borderColor: COLORS[index % COLORS.length],
+        fill: chartType === 'area',
+      }));
+
+    const chartData = { labels, datasets };
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: type,
+        },
+      },
+    };
+
     switch (chartType) {
       case 'bar':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <RechartsTooltip />
-              <Legend />
-              {Object.keys(data[0]).filter(key => key !== 'month').map((key, index) => (
-                <Bar key={key} dataKey={key} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        );
+        return <Bar data={chartData} options={options} />;
       case 'line':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <RechartsTooltip />
-              <Legend />
-              {Object.keys(data[0]).filter(key => key !== 'month').map((key, index) => (
-                <Line key={key} type="monotone" dataKey={key} stroke={COLORS[index % COLORS.length]} />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        );
+        return <Line data={chartData} options={options} />;
       case 'pie':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <RechartsTooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        );
+      case 'doughnut':
+        const pieData = {
+          labels: data.map(item => item.name),
+          datasets: [{
+            data: data.map(item => item.value),
+            backgroundColor: COLORS,
+          }],
+        };
+        return chartType === 'pie' ? <Pie data={pieData} options={options} /> : <Doughnut data={pieData} options={options} />;
       case 'area':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <RechartsTooltip />
-              <Legend />
-              {Object.keys(data[0]).filter(key => key !== 'month').map((key, index) => (
-                <Area key={key} type="monotone" dataKey={key} stackId="1" stroke={COLORS[index % COLORS.length]} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
-        );
+        return <Line data={chartData} options={{ ...options, fill: true }} />;
       default:
         return <Typography>Unsupported chart type</Typography>;
     }
@@ -290,7 +268,6 @@ const Reports = () => {
 
   const handleFrequencyChange = (event) => {
     setFrequency(event.target.value);
-    // Here you would typically fetch new data based on the selected frequency
     setSnackbarMessage(`Frequency changed to ${event.target.value}`);
     setSnackbarSeverity("info");
     setSnackbarOpen(true);
@@ -385,7 +362,9 @@ const Reports = () => {
                     <Chip key={tag} label={tag} size="small" style={{ marginRight: 4, marginBottom: 4 }} />
                   ))}
                 </Box>
-                {renderChart(report.type, report.data, report.chartType)}
+                <Box height={300}>
+                  {renderChart(report.type, report.data, report.chartType)}
+                </Box>
                 <Box mt={2} display="flex" justifyContent="space-between">
                   <Button
                     variant="outlined"
@@ -463,11 +442,12 @@ const Reports = () => {
                       <MenuItem value="line">Line Chart</MenuItem>
                       <MenuItem value="pie">Pie Chart</MenuItem>
                       <MenuItem value="area">Area Chart</MenuItem>
+                      <MenuItem value="doughnut">Doughnut Chart</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
               </Grid>
-              <Box ref={chartRef}>
+              <Box ref={chartRef} height={400}>
                 {renderChart(selectedReport.type, selectedReport.data, chartType || selectedReport.chartType)}
               </Box>
               <TableContainer component={Paper} style={{ marginTop: 20 }}>
