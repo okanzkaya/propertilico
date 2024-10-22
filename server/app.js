@@ -27,7 +27,16 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Cache-Control',
+    'Pragma', // Add this
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
+  exposedHeaders: ['Content-Disposition', 'Content-Length']
 }));
 
 // Apply Helmet after CORS to avoid conflicts
@@ -63,20 +72,24 @@ if (process.env.NODE_ENV === 'development') {
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Increase the limit for general requests
   message: 'Too many requests from this IP, please try again later.'
 });
 
-const blogLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
-  message: 'Too many requests from this IP for blog routes, please try again later.'
+const previewLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 50, // Allow more requests per minute for previews
+  message: 'Too many preview requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+
+app.use('/api/documents/:id/download', previewLimiter);
+
 
 // Routes
 app.use('/api/auth', limiter, require('./routes/authRoutes'));
-app.use('/api/blogs', blogLimiter, require('./routes/blogRoutes'));
 app.use('/api/user', limiter, protect, require('./routes/userRoutes'));
 app.use('/api/feedback', limiter, protect, require('./routes/feedbackRoutes'));
 app.use('/api/properties', limiter, protect, require('./routes/propertyRoutes'));
