@@ -1,24 +1,24 @@
-// Create a new file: src/components/FontSizeWrapper.js
-
 import React from 'react';
-import { Box } from '@mui/material';
 
 const FontSizeWrapper = ({ fontSize, children }) => {
   const getFontSizeMultiplier = () => {
     switch (fontSize) {
       case 'small':
-        return 0.875;
+        return '0.875rem';
       case 'large':
-        return 1.125;
+        return '1.125rem';
       default:
-        return 1;
+        return '1rem';
     }
   };
 
   return (
-    <Box sx={{ fontSize: getFontSizeMultiplier() }}>
+    <div style={{ 
+      fontSize: getFontSizeMultiplier(),
+      transition: 'font-size 0.3s ease'
+    }}>
       {children}
-    </Box>
+    </div>
   );
 };
 

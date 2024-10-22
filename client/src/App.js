@@ -10,7 +10,7 @@ import PublicFooter from './components/public/Footer';
 import Sidebar from './components/app/Sidebar';
 import ProtectedRoute from './components/public/ProtectedRoute';
 import AuthenticatedRoute from './components/public/AuthenticatedRoute';
-import { lightTheme, darkTheme } from './theme';
+import { createAppTheme } from './theme';
 import { useUser } from './context/UserContext';
 import FontSizeWrapper from './components/app/FontSizeWrapper';
 
@@ -101,8 +101,14 @@ const App = () => {
     updateUserSettings({ fontSize: newSize });
   }, [updateUserSettings]);
 
-  const appTheme = useMemo(() => themeMode.app === 'light' ? lightTheme : darkTheme, [themeMode.app]);
-  const publicTheme = useMemo(() => themeMode.public === 'light' ? lightTheme : darkTheme, [themeMode.public]);
+  const appTheme = useMemo(() =>
+    createAppTheme(themeMode.app, fontSize),
+    [themeMode.app, fontSize]
+  );
+  const publicTheme = useMemo(() =>
+    createAppTheme(themeMode.public, 'medium'), // Always use medium for public pages
+    [themeMode.public]
+  );
 
   if (userLoading) return <LoadingFallback />;
 
@@ -260,7 +266,9 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
       <Box sx={{ display: 'flex', height: '100vh' }}>
         <Sidebar themeMode={themeMode} toggleTheme={toggleTheme} />
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, mt: '64px', overflow: 'auto' }}>
-          {children}
+          <FontSizeWrapper fontSize={fontSize}>
+            {children}
+          </FontSizeWrapper>
         </Box>
       </Box>
       {!showReCaptcha && (
@@ -271,5 +279,4 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
     </ThemeProvider>
   );
 });
-
 export default App;
