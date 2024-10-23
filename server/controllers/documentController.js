@@ -264,8 +264,6 @@ function formatSize(bytes) {
 // Controller Methods
 exports.getPreview = async (req, res, next) => {
   try {
-    console.log('Getting preview for document:', req.params.id);
-
     const document = await models.Document.findOne({
       where: { 
         id: req.params.id,
@@ -275,77 +273,42 @@ exports.getPreview = async (req, res, next) => {
     });
 
     if (!document) {
-      console.log('Document not found');
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Handle image files
+    // Only generate previews for images
     if (document.category === 'image') {
       try {
         const decryptedContent = decrypt(document.content);
-        const preview = await generatePreview(document, decryptedContent);
+        const preview = await sharp(decryptedContent)
+          .resize(400, 300, {
+            fit: 'inside',
+            withoutEnlargement: true,
+            background: { r: 255, g: 255, b: 255, alpha: 0 }
+          })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+
+        // Set response headers
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Content-Length', preview.length);
+        res.setHeader('Cache-Control', 'public, max-age=3600');
         
-        if (preview) {
-          res.set({
-            'Content-Type': 'image/jpeg',
-            'Cache-Control': 'public, max-age=3600'
-          });
-          return res.send(preview);
-        }
-      } catch (error) {
-        console.error('Image preview generation failed:', error);
-      }
-    }
-
-    // Check for existing preview
-    if (document.preview) {
-      res.set({
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': 'public, max-age=3600'
-      });
-      return res.send(document.preview);
-    }
-
-    // Generate new preview if needed
-    try {
-      const decryptedContent = decrypt(document.content);
-      const preview = await generatePreview(document, decryptedContent);
-
-      if (preview) {
-        await document.update({ preview });
-        res.set({
-          'Content-Type': 'image/jpeg',
-          'Cache-Control': 'public, max-age=3600'
-        });
+        // Send binary data
         return res.send(preview);
+      } catch (error) {
+        console.error('Image preview generation error:', error);
+        return res.status(500).json({ message: 'Failed to generate preview' });
       }
-    } catch (error) {
-      console.error('Preview generation failed:', error);
+    } else {
+      // For non-images, return 404
+      return res.status(404).json({ message: 'Preview not available' });
     }
-
-    // Return placeholder for non-previewable files
-    const placeholderColors = {
-      document: '#4A90E2',
-      image: '#2ECC71',
-      video: '#E74C3C',
-      other: '#95A5A6'
-    };
-
-    res.set('Content-Type', 'image/svg+xml');
-    res.send(`
-      <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="#f5f5f5"/>
-        <rect width="80" height="100" x="160" y="100" fill="${placeholderColors[document.category] || placeholderColors.other}"/>
-        <text x="200" y="160" font-family="Arial" font-size="24" fill="#fff" text-anchor="middle">
-          ${document.category.toUpperCase()}
-        </text>
-      </svg>
-    `);
   } catch (error) {
     console.error('Preview error:', error);
     next(error);
   }
-};;
+};
 
 function generatePlaceholderSVG(category) {
   const colors = {
@@ -440,6 +403,31 @@ exports.uploadFiles = async (req, res, next) => {
   } catch (error) {
     await t.rollback();
     next(error);
+  }
+};
+const validateImageData = async (buffer, mimeType) => {
+  try {
+    if (mimeType.includes('svg')) {
+      // Validate SVG
+      const text = buffer.toString('utf8');
+      if (!text.includes('<svg')) {
+        throw new Error('Invalid SVG content');
+      }
+      return true;
+    } else {
+      // Validate image using sharp
+      const metadata = await sharp(buffer).metadata();
+      console.log('Image validation:', {
+        format: metadata.format,
+        width: metadata.width,
+        height: metadata.height,
+        size: buffer.length
+      });
+      return true;
+    }
+  } catch (error) {
+    console.error('Image validation failed:', error);
+    return false;
   }
 };
 

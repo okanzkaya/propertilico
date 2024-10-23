@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef, forwardRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, forwardRef } from 'react';
 import {
   Box,
   Typography,
@@ -53,7 +53,6 @@ import {
   Error as ErrorIcon,
   Refresh as RefreshIcon,
   CloudUploadOutlined,
-  PlayCircleOutline as PlayIcon,
   InsertDriveFile as FileIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
@@ -70,9 +69,6 @@ import axiosInstance from '../../axiosSetup';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_TOTAL_FILES = 10;
 const MAX_TOTAL_SIZE = MAX_FILE_SIZE * MAX_TOTAL_FILES;
-const PREVIEW_LOAD_TIMEOUT = 10000; // 10 seconds
-const MAX_PREVIEW_RETRIES = 3;
-
 const ALLOWED_FILE_TYPES = {
   documents: {
     mimeTypes: [
@@ -261,27 +257,6 @@ const StyledCard = styled(motion(Card))(({ theme }) => ({
     boxShadow: theme.shadows[8],
   },
 }));
-
-const PreviewContainer = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  width: '100%',
-  height: '200px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: theme.palette.action.hover,
-  overflow: 'hidden',
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(2),
-}));
-
-const PreviewImage = styled('img')({
-  maxWidth: '100%',
-  maxHeight: '100%',
-  objectFit: 'contain',
-  transition: 'opacity 0.3s ease-in-out',
-});
-
 const StyledDropzone = styled('div', {
   shouldForwardProp: prop => !['isDragActive', 'isDragReject'].includes(prop)
 })(({ theme, isDragActive, isDragReject }) => ({
@@ -353,42 +328,24 @@ const FilePreview = React.memo(({ file, onLoadError }) => {
     isLoading: true,
     error: false,
     previewUrl: '',
-    retryCount: 0,
     showPlaceholder: false
   });
 
-  const previewRef = useRef(null);
-  const isMounted = useRef(true);
-
   // Cleanup function
-  const cleanup = useCallback(() => {
-    if (state.previewUrl) {
-      URL.revokeObjectURL(state.previewUrl);
-    }
+  useEffect(() => {
+    return () => {
+      if (state.previewUrl && !state.previewUrl.startsWith('data:')) {
+        URL.revokeObjectURL(state.previewUrl);
+      }
+    };
   }, [state.previewUrl]);
 
-  const loadPreview = useCallback(async () => {
-    if (!file?.id || state.previewUrl || state.retryCount >= MAX_PREVIEW_RETRIES) return;
-    cleanup(); // Clean up any existing preview URL
-
-    try {
-      setState(prev => ({ ...prev, isLoading: true, error: false }));
-
-      const response = await axiosInstance.get(
-        `/api/documents/${file.id}/preview`,
-        {
-          responseType: 'blob',
-          headers: {
-            'Accept': 'image/jpeg,image/svg+xml,*/*',
-          }
-        }
-      );
-
-      if (!isMounted.current) return;
-
-      const contentType = response.headers['content-type'];
-      
-      if (contentType.includes('svg')) {
+  // Load preview only for images
+  useEffect(() => {
+    let mounted = true;
+    
+    const loadPreview = async () => {
+      if (!file?.id || file.category !== 'image') {
         setState(prev => ({
           ...prev,
           isLoading: false,
@@ -396,63 +353,107 @@ const FilePreview = React.memo(({ file, onLoadError }) => {
         }));
         return;
       }
+      
+      try {
+        setState(prev => ({ ...prev, isLoading: true, error: false }));
 
-      const blob = new Blob([response.data], { type: contentType });
-      const url = URL.createObjectURL(blob);
-
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        previewUrl: url
-      }));
-    } catch (error) {
-      console.error('Preview load error:', error);
-      if (isMounted.current) {
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: true,
-          retryCount: prev.retryCount + 1
-        }));
-        onLoadError?.(file?.id);
-      }
-    }
-  }, [file?.id, state.previewUrl, state.retryCount, onLoadError, cleanup]);
-
-  // Effect for intersection observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting && !state.error) {
-            loadPreview();
+        const response = await axiosInstance.get(`/api/documents/${file.id}/preview`, {
+          responseType: 'arraybuffer',
+          headers: {
+            'Accept': 'image/jpeg,image/svg+xml,*/*',
           }
         });
-      },
-      { threshold: 0.1 }
-    );
 
-    if (previewRef.current) {
-      observer.observe(previewRef.current);
-    }
+        if (!mounted) return;
+
+        const contentType = response.headers['content-type'];
+        const blob = new Blob([response.data], { type: contentType });
+        const url = URL.createObjectURL(blob);
+
+        // Verify the image loads correctly
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
+        });
+
+        if (mounted) {
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            previewUrl: url,
+            showPlaceholder: false
+          }));
+        }
+      } catch (error) {
+        console.error('Preview loading error:', {
+          error,
+          fileId: file.id
+        });
+        if (mounted) {
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            error: true,
+            showPlaceholder: true
+          }));
+          onLoadError?.(file.id);
+        }
+      }
+    };
+
+    loadPreview();
 
     return () => {
-      observer.disconnect();
-      isMounted.current = false;
-      cleanup();
+      mounted = false;
     };
-  }, [loadPreview, state.error, cleanup]);
+  }, [file?.id, file?.category, onLoadError]);
 
-  // Initial load for images
-  useEffect(() => {
-    if (file?.category === 'image') {
-      loadPreview();
-    }
-  }, [file, loadPreview]);
+  // Enhanced placeholder with better styling
+  const renderPlaceholder = () => (
+    <Box sx={{ 
+      textAlign: 'center',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      color: theme => theme.palette.text.secondary
+    }}>
+      {file.category === 'document' ? (
+        <DescriptionIcon sx={{ fontSize: 64, color: 'primary.main' }} />
+      ) : file.category === 'video' ? (
+        <VideoFileIcon sx={{ fontSize: 64, color: 'error.main' }} />
+      ) : (
+        <FileIcon sx={{ fontSize: 64, color: 'action.active' }} />
+      )}
+      <Typography 
+        variant="caption" 
+        display="block" 
+        sx={{ 
+          mt: 1,
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          px: 2
+        }}
+      >
+        {file.name}
+      </Typography>
+      <Typography 
+        variant="caption" 
+        color="textSecondary"
+        sx={{ mt: 0.5 }}
+      >
+        {formatFileSize(file.size)}
+      </Typography>
+    </Box>
+  );
 
-  // Render the preview
   return (
-    <PreviewContainer ref={previewRef}>
+    <PreviewContainer>
       {state.isLoading && (
         <CircularProgress
           size={24}
@@ -466,49 +467,64 @@ const FilePreview = React.memo(({ file, onLoadError }) => {
         />
       )}
 
-      {!state.isLoading && state.previewUrl && !state.error && (
-        <PreviewImage
-          src={state.previewUrl}
-          alt={file.name}
-          sx={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain'
-          }}
-        />
-      )}
-
-      {(!state.previewUrl || state.error || state.showPlaceholder) && !state.isLoading && (
-        <Box sx={{ textAlign: 'center' }}>
-          {file.category === 'document' ? (
-            <DescriptionIcon sx={{ fontSize: 64, color: 'primary.main' }} />
-          ) : file.category === 'video' ? (
-            <VideoFileIcon sx={{ fontSize: 64, color: 'error.main' }} />
-          ) : (
-            <FileIcon sx={{ fontSize: 64, color: 'action.active' }} />
-          )}
-          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-            {file.name.split('.').pop().toUpperCase()}
-          </Typography>
+      {!state.isLoading && state.previewUrl && !state.error && file.category === 'image' && (
+        <Box sx={{ 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
+          <PreviewImage
+            src={state.previewUrl}
+            alt={file.name}
+            onLoad={() => console.log('Preview rendered:', file.id)}
+            onError={(e) => {
+              console.error('Preview render error:', {
+                fileId: file.id,
+                error: e
+              });
+              setState(prev => ({
+                ...prev,
+                error: true,
+                showPlaceholder: true
+              }));
+            }}
+            sx={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain'
+            }}
+          />
         </Box>
       )}
 
-      {file.category === 'video' && !state.error && (
-        <PlayIcon
-          sx={{
-            position: 'absolute',
-            fontSize: 48,
-            color: 'white',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            borderRadius: '50%',
-            padding: '8px'
-          }}
-        />
-      )}
+      {(file.category !== 'image' || state.error || state.showPlaceholder) && !state.isLoading && renderPlaceholder()}
     </PreviewContainer>
   );
 });
 
+// Update PreviewContainer styled component
+const PreviewContainer = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  width: '100%',
+  height: '200px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: theme.palette.action.hover,
+  borderRadius: theme.shape.borderRadius,
+  overflow: 'hidden',
+  padding: theme.spacing(2),
+}));
+
+// Update PreviewImage styled component
+const PreviewImage = styled('img')({
+  maxWidth: '100%',
+  maxHeight: '100%',
+  objectFit: 'contain',
+  transition: 'opacity 0.3s ease-in-out',
+});
 // UploadDialog Component
 const UploadDialog = React.memo(({
   open,
