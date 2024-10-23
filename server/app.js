@@ -34,12 +34,8 @@ app.use(cors({
     'Pragma',
     'X-Requested-With',
     'Accept',
-<<<<<<< HEAD
-    'Origin'
-=======
     'Origin',
     'expires'  // Add this
->>>>>>> master
   ],
   exposedHeaders: ['Content-Disposition', 'Content-Length']
 }));
@@ -47,10 +43,7 @@ app.use(cors({
 // Apply Helmet after CORS to avoid conflicts
 app.use(helmet({
   crossOriginResourcePolicy: false,
-<<<<<<< HEAD
-=======
   contentSecurityPolicy: false // Disable CSP in development
->>>>>>> master
 }));
 
 app.use(xss());
