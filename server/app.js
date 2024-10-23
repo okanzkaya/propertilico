@@ -31,7 +31,7 @@ app.use(cors({
     'Content-Type', 
     'Authorization', 
     'Cache-Control',
-    'Pragma', // Add this
+    'Pragma',
     'X-Requested-With',
     'Accept',
     'Origin'

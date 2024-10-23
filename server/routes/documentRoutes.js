@@ -10,6 +10,7 @@ const {
   updateDocument,
   toggleFavorite,
   getStorageInfo,
+  getPreview,  // Add this
 } = require('../controllers/documentController');
 
 const storage = multer.memoryStorage();
@@ -19,6 +20,9 @@ const upload = multer({
 });
 
 router.use(protect);
+
+// Add the preview route before other routes
+router.get('/:id/preview', getPreview);
 
 router.get('/', getDocuments);
 router.post('/upload', upload.single('file'), uploadFile);

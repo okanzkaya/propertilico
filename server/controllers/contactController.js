@@ -119,7 +119,7 @@ exports.createContact = async (req, res) => {
     console.error('Error creating contact:', error);
     res.status(400).json({ message: 'Error creating contact', error: error.message });
   }
-};;
+};
 
 exports.getContactById = async (req, res) => {
   try {
