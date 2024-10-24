@@ -1,3 +1,4 @@
+// server/models/Feedback.js
 module.exports = (sequelize, DataTypes) => {
   const Feedback = sequelize.define('Feedback', {
     id: {
@@ -44,7 +45,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     userId: {
       type: DataTypes.UUID,
-      allowNull: false
+      allowNull: false,
+      field: 'user_id' // Explicitly define the field name
     }
   }, {
     tableName: 'feedbacks',
@@ -57,9 +59,11 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Feedback.associate = (models) => {
+    // Update the association to include the alias
     Feedback.belongsTo(models.User, {
       foreignKey: 'user_id',
-      as: 'user'
+      targetKey: 'id',
+      as: 'user' // This is required when using include
     });
   };
 
