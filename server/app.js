@@ -30,7 +30,17 @@ const createRequiredDirectories = () => {
     }
   });
 };
+const createUploadDirs = () => {
+  const dirs = ['uploads', 'uploads/blog-images'];
+  dirs.forEach(dir => {
+    const dirPath = path.join(__dirname, dir);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  });
+};
 
+createUploadDirs();
 createRequiredDirectories();
 
 // Configure multer for image uploads
@@ -174,18 +184,27 @@ app.use('/api/taxes', limiter, protect, require('./routes/taxRoutes'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, filepath) => {
-    // Allow cross-origin access
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET');
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     
-    // Cache control for images
     if (/\.(jpg|jpeg|png|gif|webp)$/i.test(filepath)) {
       res.set('Cache-Control', 'public, max-age=31536000');
+      res.set('Pragma', 'public');
     }
   }
 }));
 
+if (process.env.NODE_ENV === 'development') {
+  app.get('/debug/image/:filename', (req, res) => {
+    const filepath = path.join(__dirname, 'uploads/blog-images', req.params.filename);
+    res.json({
+      exists: fs.existsSync(filepath),
+      stats: fs.existsSync(filepath) ? fs.statSync(filepath) : null,
+      fullPath: filepath
+    });
+  });
+}
 // Health check route
 app.get('/health', (req, res) => res.status(200).json({ status: 'OK' }));
 

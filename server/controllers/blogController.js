@@ -53,17 +53,13 @@ const validateBlogData = (data) => {
 // Controller Methods
 exports.getAllBlogs = async (req, res, next) => {
   try {
-    console.log('Getting all blogs with query params:', req.query);
-
+    console.log('Fetching blogs with params:', req.query);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const search = req.query.search || '';
-    const sort = req.query.sort || 'newest';
+    const sort = req.query.sort || 'desc';
 
-    const order = sort === 'oldest' ? [['createdAt', 'ASC']] : [['createdAt', 'DESC']];
-
-    // Only fetch published blogs for public viewing
     const whereClause = {
       status: 'published',
       ...(search && {
@@ -77,22 +73,30 @@ exports.getAllBlogs = async (req, res, next) => {
 
     const { count, rows: blogs } = await models.Blog.findAndCountAll({
       where: whereClause,
-      order,
+      order: [['createdAt', sort.toUpperCase()]],
       limit,
       offset,
       include: [{
         model: models.User,
         as: 'author',
         attributes: ['id', 'name', 'bloggerDescription']
-      }]
+      }],
+      distinct: true
     });
 
-    console.log(`Found ${count} blogs`);
+    // Process image URLs
+    const processedBlogs = blogs.map(blog => {
+      const plainBlog = blog.get({ plain: true });
+      if (plainBlog.imageUrl && !plainBlog.imageUrl.startsWith('http')) {
+        plainBlog.imageUrl = `/uploads/blog-images/${path.basename(plainBlog.imageUrl)}`;
+      }
+      return plainBlog;
+    });
 
     res.status(200).json({
       status: 'success',
       data: {
-        blogs,
+        blogs: processedBlogs,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(count / limit),
