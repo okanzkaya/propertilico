@@ -1,70 +1,5 @@
-// src/pages/FAQ.js
 import React, { useState } from 'react';
-import styled from 'styled-components';
-
-const FAQContainer = styled.div`
-  padding: 60px 20px;
-  background-color: #f8f8f8;
-  color: #333;
-  text-align: center;
-
-  @media (max-width: 768px) {
-    padding: 20px;
-  }
-`;
-
-const Header = styled.h1`
-  font-size: 2.5em;
-  margin-bottom: 20px;
-
-  @media (max-width: 768px) {
-    font-size: 2em;
-  }
-`;
-
-const Description = styled.p`
-  font-size: 1.2em;
-  margin-bottom: 40px;
-
-  @media (max-width: 768px) {
-    font-size: 1em;
-    margin-bottom: 20px;
-  }
-`;
-
-const FAQList = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-  text-align: left;
-`;
-
-const FAQItem = styled.div`
-  background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 5px;
-  margin-bottom: 10px;
-  padding: 20px;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s;
-
-  &:hover {
-    transform: scale(1.02);
-  }
-`;
-
-const Question = styled.h3`
-  font-size: 1.2em;
-  margin: 0;
-`;
-
-const Answer = styled.p`
-  font-size: 1em;
-  margin-top: 10px;
-  color: #666;
-  display: ${props => (props.$isOpen ? 'block' : 'none')};
-  transition: all 0.3s;
-`;
+import './FAQ.css';
 
 const faqData = [
   {
@@ -89,27 +24,40 @@ const faqData = [
   }
 ];
 
-function FAQ() {
+const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(null);
 
-  const toggleFAQ = index => {
+  const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   return (
-    <FAQContainer>
-      <Header>Frequently Asked Questions</Header>
-      <Description>Find answers to the most common questions about Propertilico.</Description>
-      <FAQList>
+    <div className="faq-container">
+      <h1 className="faq-header">Frequently Asked Questions</h1>
+      <p className="faq-description">
+        Find answers to the most common questions about Propertilico.
+      </p>
+      <div className="faq-list">
         {faqData.map((item, index) => (
-          <FAQItem key={index} onClick={() => toggleFAQ(index)}>
-            <Question>{item.question}</Question>
-            <Answer $isOpen={openIndex === index}>{item.answer}</Answer>
-          </FAQItem>
+          <div
+            key={index}
+            className="faq-item"
+            onClick={() => toggleFAQ(index)}
+            role="button"
+            tabIndex={0}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') toggleFAQ(index);
+            }}
+          >
+            <h3 className="faq-question">{item.question}</h3>
+            <p className={`faq-answer ${openIndex === index ? 'open' : ''}`}>
+              {item.answer}
+            </p>
+          </div>
         ))}
-      </FAQList>
-    </FAQContainer>
+      </div>
+    </div>
   );
-}
+};
 
 export default FAQ;

@@ -1,135 +1,78 @@
 // src/pages/ContactUs.js
 import React, { useState } from 'react';
-import styled from 'styled-components';
-
-const ContactContainer = styled.div`
-  padding: 40px;
-  max-width: 800px;
-  margin: 0 auto;
-  text-align: center;
-
-  @media (max-width: 768px) {
-    padding: 20px;
-  }
-`;
-
-const ContactTitle = styled.h1`
-  margin-bottom: 20px;
-  color: #007BFF;
-`;
-
-const ContactText = styled.p`
-  font-size: 1.2em;
-  color: #666;
-  margin-bottom: 30px;
-`;
-
-const ContactForm = styled.form`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 1em;
-
-  @media (max-width: 768px) {
-    padding: 10px;
-  }
-`;
-
-const TextArea = styled.textarea`
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 1em;
-  resize: none;
-
-  @media (max-width: 768px) {
-    padding: 10px;
-  }
-`;
-
-const Button = styled.button`
-  width: 100%;
-  padding: 12px;
-  background-color: #007BFF;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 1.2em;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
-
-  &:hover {
-    background-color: #0056b3;
-    transform: scale(1.05);
-  }
-
-  @media (max-width: 768px) {
-    padding: 10px;
-  }
-`;
+import './ContactUs.css';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    message: '',
+    message: ''
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Form data submitted:', formData);
+    try {
+      // Handle form submission
+      console.log('Form data submitted:', formData);
+      // Reset form after successful submission
+      setFormData({
+        name: '',
+        email: '',
+        message: ''
+      });
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
   };
 
   return (
-    <ContactContainer>
-      <ContactTitle>Contact Us</ContactTitle>
-      <ContactText>
-        If you have any questions or need assistance, please fill out the form below, and we'll get back to you as soon as possible.
-      </ContactText>
-      <ContactForm onSubmit={handleSubmit}>
-        <Input
+    <div className="contact-container">
+      <h1 className="contact-title">Contact Us</h1>
+      <p className="contact-text">
+        If you have any questions or need assistance, please fill out the form below, 
+        and we'll get back to you as soon as possible.
+      </p>
+      <form className="contact-form" onSubmit={handleSubmit}>
+        <input
           type="text"
           name="name"
+          className="form-input"
           placeholder="Your Name"
           value={formData.name}
           onChange={handleChange}
           required
         />
-        <Input
+        <input
           type="email"
           name="email"
+          className="form-input"
           placeholder="Your Email"
           value={formData.email}
           onChange={handleChange}
           required
         />
-        <TextArea
+        <textarea
           name="message"
           rows="5"
+          className="form-textarea"
           placeholder="Your Message"
           value={formData.message}
           onChange={handleChange}
           required
         />
-        <Button type="submit">Send Message</Button>
-      </ContactForm>
-    </ContactContainer>
+        <button type="submit" className="submit-button">
+          Send Message
+        </button>
+      </form>
+    </div>
   );
 };
 

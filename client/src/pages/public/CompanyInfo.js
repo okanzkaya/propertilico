@@ -1,97 +1,72 @@
-// src/pages/CompanyInfo.js
 import React from 'react';
-import styled from 'styled-components';
-
-const CompanyContainer = styled.div`
-  padding: 40px;
-  max-width: 800px;
-  margin: 0 auto;
-
-  @media (max-width: 768px) {
-    padding: 20px;
-  }
-`;
-
-const CompanyTitle = styled.h1`
-  text-align: center;
-  margin-bottom: 20px;
-  color: #007BFF;
-`;
-
-const SectionTitle = styled.h2`
-  margin-top: 20px;
-  margin-bottom: 10px;
-  color: #007BFF;
-`;
-
-const SectionText = styled.p`
-  font-size: 1.2em;
-  color: #666;
-  margin-bottom: 20px;
-`;
-
-const TeamMember = styled.div`
-  margin-bottom: 20px;
-`;
-
-const MemberName = styled.h3`
-  font-size: 1.5em;
-  color: #007BFF;
-  margin-bottom: 5px;
-`;
-
-const MemberRole = styled.p`
-  font-size: 1.2em;
-  color: #666;
-`;
+import './CompanyInfo.css';
 
 const CompanyInfo = () => {
+  const teamMembers = [
+    {
+      name: 'John Doe',
+      role: 'CEO',
+      bio: '[Fill in bio or description here.]'
+    },
+    {
+      name: 'Jane Smith',
+      role: 'CTO',
+      bio: '[Fill in bio or description here.]'
+    }
+  ];
+
+  const contactInfo = {
+    email: 'support@propertilico.com',
+    phone: '(123) 456-7890',
+    address: '[Fill in address here.]'
+  };
+
   return (
-    <CompanyContainer>
-      <CompanyTitle>About Us</CompanyTitle>
+    <div className="company-container">
+      <h1 className="company-title">About Us</h1>
+      
+      <section className="company-section">
+        <h2 className="section-title">Company Overview</h2>
+        <p className="section-text">
+          Our company, Propertilico, is dedicated to providing top-notch property management solutions. [Fill in detailed overview here.]
+        </p>
+      </section>
 
-      <SectionTitle>Company Overview</SectionTitle>
-      <SectionText>
-        Our company, Propertilico, is dedicated to providing top-notch property management solutions. [Fill in detailed overview here.]
-      </SectionText>
+      <section className="company-section">
+        <h2 className="section-title">Mission</h2>
+        <p className="section-text">
+          Our mission is to [Fill in mission statement here.]
+        </p>
+      </section>
 
-      <SectionTitle>Mission</SectionTitle>
-      <SectionText>
-        Our mission is to [Fill in mission statement here.]
-      </SectionText>
+      <section className="company-section">
+        <h2 className="section-title">Vision</h2>
+        <p className="section-text">
+          Our vision is to [Fill in vision statement here.]
+        </p>
+      </section>
 
-      <SectionTitle>Vision</SectionTitle>
-      <SectionText>
-        Our vision is to [Fill in vision statement here.]
-      </SectionText>
+      <section className="company-section">
+        <h2 className="section-title">Our Team</h2>
+        {teamMembers.map((member, index) => (
+          <div className="team-member" key={index}>
+            <h3 className="member-name">{member.name}</h3>
+            <p className="member-role">{member.role}</p>
+            <p className="section-text">{member.bio}</p>
+          </div>
+        ))}
+      </section>
 
-      <SectionTitle>Our Team</SectionTitle>
-      <TeamMember>
-        <MemberName>John Doe</MemberName>
-        <MemberRole>CEO</MemberRole>
-        <SectionText>[Fill in bio or description here.]</SectionText>
-      </TeamMember>
-      <TeamMember>
-        <MemberName>Jane Smith</MemberName>
-        <MemberRole>CTO</MemberRole>
-        <SectionText>[Fill in bio or description here.]</SectionText>
-      </TeamMember>
-      {/* Add more team members as needed */}
-
-      <SectionTitle>Contact Information</SectionTitle>
-      <SectionText>
-        You can reach us at:
-      </SectionText>
-      <SectionText>
-        Email: support@propertilico.com
-      </SectionText>
-      <SectionText>
-        Phone: (123) 456-7890
-      </SectionText>
-      <SectionText>
-        Address: [Fill in address here.]
-      </SectionText>
-    </CompanyContainer>
+      <section className="company-section">
+        <h2 className="section-title">Contact Information</h2>
+        <div className="contact-info">
+          <p className="section-text">You can reach us at:</p>
+          <p className="section-text">Email: {contactInfo.email}</p>
+          <p className="section-text">Phone: {contactInfo.phone}</p>
+          <p className="section-text">Address: {contactInfo.address}</p>
+        </div>
+      </section>
+    </div>
   );
 };
 

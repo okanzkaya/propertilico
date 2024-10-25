@@ -1,0 +1,153 @@
+.styled-paper {
+    padding: 32px;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #ffffff 0%, #f7f7f7 100%);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .styled-paper:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  }
+  
+  .gradient-box {
+    position: relative;
+    overflow: hidden;
+    border-radius: 36px;
+    padding: 32px;
+    margin-bottom: 32px;
+    background: linear-gradient(135deg, #6200EA 0%, #B388FF 100%);
+    color: white;
+  }
+  
+  .gradient-box::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+    transform: rotate(30deg);
+  }
+  
+  .subscription-actions {
+    background-color: #ffffff;
+    padding: 24px;
+    border-radius: 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 32px;
+  }
+  
+  .action-button {
+    border-radius: 36px;
+    padding: 12px 24px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .action-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  }
+  
+  .feature-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease-in-out;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+  
+  .feature-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  .feature-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .feature-icon {
+    margin-bottom: 16px;
+    width: 60px;
+    height: 60px;
+  }
+  
+  .progress-bar {
+    height: 12px;
+    border-radius: 6px;
+  }
+  
+  .progress-bar.active {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .progress-bar.active .MuiLinearProgress-bar {
+    background-color: #4caf50;
+  }
+  
+  .progress-bar.expiring .MuiLinearProgress-bar {
+    background-color: #ff9800;
+  }
+  
+  .progress-bar.expired .MuiLinearProgress-bar {
+    background-color: #f44336;
+  }
+  
+  .view-pricing-button {
+    margin-top: 16px;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .alert {
+    width: 100%;
+    variant: filled;
+    elevation: 6;
+  }
+  
+  .dialog {
+    & .MuiPaper-root {
+      border-radius: 16px;
+      padding: 16px;
+    }
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 600px) {
+    .styled-paper {
+      padding: 16px;
+    }
+  
+    .gradient-box {
+      padding: 24px;
+    }
+  
+    .subscription-actions {
+      padding: 16px;
+    }
+  
+    .action-button {
+      padding: 8px 16px;
+    }
+  }
+  
+  /* Theme overrides for Material-UI components */
+  .MuiButton-root {
+    text-transform: none;
+    padding: 10px 20px;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .MuiPaper-root {
+    transition: box-shadow 0.3s ease-in-out;
+  }

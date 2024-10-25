@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { userApi } from '../../api';
 import { useUser } from '../../context/UserContext';
-import { ThemeProvider, createTheme, styled } from '@mui/material/styles';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import {
   Container, Typography, Paper, Button, CircularProgress, Snackbar, Alert,
   Box, Grid, Divider, Chip, Dialog, DialogActions, DialogContent,
@@ -11,6 +11,7 @@ import {
   AddCircleOutline, RemoveCircleOutline, InfoOutlined, CardGiftcard,
   Timeline, People, Apartment, MonetizationOn, Security, CreditCard
 } from '@mui/icons-material';
+import './MyPlan.css';
 
 const theme = createTheme({
   palette: {
@@ -26,82 +27,7 @@ const theme = createTheme({
     button: { fontWeight: 600, letterSpacing: '0.02em' },
   },
   shape: { borderRadius: 12 },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          padding: '10px 20px',
-          transition: 'all 0.3s ease-in-out',
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          transition: 'box-shadow 0.3s ease-in-out',
-        },
-      },
-    },
-  },
 });
-
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  borderRadius: theme.shape.borderRadius * 2,
-  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-  background: 'linear-gradient(135deg, #ffffff 0%, #f7f7f7 100%)',
-  transition: 'all 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: '0 15px 40px rgba(0, 0, 0, 0.15)',
-  },
-}));
-
-const FeatureCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  transition: 'all 0.3s ease-in-out',
-  borderRadius: theme.shape.borderRadius * 2,
-  overflow: 'hidden',
-  '&:hover': {
-    transform: 'scale(1.03)',
-    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
-  },
-}));
-
-const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: theme.shape.borderRadius * 3,
-  padding: theme.spacing(1.5, 3),
-  fontWeight: 600,
-  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-  transition: 'all 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 6px 15px rgba(0, 0, 0, 0.15)',
-  },
-}));
-
-const GradientBox = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  overflow: 'hidden',
-  borderRadius: theme.shape.borderRadius * 3,
-  padding: theme.spacing(4),
-  marginBottom: theme.spacing(4),
-  background: 'linear-gradient(135deg, #6200EA 0%, #B388FF 100%)',
-  color: 'white',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: '-50%',
-    left: '-50%',
-    width: '200%',
-    height: '200%',
-    background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)',
-    transform: 'rotate(30deg)',
-  },
-}));
 
 const MyPlan = () => {
   const { user } = useUser();
@@ -213,7 +139,7 @@ const MyPlan = () => {
   }, [state.dialogAction, handleSubscriptionAction, handleCloseDialog]);
 
   const renderSubscriptionDetails = useMemo(() => (
-    <GradientBox>
+    <Box className="gradient-box">
       <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
         Your {state.planName} Plan
       </Typography>
@@ -246,42 +172,36 @@ const MyPlan = () => {
               <LinearProgress
                 variant="determinate"
                 value={(daysLeft / 30) * 100}
-                sx={{ 
-                  height: 12, 
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(255,255,255,0.3)',
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 6,
-                    backgroundColor: subscriptionStatus === 'active' ? '#4caf50' : subscriptionStatus === 'expiring' ? '#ff9800' : '#f44336'
-                  }
-                }}
+                className={`progress-bar ${subscriptionStatus}`}
               />
             </Box>
           )}
         </Grid>
       </Grid>
-    </GradientBox>
+    </Box>
   ), [state.subscription, state.planName, state.maxProperties, subscriptionStatus, daysLeft]);
-
 
   const renderSubscriptionActions = useMemo(() => {
     if (!user?.isAdmin) return null;
 
+    const actions = [
+      { action: 'extending', label: 'Extend', icon: <AddCircleOutline />, color: 'primary', disabled: !state.subscription || !!state.action },
+      { action: 'reducing', label: 'Reduce', icon: <RemoveCircleOutline />, color: 'secondary', disabled: !state.subscription || !!state.action || daysLeft <= 0 },
+      { action: 'gettingSubscription', label: 'Get 1 Month', icon: <CardGiftcard />, color: 'success', disabled: !!state.action || daysLeft > 0 },
+    ];
+
     return (
-      <Box sx={{ backgroundColor: 'background.paper', padding: 3, borderRadius: theme.shape.borderRadius * 2, boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)', mb: 4 }}>
+      <Box className="subscription-actions">
         <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'text.primary', fontWeight: 'bold' }}>
           Manage Subscription (Admin Only)
         </Typography>
         <Grid container spacing={2}>
-          {[
-            { action: 'extending', label: 'Extend', icon: <AddCircleOutline />, color: 'primary', disabled: !state.subscription || !!state.action },
-            { action: 'reducing', label: 'Reduce', icon: <RemoveCircleOutline />, color: 'secondary', disabled: !state.subscription || !!state.action || daysLeft <= 0 },
-            { action: 'gettingSubscription', label: 'Get 1 Month', icon: <CardGiftcard />, color: 'success', disabled: !!state.action || daysLeft > 0 },
-          ].map(({ action, label, icon, color, disabled }) => (
+          {actions.map(({ action, label, icon, color, disabled }) => (
             <Grid item xs={12} sm={4} key={action}>
               <Tooltip title={`${label} subscription`}>
                 <span>
-                  <ActionButton
+                  <Button
+                    className={`action-button ${action}`}
                     variant={action === 'reducing' ? 'outlined' : 'contained'}
                     color={color}
                     fullWidth
@@ -290,7 +210,7 @@ const MyPlan = () => {
                     disabled={disabled || !!state.action}
                   >
                     {label}
-                  </ActionButton>
+                  </Button>
                 </span>
               </Tooltip>
             </Grid>
@@ -300,39 +220,43 @@ const MyPlan = () => {
     );
   }, [user, state.action, state.subscription, daysLeft, handleOpenDialog]);
 
-  const renderFeatures = useMemo(() => (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 'bold', color: 'text.primary', textAlign: 'center' }}>
-        Plan Features
-      </Typography>
-      <Grid container spacing={3}>
-        {[
-          { icon: <Apartment />, title: 'Property Management', description: 'Efficiently manage all your properties in one place' },
-          { icon: <People />, title: 'Tenant Portal', description: 'Provide a seamless experience for your tenants' },
-          { icon: <Timeline />, title: 'Maintenance Requests', description: 'Track and manage maintenance requests with ease' },
-          { icon: <MonetizationOn />, title: 'Financial Reporting', description: 'Generate comprehensive financial reports' },
-          { icon: <Security />, title: '24/7 Support', description: 'Round-the-clock support for all your needs' },
-          { icon: <CreditCard />, title: 'Online Payments', description: 'Accept payments online for rent and other fees' },
-        ].map((feature, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <FeatureCard>
-              <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <Avatar sx={{ bgcolor: 'primary.main', mb: 2, width: 60, height: 60 }}>
-                  {React.cloneElement(feature.icon, { fontSize: 'large' })}
-                </Avatar>
-                <Typography variant="h6" component="div" gutterBottom>
-                  {feature.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {feature.description}
-                </Typography>
-              </CardContent>
-            </FeatureCard>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  ), []);
+  const renderFeatures = useMemo(() => {
+    const features = [
+      { icon: <Apartment />, title: 'Property Management', description: 'Efficiently manage all your properties in one place' },
+      { icon: <People />, title: 'Tenant Portal', description: 'Provide a seamless experience for your tenants' },
+      { icon: <Timeline />, title: 'Maintenance Requests', description: 'Track and manage maintenance requests with ease' },
+      { icon: <MonetizationOn />, title: 'Financial Reporting', description: 'Generate comprehensive financial reports' },
+      { icon: <Security />, title: '24/7 Support', description: 'Round-the-clock support for all your needs' },
+      { icon: <CreditCard />, title: 'Online Payments', description: 'Accept payments online for rent and other fees' },
+    ];
+
+    return (
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 'bold', color: 'text.primary', textAlign: 'center' }}>
+          Plan Features
+        </Typography>
+        <Grid container spacing={3}>
+          {features.map((feature, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Card className="feature-card">
+                <CardContent className="feature-content">
+                  <Avatar className="feature-icon" sx={{ bgcolor: 'primary.main' }}>
+                    {React.cloneElement(feature.icon, { fontSize: 'large' })}
+                  </Avatar>
+                  <Typography variant="h6" component="div" gutterBottom>
+                    {feature.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {feature.description}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    );
+  }, []);
 
   const renderContent = useMemo(() => {
     if (state.loading) {
@@ -344,7 +268,7 @@ const MyPlan = () => {
     }
 
     return (
-      <StyledPaper elevation={3}>
+      <Paper className="styled-paper">
         {state.subscription ? (
           <>
             {renderSubscriptionDetails}
@@ -362,20 +286,20 @@ const MyPlan = () => {
                 {renderSubscriptionActions}
               </>
             ) : (
-              <ActionButton
+              <Button
+                className="view-pricing-button"
                 variant="contained"
                 color="primary"
                 fullWidth
                 onClick={() => window.location.href = '/pricing'}
                 startIcon={<InfoOutlined />}
-                sx={{ mt: 2, maxWidth: 300, mx: 'auto' }}
               >
                 View Pricing Plans
-              </ActionButton>
+              </Button>
             )}
           </Box>
         )}
-      </StyledPaper>
+      </Paper>
     );
   }, [state.loading, state.subscription, user, renderSubscriptionDetails, renderSubscriptionActions, renderFeatures]);
 
@@ -395,9 +319,7 @@ const MyPlan = () => {
           <Alert
             onClose={() => setState(prev => ({ ...prev, message: null }))}
             severity={state.message?.severity}
-            sx={{ width: '100%' }}
-            variant="filled"
-            elevation={6}
+            className="alert"
           >
             {state.message?.text}
           </Alert>
@@ -407,12 +329,7 @@ const MyPlan = () => {
           onClose={handleCloseDialog}
           aria-labelledby="alert-dialog-title"
           aria-describedby="alert-dialog-description"
-          PaperProps={{
-            style: {
-              borderRadius: '16px',
-              padding: '16px',
-            },
-          }}
+          className="dialog"
         >
           <DialogTitle id="alert-dialog-title">
             {state.dialogAction === 'extending' ? 'Extend Subscription' : 

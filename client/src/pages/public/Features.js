@@ -1,35 +1,11 @@
 import React from 'react';
 import { Box, Typography, Grid, Container, useTheme } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import {
   Analytics, Security, BuildCircle, People, LightbulbOutlined, Headset,
   CloudQueue, Settings, PhoneAndroid, Autorenew, LocationOn, Receipt
 } from '@mui/icons-material';
-
-const FeatureCard = styled(motion.div)(({ theme }) => ({
-  background: theme.palette.background.paper,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(3),
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  textAlign: 'center',
-  transition: 'all 0.3s ease-in-out',
-  cursor: 'pointer',
-  '&:hover': {
-    transform: 'translateY(-10px)',
-    boxShadow: '0 20px 30px rgba(0, 0, 0, 0.2)',
-  },
-}));
-
-const IconWrapper = styled(Box)(({ theme }) => ({
-  fontSize: '3rem',
-  color: theme.palette.primary.main,
-  marginBottom: theme.spacing(2),
-}));
+import './Features.css';
 
 const features = [
   { icon: <Analytics />, title: 'Advanced Analytics', description: 'Gain deep insights with our cutting-edge analytics tools.' },
@@ -43,24 +19,25 @@ const features = [
   { icon: <PhoneAndroid />, title: 'Mobile Mastery', description: 'Full-featured mobile app for management on the move.' },
   { icon: <Autorenew />, title: 'AI Automation', description: 'Let our AI handle repetitive tasks while you focus on growth.' },
   { icon: <LocationOn />, title: 'Geo-Intelligence', description: 'Location-based insights for strategic property management.' },
-  { icon: <Receipt />, title: 'Financial Tools', description: 'Simplified billing and invoicing with smart financial wizardry.' },
+  { icon: <Receipt />, title: 'Financial Tools', description: 'Simplified billing and invoicing with smart financial wizardry.' }
 ];
 
 const FeatureItem = ({ feature, index }) => (
   <Grid item xs={12} sm={6} md={4} lg={3}>
-    <FeatureCard
+    <motion.div
+      className="feature-card"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
     >
-      <IconWrapper>{feature.icon}</IconWrapper>
+      <div className="icon-wrapper">{feature.icon}</div>
       <Typography variant="h6" component="h3" gutterBottom fontWeight="bold" color="primary">
         {feature.title}
       </Typography>
       <Typography variant="body2" color="text.secondary">
         {feature.description}
       </Typography>
-    </FeatureCard>
+    </motion.div>
   </Grid>
 );
 
@@ -81,12 +58,8 @@ const Features = () => {
           component="h1"
           align="center"
           gutterBottom
-          sx={{
-            fontWeight: 900,
-            fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-            color: theme.palette.primary.main,
-            mb: 2,
-          }}
+          className="features-title"
+          sx={{ color: theme.palette.primary.main }}
         >
           Revolutionize Your Property Management
         </Typography>
@@ -94,13 +67,8 @@ const Features = () => {
           variant="h5"
           align="center"
           paragraph
-          sx={{
-            maxWidth: '800px',
-            margin: '0 auto',
-            mb: 8,
-            color: theme.palette.text.secondary,
-            fontWeight: 300,
-          }}
+          className="features-subtitle"
+          sx={{ color: theme.palette.text.secondary }}
         >
           Unlock the full potential of your properties with our cutting-edge features
         </Typography>

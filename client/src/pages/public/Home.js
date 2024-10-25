@@ -1,315 +1,126 @@
-import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { FaHome, FaChartBar, FaShieldAlt, FaClock, FaCheck, FaStar, FaArrowLeft, FaArrowRight, FaChevronDown, FaChevronUp } from 'react-icons/fa';
-
-const LazyImage = lazy(() => import('./LazyImage'));
-
-const GlobalStyle = createGlobalStyle`
-  body {
-    font-family: 'Poppins', sans-serif;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    background-color: #f8f9fa;
-    color: #333;
-  }
-`;
-
-const gradientAnimation = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`;
-
-const Section = styled(motion.section)`
-  padding: 80px 5%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-
-  @media (max-width: 768px) {
-    padding: 60px 5%;
-  }
-`;
-
-const HeroSection = styled(Section)`
-  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-  background-size: 400% 400%;
-  animation: ${gradientAnimation} 15s ease infinite;
-  min-height: 100vh;
-  color: white;
-  padding: 0;
-`;
-
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-`;
-
-const HeroContainer = styled(Container)`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 5%;
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-`;
-
-const HeroContent = styled.div`
-  flex: 1;
-  max-width: 600px;
-`;
-
-const HeroImageGrid = styled(motion.div)`
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-left: 40px;
-
-  @media (max-width: 1024px) {
-    margin-left: 0;
-    margin-top: 40px;
-  }
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const Heading = styled(motion.h1)`
-  font-size: 3rem;
-  font-weight: 800;
-  margin-bottom: 20px;
-  line-height: 1.2;
-
-  @media (max-width: 768px) {
-    font-size: 2.5rem;
-  }
-`;
-
-const SubHeading = styled(motion.p)`
-  font-size: 1.2rem;
-  line-height: 1.6;
-  margin-bottom: 30px;
-
-  @media (max-width: 768px) {
-    font-size: 1rem;
-  }
-`;
-
-const CTAButton = styled(motion.button)`
-  background: white;
-  color: #e73c7e;
-  border: none;
-  padding: 15px 40px;
-  font-size: 1.2rem;
-  font-weight: 600;
-  border-radius: 50px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: #e73c7e;
-    color: white;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  }
-
-  @media (max-width: 768px) {
-    font-size: 1rem;
-    padding: 12px 30px;
-  }
-`;
-
-const FeatureGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 30px;
-`;
-
-const FeatureCard = styled(motion.div)`
-  background: #fff;
-  padding: 30px;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const FeatureIcon = styled.div`
-  font-size: 2.5rem;
-  color: #e73c7e;
-  margin-bottom: 20px;
-`;
-
-const TestimonialSection = styled(Section)`
-  background: linear-gradient(135deg, #f6f9fc, #e9f2f9);
-  position: relative;
-`;
-
-const TestimonialCard = styled(motion.div)`
-  background: #fff;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  width: 80%;
-  max-width: 800px;
-  margin: 0 auto;
-  text-align: center;
-`;
-
-const TestimonialImage = styled.img`
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  margin-bottom: 15px;
-  border: 4px solid #e73c7e;
-`;
-
-const ArrowButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 2rem;
-  color: #e73c7e;
-  cursor: pointer;
-  transition: color 0.3s;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-
-  &:hover {
-    color: #23a6d5;
-  }
-
-  &:disabled {
-    color: #ccc;
-    cursor: not-allowed;
-  }
-
-  &.left {
-    left: 20px;
-  }
-
-  &.right {
-    right: 20px;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 1.5rem;
-  }
-`;
-
-const BenefitList = styled.ul`
-  list-style: none;
-  padding: 0;
-  margin-top: 20px;
-`;
-
-const BenefitItem = styled.li`
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  font-size: 1.1rem;
-
-  svg {
-    color: #23d5ab;
-    margin-right: 10px;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 1rem;
-  }
-`;
-
-const FAQSection = styled(Section)`
-  background: #fff;
-`;
-
-const FAQContainer = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-`;
-
-const FAQItem = styled.div`
-  margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 20px;
-`;
-
-const FAQQuestion = styled.button`
-  font-size: 1.2rem;
-  color: #e73c7e;
-  background: none;
-  border: none;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-
-  &:hover {
-    color: #23a6d5;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 1rem;
-  }
-`;
-
-const FAQAnswer = styled(motion.div)`
-  font-size: 1rem;
-  color: #333;
-  margin-top: 10px;
-`;
+import { 
+  FaBuilding,
+  FaChartBar, 
+  FaShieldAlt, 
+  FaCheck, 
+  FaStar, 
+  FaArrowLeft, 
+  FaArrowRight, 
+  FaChevronDown, 
+  FaChevronUp,
+  FaUser,
+  FaChartLine,
+  FaUsers,
+  FaFileInvoiceDollar
+} from 'react-icons/fa';
+import './Home.css';
 
 const features = [
-  { icon: FaHome, title: "Smart Property Management", description: "Streamline operations with AI-powered tools." },
-  { icon: FaChartBar, title: "Advanced Analytics", description: "Make data-driven decisions to maximize ROI." },
-  { icon: FaShieldAlt, title: "Bank-Level Security", description: "Protect your data with top-tier security measures." },
-  { icon: FaClock, title: "24/7 Automated Support", description: "Provide instant assistance to tenants around the clock." }
+  { 
+    icon: FaBuilding, 
+    title: "Smart Property Management", 
+    description: "Streamline operations with AI-powered tools and automation.",
+    ariaLabel: "Learn about our smart property management features"
+  },
+  { 
+    icon: FaChartLine, 
+    title: "Advanced Analytics", 
+    description: "Make data-driven decisions with real-time insights and reporting.",
+    ariaLabel: "Explore our advanced analytics capabilities"
+  },
+  { 
+    icon: FaShieldAlt, 
+    title: "Bank-Level Security", 
+    description: "Enterprise-grade encryption and security for your sensitive data.",
+    ariaLabel: "Read about our security measures"
+  },
+  { 
+    icon: FaUsers, 
+    title: "24/7 Tenant Support", 
+    description: "Automated support system with live chat and ticket management.",
+    ariaLabel: "Learn about our tenant support system"
+  }
 ];
 
 const testimonials = [
-  { image: "https://via.placeholder.com/100", name: "John Doe", title: "Property Investor", rating: 5, text: "Propertilico has revolutionized how I manage my properties. It's an absolute game-changer." },
-  { image: "https://via.placeholder.com/100", name: "Jane Smith", title: "Real Estate Mogul", rating: 5, text: "The analytics feature in Propertilico is truly a game-changer. It's become indispensable." },
-  { image: "https://via.placeholder.com/100", name: "Mike Johnson", title: "Property Manager", rating: 5, text: "Propertilico has streamlined my workflow beyond belief. I highly recommend it." }
+  { 
+    name: "John Doe", 
+    title: "Property Manager", 
+    company: "Real Estate Solutions Inc.",
+    rating: 5, 
+    text: "Propertilico has revolutionized how we manage our 500+ unit portfolio. The automation features alone save us 20+ hours per week.",
+    location: "New York, NY"
+  },
+  { 
+    name: "Sarah Johnson", 
+    title: "Real Estate Investor", 
+    company: "Johnson Properties",
+    rating: 5, 
+    text: "The analytics and reporting features have transformed our decision-making process. We've seen a 15% increase in ROI since implementing Propertilico.",
+    location: "Los Angeles, CA"
+  },
+  { 
+    name: "Michael Chen", 
+    title: "Property Owner", 
+    company: "Chen Real Estate Group",
+    rating: 5, 
+    text: "As someone managing multiple properties, Propertilico's unified dashboard and tenant portal have made my life significantly easier.",
+    location: "Chicago, IL"
+  }
 ];
 
 const benefits = [
-  "Increase property value",
-  "Reduce operational costs",
-  "Improve tenant satisfaction",
-  "Streamline maintenance processes"
+  "Reduce operational costs by up to 30%",
+  "Increase property value through better management",
+  "Improve tenant satisfaction and retention",
+  "Automate 80% of routine tasks"
 ];
 
 const faqs = [
-  { question: "How does Propertilico help with property management?", answer: "Propertilico offers AI-powered tools to streamline operations, automate tasks, and provide real-time insights into your property portfolio." },
-  { question: "Is Propertilico suitable for small property owners?", answer: "Yes, Propertilico is designed to scale with your needs, making it perfect for both small property owners and large real estate companies." },
-  { question: "How secure is my data with Propertilico?", answer: "We use bank-level encryption and security measures to ensure your data is always protected and compliant with industry standards." },
-  { question: "Can I try Propertilico before committing?", answer: "Absolutely! We offer a free trial so you can experience the full power of Propertilico before making a decision." }
+  { 
+    question: "How does Propertilico help with property management?", 
+    answer: "Propertilico offers a comprehensive suite of tools including automated rent collection, maintenance tracking, tenant screening, financial reporting, and AI-powered analytics. Our platform streamlines daily operations, reduces manual work, and provides real-time insights for better decision-making."
+  },
+  { 
+    question: "Is Propertilico suitable for small property owners?", 
+    answer: "Yes! Propertilico is designed to scale with your needs. Whether you manage 5 units or 5,000, our flexible pricing and feature set adapt to your requirements. Small property owners particularly benefit from our automation tools and simplified workflows."
+  },
+  { 
+    question: "How secure is my data with Propertilico?", 
+    answer: "We implement bank-level security measures including 256-bit encryption, two-factor authentication, and regular security audits. Our platform is SOC 2 Type II certified and compliant with all major data protection regulations."
+  },
+  { 
+    question: "Can I try Propertilico before committing?", 
+    answer: "Absolutely! We offer a 14-day free trial with full access to all features. No credit card required. You'll also get a personalized onboarding session with our customer success team to ensure you get the most out of our platform."
+  }
 ];
+
+const GridBox = ({ icon: Icon, title, description }) => (
+  <div className="grid-box" role="article">
+    <div className="grid-icon-wrapper">
+      <Icon className="grid-icon" aria-hidden="true" />
+    </div>
+    <h3 className="grid-title">{title}</h3>
+    <p className="grid-description">{description}</p>
+  </div>
+);
 
 const Home = () => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [openFAQ, setOpenFAQ] = useState(null);
   const navigate = useNavigate();
 
-  const nextTestimonial = useCallback(() => setActiveTestimonial((prev) => (prev + 1) % testimonials.length), []);
-  const prevTestimonial = useCallback(() => setActiveTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length), []);
+  const nextTestimonial = useCallback(() => {
+    setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
+  }, []);
+
+  const prevTestimonial = useCallback(() => {
+    setActiveTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(nextTestimonial, 5000);
@@ -320,136 +131,341 @@ const Home = () => {
     setOpenFAQ(openFAQ === index ? null : index);
   };
 
+  const structuredData = {
+    "@context": "http://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Propertilico",
+    "applicationCategory": "Property Management Software",
+    "operatingSystem": "Web-based",
+    "description": "Advanced property management software with AI-powered analytics and automation tools",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "ratingCount": "100",
+      "bestRating": "5",
+      "worstRating": "1"
+    },
+    "featureList": [
+      "Smart Property Management",
+      "Advanced Analytics",
+      "Bank-Level Security",
+      "24/7 Tenant Support"
+    ]
+  };
+
   return (
     <>
-      <GlobalStyle />
       <Helmet>
-        <title>Propertilico - Revolutionary Property Management Software</title>
-        <meta name="description" content="Transform your property management with Propertilico. Our AI-powered platform offers smart tools for efficient property tracking, advanced analytics, and secure tenant management." />
-        <meta name="keywords" content="property management, real estate software, AI analytics, tenant management" />
+        <title>Propertilico | Smart Property Management Software for Modern Landlords</title>
+        <meta name="description" content="Transform your property management with Propertilico's AI-powered platform. Automate tasks, get real-time insights, and boost ROI. Start free trial today!" />
+        <meta name="keywords" content="property management software, real estate management, landlord software, tenant management, property analytics, automation tools" />
+        <link rel="canonical" href="https://www.propertilico.com" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.propertilico.com/" />
+        <meta property="og:title" content="Propertilico - Smart Property Management Software" />
+        <meta property="og:description" content="Transform your property management with AI-powered automation and analytics. Designed for modern landlords and property managers." />
+        <meta property="og:image" content="https://www.propertilico.com/og-image.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://www.propertilico.com/" />
+        <meta name="twitter:title" content="Propertilico - Smart Property Management Software" />
+        <meta name="twitter:description" content="Transform your property management with AI-powered automation and analytics. Designed for modern landlords and property managers." />
+        <meta name="twitter:image" content="https://www.propertilico.com/twitter-card.jpg" />
+
+        {/* Additional SEO meta tags */}
+        <meta name="robots" content="index, follow" />
         <meta name="author" content="Propertilico" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="canonical" href="https://www.propertilico.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+
+        {/* Preconnect to required origins */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+        {/* Structured Data */}
         <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "http://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Propertilico",
-            "applicationCategory": "Property Management Software",
-            "operatingSystem": "Web-based",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            },
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "5",
-              "ratingCount": "100"
-            }
-          })}
+          {JSON.stringify(structuredData)}
         </script>
       </Helmet>
 
-      <HeroSection>
-        <HeroContainer>
-          <HeroContent>
-            <Heading initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              Transform Your Property Management
-            </Heading>
-            <SubHeading initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-              Streamline operations, boost efficiency, and maximize returns with our AI-powered platform.
-            </SubHeading>
-            <CTAButton whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/get-started')}>
-              Start Your Free Trial
-            </CTAButton>
-            <BenefitList>
-              {benefits.map((benefit, index) => (
-                <BenefitItem key={index}>
-                  <FaCheck /> {benefit}
-                </BenefitItem>
-              ))}
-            </BenefitList>
-          </HeroContent>
-          <HeroImageGrid
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <Suspense fallback={<div>Loading...</div>}>
-              <LazyImage src="https://via.placeholder.com/300x200" alt="Property Management" />
-              <LazyImage src="https://via.placeholder.com/300x200" alt="Data Analytics" />
-              <LazyImage src="https://via.placeholder.com/300x200" alt="Tenant Portal" />
-              <LazyImage src="https://via.placeholder.com/300x200" alt="Financial Reports" />
-            </Suspense>
-          </HeroImageGrid>
-        </HeroContainer>
-      </HeroSection>
-
-      <Section>
-        <Container>
-          <FeatureGrid>
-            {features.map((feature, index) => (
-              <FeatureCard key={index} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }}>
-                <FeatureIcon>{<feature.icon />}</FeatureIcon>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </FeatureCard>
-            ))}
-          </FeatureGrid>
-        </Container>
-      </Section>
-
-      <TestimonialSection>
-        <Container>
-          <AnimatePresence mode="wait">
-            <TestimonialCard
-              key={activeTestimonial}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.5 }}
+      <main id="main-content">
+        <section className="hero-section" aria-labelledby="hero-title">
+          <div className="hero-container">
+            <div className="hero-content">
+              <motion.h1 
+                id="hero-title"
+                initial={{ opacity: 0, y: 50 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.5 }}
+                className="heading"
+              >
+                Transform Your Property Management
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0, y: 50 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="sub-heading"
+              >
+                Streamline operations, boost efficiency, and maximize returns with our AI-powered platform.
+              </motion.p>
+              <motion.button 
+                className="cta-button"
+                whileHover={{ scale: 1.05 }} 
+                whileTap={{ scale: 0.95 }} 
+                onClick={() => navigate('/get-started')}
+                aria-label="Start your free trial"
+              >
+                Start Free Trial
+              </motion.button>
+              <ul className="benefit-list">
+                {benefits.map((benefit, index) => (
+                  <li key={index} className="benefit-item">
+                    <FaCheck aria-hidden="true" /> 
+                    <span>{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <motion.div
+              className="hero-grid"
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <TestimonialImage src={testimonials[activeTestimonial].image} alt={testimonials[activeTestimonial].name} loading="lazy" />
-              <h4>{testimonials[activeTestimonial].name}</h4>
-              <p>{testimonials[activeTestimonial].title}</p>
-              <div>{[...Array(testimonials[activeTestimonial].rating)].map((_, i) => <FaStar key={i} color="#FFD700" />)}</div>
-              <p>"{testimonials[activeTestimonial].text}"</p>
-            </TestimonialCard>
-          </AnimatePresence>
-          <ArrowButton className="left" onClick={prevTestimonial} disabled={activeTestimonial === 0}><FaArrowLeft /></ArrowButton>
-          <ArrowButton className="right" onClick={nextTestimonial} disabled={activeTestimonial === testimonials.length - 1}><FaArrowRight /></ArrowButton>
-        </Container>
-      </TestimonialSection>
+              <GridBox 
+                icon={FaBuilding} 
+                title="Property Dashboard" 
+                description="Centralized property management"
+              />
+              <GridBox 
+                icon={FaChartBar} 
+                title="Real-time Analytics" 
+                description="Data-driven insights"
+              />
+              <GridBox 
+                icon={FaUsers} 
+                title="Tenant Portal" 
+                description="Simplified tenant communication"
+              />
+              <GridBox 
+                icon={FaFileInvoiceDollar} 
+                title="Financial Reports" 
+                description="Comprehensive financial tracking"
+              />
+            </motion.div>
+          </div>
+        </section>
 
-      <FAQSection>
-        <Container>
-          <FAQContainer>
-            <Heading as="h2" style={{ textAlign: 'center', marginBottom: '40px' }}>Frequently Asked Questions</Heading>
-            {faqs.map((faq, index) => (
-              <FAQItem key={index}>
-                <FAQQuestion onClick={() => toggleFAQ(index)}>
-                  {faq.question}
-                  {openFAQ === index ? <FaChevronUp /> : <FaChevronDown />}
-                </FAQQuestion>
-                <AnimatePresence>
-                  {openFAQ === index && (
-                    <FAQAnswer
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {faq.answer}
-                    </FAQAnswer>
-                  )}
-                </AnimatePresence>
-              </FAQItem>
-            ))}
-          </FAQContainer>
-        </Container>
-      </FAQSection>
+        <section className="features-section" aria-labelledby="features-title">
+          <div className="container">
+            <h2 id="features-title" className="section-title">Powerful Features</h2>
+            <div className="feature-grid">
+              {features.map((feature, index) => (
+                <motion.div 
+                  key={index}
+                  className="feature-card"
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  role="article"
+                  aria-labelledby={`feature-title-${index}`}
+                >
+                  <div className="feature-icon" aria-hidden="true">
+                    <feature.icon />
+                  </div>
+                  <h3 id={`feature-title-${index}`}>{feature.title}</h3>
+                  <p>{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="testimonial-section" aria-labelledby="testimonials-title">
+          <div className="container">
+            <h2 id="testimonials-title" className="section-title">What Our Clients Say</h2>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTestimonial}
+                className="testimonial-card"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="testimonial-content">
+                  <div className="testimonial-icon">
+                    <FaUser aria-hidden="true" />
+                  </div>
+                  <div className="testimonial-text">
+                    <h3>{testimonials[activeTestimonial].name}</h3>
+                    <p className="testimonial-title">
+                      {testimonials[activeTestimonial].title} at {testimonials[activeTestimonial].company}
+                    </p>
+                    <div className="testimonial-rating" aria-label={`Rated ${testimonials[activeTestimonial].rating} out of 5 stars`}>
+                      {[...Array(testimonials[activeTestimonial].rating)].map((_, i) => (
+                        <FaStar key={i} className="star-icon" aria-hidden="true" />
+                      ))}
+                    </div>
+                    <blockquote>
+                      <p>{testimonials[activeTestimonial].text}</p>
+                      <footer className="testimonial-location">
+                        <cite>{testimonials[activeTestimonial].location}</cite>
+                      </footer>
+                    </blockquote>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="testimonial-navigation">
+              <button 
+                className="nav-button prev"
+                onClick={prevTestimonial}
+                disabled={activeTestimonial === 0}
+                aria-label="Previous testimonial"
+              >
+                <FaArrowLeft aria-hidden="true" />
+              </button>
+              <button 
+                className="nav-button next"
+                onClick={nextTestimonial}
+                disabled={activeTestimonial === testimonials.length - 1}
+                aria-label="Next testimonial"
+              >
+                <FaArrowRight aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="faq-section" aria-labelledby="faq-title">
+          <div className="container">
+            <h2 id="faq-title" className="section-title">Frequently Asked Questions</h2>
+            <div className="faq-grid">
+              {faqs.map((faq, index) => (
+                <div 
+                  key={index} 
+                  className="faq-item"
+                >
+                  <button 
+                    className="faq-question"
+                    onClick={() => toggleFAQ(index)}
+                    aria-expanded={openFAQ === index}
+                    aria-controls={`faq-answer-${index}`}
+                  >
+                    <span className="question-text">{faq.question}</span>
+                    {openFAQ === index ? (
+                      <FaChevronUp aria-hidden="true" className="faq-icon" />
+                    ) : (
+                      <FaChevronDown aria-hidden="true" className="faq-icon" />
+                    )}
+                  </button>
+                  <AnimatePresence>
+                    {openFAQ === index && (
+                      <motion.div
+                        id={`faq-answer-${index}`}
+                        className="faq-answer"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <p>{faq.answer}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="cta-section" aria-labelledby="cta-title">
+          <div className="container">
+            <motion.div 
+              className="cta-wrapper"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+            >
+              <h2 id="cta-title" className="cta-heading">Ready to Transform Your Property Management?</h2>
+              <p className="cta-description">
+                Join thousands of property managers who have already streamlined their operations with Propertilico.
+              </p>
+              <div className="cta-buttons">
+                <motion.button
+                  className="primary-button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/get-started')}
+                >
+                  Start Free Trial
+                </motion.button>
+                <motion.button
+                  className="secondary-button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/demo')}
+                >
+                  Schedule Demo
+                </motion.button>
+              </div>
+              <p className="cta-note">No credit card required • 14-day free trial • Full featured</p>
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="trust-section" aria-labelledby="trust-title">
+          <div className="container">
+            <h2 id="trust-title" className="section-title">Trusted by Industry Leaders</h2>
+            <div className="trust-metrics">
+              <div className="metric-item">
+                <span className="metric-number">10k+</span>
+                <span className="metric-label">Properties Managed</span>
+              </div>
+              <div className="metric-item">
+                <span className="metric-number">98%</span>
+                <span className="metric-label">Customer Satisfaction</span>
+              </div>
+              <div className="metric-item">
+                <span className="metric-number">30%</span>
+                <span className="metric-label">Average Cost Reduction</span>
+              </div>
+              <div className="metric-item">
+                <span className="metric-number">24/7</span>
+                <span className="metric-label">Customer Support</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="site-footer">
+        <div className="container">
+          <div className="footer-content">
+            <p className="footer-copyright">
+              © {new Date().getFullYear()} Propertilico. All rights reserved.
+            </p>
+            <nav className="footer-nav" aria-label="Footer navigation">
+              <ul className="footer-links">
+                <li><button onClick={() => navigate('/privacy')}>Privacy Policy</button></li>
+                <li><button onClick={() => navigate('/terms')}>Terms of Service</button></li>
+                <li><button onClick={() => navigate('/contact')}>Contact Us</button></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </footer>
     </>
   );
 };

@@ -1,0 +1,92 @@
+.signin-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    padding: 20px;
+  }
+  
+  .signin-box {
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+  }
+  
+  .signin-title {
+    color: #6e8efb;
+    font-weight: bold;
+  }
+  
+  .signin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .input-icon {
+    color: #6e8efb;
+  }
+  
+  .form-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .forgot-password {
+    color: #6e8efb;
+    text-decoration: none;
+  }
+  
+  .error-message {
+    color: #f44336;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  
+  .submit-button {
+    background-color: #6e8efb;
+    height: 48px;
+  }
+  
+  .submit-button:hover {
+    background-color: #5c7cfa;
+  }
+  
+  .google-button {
+    height: 48px;
+    background-color: #4285F4;
+    color: white;
+    opacity: 0.7;
+  }
+  
+  .google-button:hover {
+    background-color: #357ae8;
+  }
+  
+  .google-button.Mui-disabled {
+    color: white;
+    background-color: #4285F4;
+  }
+  
+  .signup-link {
+    margin-top: 16px;
+    color: #666;
+  }
+  
+  .signup-link a {
+    color: #6e8efb;
+    text-decoration: none;
+  }
+  
+  .alert {
+    width: 100%;
+  }
