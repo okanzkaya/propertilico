@@ -1,0 +1,368 @@
+/* Finances.css */
+:root {
+    --background-default: var(--mui-palette-background-default);
+    --background-paper: var(--mui-palette-background-paper);
+    --text-primary: var(--mui-palette-text-primary);
+    --primary-main: var(--mui-palette-primary-main);
+    --primary-dark: var(--mui-palette-primary-dark);
+    --primary-contrast-text: var(--mui-palette-primary-contrastText);
+    --error-main: var(--mui-palette-error-main);
+    --success-main: var(--mui-palette-success-main);
+    --divider: var(--mui-palette-divider);
+  }
+  
+  .page-wrapper {
+    padding: 24px;
+    min-height: 100vh;
+    background-color: var(--background-default);
+    color: var(--text-primary);
+  }
+  
+  @media (max-width: 600px) {
+    .page-wrapper {
+      padding: 16px;
+    }
+  }
+  
+  /* Cards */
+  .chart-card, .insight-card, .table-card {
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: var(--background-paper);
+    color: var(--text-primary);
+    transition: all 0.3s ease-in-out;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .chart-card:hover, .insight-card:hover, .table-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Chart Container */
+  .chart-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    min-height: 300px;
+  }
+  
+  /* Table Styles */
+  .table-container {
+    max-height: 400px;
+    overflow: auto;
+  }
+  
+  .table-container::-webkit-scrollbar {
+    width: 0.4em;
+    height: 0.4em;
+  }
+  
+  .table-container::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.00);
+  }
+  
+  .table-container::-webkit-scrollbar-thumb {
+    background-color: var(--divider);
+    border-radius: 10px;
+  }
+  
+  /* Button Group */
+  .button-group {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  @media (max-width: 600px) {
+    .button-group {
+      flex-direction: column;
+    }
+  }
+  
+  /* Action Button */
+  .action-button {
+    flex-grow: 1;
+    padding: 12px;
+    border-radius: 12px;
+    text-transform: none;
+    font-weight: bold;
+    color: var(--primary-contrast-text);
+    background-color: var(--primary-main);
+    transition: background-color 0.3s ease;
+  }
+  
+  .action-button:hover {
+    background-color: var(--primary-dark);
+  }
+  
+  /* Status Chip */
+  .status-chip {
+    margin-right: 8px;
+    margin-bottom: 8px;
+    font-weight: bold;
+  }
+  
+  /* Typography */
+  .chart-title, .insight-title {
+    font-weight: bold;
+    color: var(--primary-main);
+  }
+  
+  .page-title {
+    font-weight: bold;
+    color: var(--primary-main);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+  }
+  
+  /* Insight Card */
+  .insight-card {
+    background: var(--background-paper);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .insight-item {
+    padding: 12px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.04);
+    margin-bottom: 8px;
+  }
+  
+  .insight-summary {
+    display: flex;
+    align-items: center;
+    margin-top: 16px;
+    padding: 8px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Loading and Error States */
+  .loading-container, .error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50vh;
+  }
+  
+  .error-container {
+    color: var(--error-main);
+  }
+  
+  /* Form Fields */
+  .form-field {
+    margin: 16px 0;
+    width: 100%;
+  }
+  
+  .form-field-label {
+    margin-bottom: 8px;
+  }
+  
+  /* Menu Styles */
+  .filter-sort-menu {
+    min-width: 200px;
+  }
+  
+  .menu-item {
+    padding: 8px 16px;
+  }
+  
+  /* Search Field */
+  .search-field {
+    min-width: 200px;
+  }
+  
+  /* Grid Layout */
+  .grid-container {
+    margin-top: 24px;
+  }
+  
+  .grid-item {
+    height: 100%;
+  }
+  
+  /* Tabs */
+  .finance-tabs {
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--divider);
+  }
+  
+  .finance-tab {
+    min-height: 48px;
+    text-transform: none;
+  }
+  
+  /* Table Header */
+  .table-header {
+    background-color: var(--background-paper);
+    font-weight: bold;
+  }
+  
+  /* Transaction Row */
+  .transaction-row:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Amount Cell */
+  .amount-cell {
+    font-weight: 500;
+  }
+  
+  .amount-cell.income {
+    color: var(--success-main);
+  }
+  
+  .amount-cell.expense {
+    color: var(--error-main);
+  }
+  
+  /* Chart Legend */
+  .chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+  
+  /* Tooltip */
+  .custom-tooltip {
+    background-color: var(--background-paper);
+    border: 1px solid var(--divider);
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Animation */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  /* Responsive Designs */
+  @media (max-width: 960px) {
+    .chart-container {
+      height: 300px;
+    }
+  
+    .search-field {
+      min-width: 150px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .chart-container {
+      height: 250px;
+    }
+  
+    .table-container {
+      max-height: 300px;
+    }
+  
+    .search-field {
+      min-width: 120px;
+    }
+  
+    .finance-tab {
+      min-width: auto;
+      padding: 6px 12px;
+    }
+  }
+  
+  /* Dialog/Modal Styles */
+  .transaction-dialog {
+    max-width: 600px;
+    margin: 32px auto;
+  }
+  
+  .dialog-title {
+    background-color: var(--primary-main);
+    color: var(--primary-contrast-text);
+    padding: 16px 24px;
+  }
+  
+  .dialog-content {
+    padding: 24px;
+  }
+  
+  .dialog-actions {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+  
+  /* Dark mode specific overrides */
+  [data-theme='dark'] .insight-item {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  [data-theme='dark'] .insight-summary {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  [data-theme='dark'] .transaction-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  /* Chart customization for better visibility */
+  .chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .chart-wrapper canvas {
+    backdrop-filter: blur(4px);
+  }
+  
+  /* Additional utility classes */
+  .text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .gap-2 {
+    gap: 8px;
+  }
+  
+  .mb-4 {
+    margin-bottom: 16px;
+  }

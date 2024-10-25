@@ -2,15 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import {
   Typography,
   Grid,
-  Box,
-  Card,
-  Button,
-  TextField,
-  Rating,
-  FormControl,
-  InputLabel,
-  MenuItem,
   Select,
+  TextField,
   Avatar,
   Tooltip,
   Alert,
@@ -20,106 +13,26 @@ import {
   CircularProgress,
   List,
   ListItem,
-  ListItemText,
   ListItemSecondaryAction,
+  MenuItem,
 } from '@mui/material';
-import { styled } from '@mui/system';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useTheme } from '@mui/material/styles';
-import { sendFeedback, checkFeedbackLimit } from '../../api';
 import { useDropzone } from 'react-dropzone';
+import { sendFeedback, checkFeedbackLimit } from '../../api';
+import './Feedback.css';
 
-const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(4),
-  backgroundColor: theme.palette.background.default,
-  minHeight: '100vh',
-  [theme.breakpoints.down('sm')]: {
-    padding: theme.spacing(2),
-  },
-}));
-
-const FeedbackCard = styled(Card)(({ theme }) => ({
-  padding: theme.spacing(4),
-  marginBottom: theme.spacing(4),
-  boxShadow: theme.shadows[3],
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: theme.palette.background.paper,
-  transition: 'all 0.3s ease-in-out',
-  '&:hover': {
-    boxShadow: theme.shadows[6],
-    transform: 'translateY(-5px)',
-  },
-}));
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  marginBottom: theme.spacing(3),
-  fontWeight: 'bold',
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
-  color: theme.palette.primary.main,
-}));
-
-const CustomFormControl = styled(FormControl)(({ theme }) => ({
-  marginBottom: theme.spacing(3),
-}));
-
-const InputLabelStyled = styled(InputLabel)(({ theme }) => ({
-  marginBottom: theme.spacing(1),
-  color: theme.palette.text.secondary,
-  fontWeight: 500,
-}));
-
-const CustomButton = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(2),
-  width: '200px',
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    transform: 'scale(1.05)',
-  },
-}));
-
-const CustomRating = styled(Rating)(({ theme }) => ({
-  fontSize: '2rem',
-  color: theme.palette.primary.main,
-}));
-
-const DropzoneArea = styled(Box)(({ theme }) => ({
-  border: `2px dashed ${theme.palette.primary.main}`,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(2),
-  textAlign: 'center',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    backgroundColor: theme.palette.action.hover,
-  },
-  fontFamily: theme.typography.fontFamily,
-}));
-
-const ListItemTextStyled = styled(ListItemText)(({ theme }) => ({
-  '& .MuiListItemText-primary': {
-    fontFamily: theme.typography.fontFamily,
-    fontWeight: 500,
-    color: theme.palette.text.primary,
-  },
-  '& .MuiListItemText-secondary': {
-    fontFamily: theme.typography.fontFamily,
-    color: theme.palette.text.secondary,
-  },
-}));
+const INITIAL_STATE = {
+  message: '',
+  rating: 0,
+  feedbackType: '',
+  attachment: null,
+};
 
 const FeedbackPage = () => {
-  const theme = useTheme();
-  const [feedback, setFeedback] = useState({
-    message: '',
-    rating: 0,
-    feedbackType: '',
-    attachment: null,
-  });
+  const [feedback, setFeedback] = useState(INITIAL_STATE);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -137,10 +50,7 @@ const FeedbackPage = () => {
         setTimeUntilNextSubmission(timeUntilNext);
       } catch (error) {
         console.error('Error in checkSubmissionLimit:', error);
-        setError(error.message || 'An error occurred while checking feedback limit');
-        setSnackbarMessage(error.message || 'Error checking feedback limit. Please try again later.');
-        setSnackbarSeverity('error');
-        setSnackbarOpen(true);
+        handleError(error);
       }
     };
 
@@ -164,23 +74,25 @@ const FeedbackPage = () => {
     return () => clearInterval(timer);
   }, [canSubmit, timeUntilNextSubmission]);
 
+  const handleError = (error) => {
+    setError(error.message || 'An unexpected error occurred');
+    setSnackbarMessage(error.message || 'Error occurred. Please try again later.');
+    setSnackbarSeverity('error');
+    setSnackbarOpen(true);
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFeedback((prev) => ({ ...prev, [name]: value }));
   };
 
   const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles && acceptedFiles.length > 0) {
+    if (acceptedFiles?.[0]) {
       const file = acceptedFiles[0];
       if (file.size > 50 * 1024 * 1024) {
-        setSnackbarMessage('File size exceeds 50MB limit.');
-        setSnackbarSeverity('error');
-        setSnackbarOpen(true);
+        handleError(new Error('File size exceeds 50MB limit.'));
       } else {
-        setFeedback((prev) => ({
-          ...prev,
-          attachment: file
-        }));
+        setFeedback((prev) => ({ ...prev, attachment: file }));
       }
     }
   }, []);
@@ -196,34 +108,25 @@ const FeedbackPage = () => {
     maxFiles: 1,
   });
 
-  const handleRemoveAttachment = () => {
-    setFeedback((prev) => ({ ...prev, attachment: null }));
-  };
-
   const handleSubmit = async () => {
     if (!canSubmit) {
-      setSnackbarMessage(`Please wait ${timeUntilNextSubmission} seconds before submitting again.`);
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      handleError(new Error(`Please wait ${timeUntilNextSubmission} seconds before submitting again.`));
       return;
     }
 
     if (feedback.message.length < 10 || !feedback.feedbackType) {
-      setSnackbarMessage('Please provide a message (at least 10 characters) and select a feedback type.');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      handleError(new Error('Please provide a message (at least 10 characters) and select a feedback type.'));
       return;
     }
 
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('message', feedback.message);
-      formData.append('feedbackType', feedback.feedbackType);
-      
-      if (feedback.rating > 0) {
-        formData.append('rating', feedback.rating);
-      }
+      Object.entries(feedback).forEach(([key, value]) => {
+        if (value && key !== 'attachment') {
+          formData.append(key, value);
+        }
+      });
       
       if (feedback.attachment) {
         formData.append('attachment', feedback.attachment);
@@ -232,60 +135,48 @@ const FeedbackPage = () => {
       await sendFeedback(formData);
       setSnackbarMessage('Feedback submitted successfully!');
       setSnackbarSeverity('success');
-      setFeedback({ message: '', rating: 0, feedbackType: '', attachment: null });
+      setFeedback(INITIAL_STATE);
       setCanSubmit(false);
-      setTimeUntilNextSubmission(300); // 5 minutes cooldown
+      setTimeUntilNextSubmission(300);
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      setSnackbarMessage(error.message || 'Failed to submit feedback. Please try again.');
-      setSnackbarSeverity('error');
+      handleError(error);
     } finally {
       setIsSubmitting(false);
       setSnackbarOpen(true);
     }
   };
 
-  const handleSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setSnackbarOpen(false);
-  };
-
   return (
-    <PageWrapper>
-      <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+    <div className="page-wrapper">
+      <Typography variant="h4" className="page-title">
         Send Feedback
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" className="error-alert">{error}</Alert>}
 
       <Grid container spacing={3} justifyContent="center">
         <Grid item xs={12} md={8} lg={6}>
           <Fade in={true} timeout={1000}>
-            <FeedbackCard>
-              <SectionTitle variant="h6">
+            <div className="feedback-card">
+              <div className="section-title">
                 <Tooltip title="Send Feedback">
-                  <Avatar
-                    sx={{
-                      bgcolor: theme.palette.primary.main,
-                      color: theme.palette.primary.contrastText,
-                    }}
-                  >
+                  <Avatar className="feedback-icon">
                     <FeedbackIcon />
                   </Avatar>
                 </Tooltip>
-                Share Your Insights
-              </SectionTitle>
-              <CustomFormControl fullWidth>
-                <InputLabelStyled shrink>Type of Feedback</InputLabelStyled>
+                <span>Share Your Insights</span>
+              </div>
+
+              <div className="custom-form-control">
+                <label className="input-label">Type of Feedback</label>
                 <Select
                   name="feedbackType"
                   value={feedback.feedbackType}
                   onChange={handleChange}
                   required
                   displayEmpty
-                  sx={{ fontFamily: theme.typography.fontFamily }}
+                  className="select-field"
                 >
                   <MenuItem value="" disabled>Select feedback type</MenuItem>
                   <MenuItem value="bug">Report a Bug</MenuItem>
@@ -293,9 +184,10 @@ const FeedbackPage = () => {
                   <MenuItem value="improvement">Suggest an Improvement</MenuItem>
                   <MenuItem value="general">General Feedback</MenuItem>
                 </Select>
-              </CustomFormControl>
-              <CustomFormControl fullWidth>
-                <InputLabelStyled shrink>Message</InputLabelStyled>
+              </div>
+
+              <div className="custom-form-control">
+                <label className="input-label">Message</label>
                 <TextField
                   multiline
                   rows={4}
@@ -305,58 +197,72 @@ const FeedbackPage = () => {
                   onChange={handleChange}
                   placeholder="Please provide detailed feedback (minimum 10 characters)..."
                   required
-                  sx={{ fontFamily: theme.typography.fontFamily }}
+                  className="text-field"
                 />
-              </CustomFormControl>
-              <CustomFormControl fullWidth>
-                <InputLabelStyled shrink>Rating (Optional)</InputLabelStyled>
-                <CustomRating
-                  name="rating"
-                  value={feedback.rating}
-                  onChange={(event, newValue) => {
-                    setFeedback((prev) => ({ ...prev, rating: newValue || 0 }));
-                  }}
-                />
-              </CustomFormControl>
-              <CustomFormControl fullWidth>
-                <InputLabelStyled shrink>Attachment (Max 50MB)</InputLabelStyled>
-                <DropzoneArea {...getRootProps()}>
+              </div>
+
+              <div className="custom-form-control">
+                <label className="input-label">Rating (Optional)</label>
+                <div className="custom-rating">
+                  {/* Implement your rating component here */}
+                </div>
+              </div>
+
+              <div className="custom-form-control">
+                <label className="input-label">Attachment (Max 50MB)</label>
+                <div className="dropzone-area" {...getRootProps()}>
                   <input {...getInputProps()} />
-                  {isDragActive ? (
-                    <Typography>Drop the file here ...</Typography>
-                  ) : (
-                    <Typography>Drag 'n' drop an image, video, or audio file here, or click to select a file</Typography>
-                  )}
-                </DropzoneArea>
+                  <Typography>
+                    {isDragActive ? 'Drop the file here ...' : 
+                     'Drag \'n\' drop an image, video, or audio file here, or click to select a file'}
+                  </Typography>
+                </div>
                 {feedback.attachment && (
-                  <List>
-                    <ListItem>
-                      <ListItemTextStyled 
-                        primary={feedback.attachment.name} 
-                        secondary={`${(feedback.attachment.size / 1024 / 1024).toFixed(2)} MB`} 
-                      />
+                  <List className="file-list">
+                    <ListItem className="file-list-item">
+                      <div className="list-item-text">
+                        <div className="list-item-text-primary">{feedback.attachment.name}</div>
+                        <div className="list-item-text-secondary">
+                          {`${(feedback.attachment.size / 1024 / 1024).toFixed(2)} MB`}
+                        </div>
+                      </div>
                       <ListItemSecondaryAction>
-                        <IconButton edge="end" aria-label="delete" onClick={handleRemoveAttachment}>
+                        <IconButton 
+                          edge="end" 
+                          onClick={() => setFeedback(prev => ({ ...prev, attachment: null }))}
+                        >
                           <DeleteIcon />
                         </IconButton>
                       </ListItemSecondaryAction>
                     </ListItem>
                   </List>
                 )}
-              </CustomFormControl>
-              <CustomButton
-                variant="contained"
-                color="primary"
+              </div>
+
+              <button
+                className={`custom-button ${isSubmitting ? 'submitting' : ''}`}
                 onClick={handleSubmit}
-                startIcon={isSubmitting ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
                 disabled={isSubmitting || !canSubmit}
               >
-                {isSubmitting ? 'Submitting...' : canSubmit ? 'Submit Feedback' : `Wait ${timeUntilNextSubmission}s`}
-              </CustomButton>
-            </FeedbackCard>
+                {isSubmitting ? (
+                  <>
+                    <CircularProgress size={24} />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <SendIcon />
+                    <span>
+                      {canSubmit ? 'Submit Feedback' : `Wait ${timeUntilNextSubmission}s`}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </Fade>
         </Grid>
       </Grid>
+
       <Snackbar
         anchorOrigin={{
           vertical: 'bottom',
@@ -364,18 +270,15 @@ const FeedbackPage = () => {
         }}
         open={snackbarOpen}
         autoHideDuration={6000}
-        onClose={handleSnackbarClose}
+        onClose={() => setSnackbarOpen(false)}
       >
         <Alert
-          onClose={handleSnackbarClose}
           severity={snackbarSeverity}
-          sx={{ width: '100%' }}
           action={
             <IconButton
               size="small"
-              aria-label="close"
               color="inherit"
-              onClick={handleSnackbarClose}
+              onClick={() => setSnackbarOpen(false)}
             >
               <CloseIcon fontSize="small" />
             </IconButton>
@@ -384,7 +287,7 @@ const FeedbackPage = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    </PageWrapper>
+    </div>
   );
 };
 

@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Typography, Grid, Box, Card, CardContent, Button, TextField,
-  MenuItem, InputAdornment, Select, FormControl,
-  InputLabel, Pagination, Snackbar, Alert, Chip,
-  Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, Paper, Dialog, DialogTitle, DialogContent,
-  DialogActions, IconButton
+  MenuItem, InputAdornment, Select, FormControl, InputLabel, 
+  Pagination, Snackbar, Alert, Chip, Table, TableBody, 
+  TableCell, TableContainer, TableHead, TableRow, Paper, 
+  Dialog, DialogTitle, DialogContent, DialogActions, IconButton
 } from "@mui/material";
-import { styled } from "@mui/material/styles";
 import {
   Search as SearchIcon,
   Visibility as VisibilityIcon,
@@ -17,7 +15,9 @@ import {
   CloudDownload as DownloadIcon,
   Image as ImageIcon
 } from "@mui/icons-material";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, 
+         PointElement, LineElement, ArcElement, Title, Tooltip, 
+         Legend, Filler } from 'chart.js';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import { jsPDF } from "jspdf";
 import 'jspdf-autotable';
@@ -25,145 +25,420 @@ import * as XLSX from 'xlsx';
 import { CSVLink } from "react-csv";
 import html2canvas from 'html2canvas';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler);
+// Chart Registration
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement, PointElement, 
+  LineElement, ArcElement, Title, Tooltip, Legend, Filler
+);
 
-const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
-  backgroundColor: theme.palette.background.default,
-  minHeight: "100vh",
-  color: theme.palette.text.primary,
-}));
-
-const ReportCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  transition: 'all 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: theme.shadows[4],
-  },
-}));
-
+// Constants
 const REPORTS_PER_PAGE = 6;
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
+// Sample Data
 const sampleReports = [
   {
     id: 1,
     title: "Property Overview",
-    description: "Overview of property additions and changes",
+    description: "Overview of property performance and occupancy rates",
     type: "PropertyOverview",
     chartType: "line",
-    tags: ["property", "overview"],
+    tags: ["property", "overview", "occupancy"],
     data: [
-      { month: 'Jan', additions: 5, changes: 2 },
-      { month: 'Feb', additions: 3, changes: 1 },
-      { month: 'Mar', additions: 7, changes: 3 },
-      { month: 'Apr', additions: 2, changes: 4 },
-      { month: 'May', additions: 6, changes: 2 },
-      { month: 'Jun', additions: 4, changes: 1 },
+      { month: 'Jan', occupancy: 92, revenue: 45000, maintenance: 5000 },
+      { month: 'Feb', occupancy: 94, revenue: 48000, maintenance: 4800 },
+      { month: 'Mar', occupancy: 96, revenue: 52000, maintenance: 5200 },
+      { month: 'Apr', occupancy: 95, revenue: 50000, maintenance: 4900 },
+      { month: 'May', occupancy: 97, revenue: 54000, maintenance: 5100 },
+      { month: 'Jun', occupancy: 98, revenue: 56000, maintenance: 5300 }
     ]
   },
   {
     id: 2,
-    title: "Ticket Summary",
-    description: "Breakdown of tickets created",
-    type: "TicketSummary",
+    title: "Maintenance Requests",
+    description: "Analysis of maintenance requests and resolution times",
+    type: "MaintenanceOverview",
     chartType: "bar",
-    tags: ["ticket", "summary"],
+    tags: ["maintenance", "requests", "resolution"],
     data: [
-      { month: 'Jan', tickets: 30 },
-      { month: 'Feb', tickets: 25 },
-      { month: 'Mar', tickets: 35 },
-      { month: 'Apr', tickets: 28 },
-      { month: 'May', tickets: 32 },
-      { month: 'Jun', tickets: 40 },
+      { month: 'Jan', urgent: 12, routine: 45, completed: 52 },
+      { month: 'Feb', urgent: 8, routine: 38, completed: 43 },
+      { month: 'Mar', urgent: 15, routine: 42, completed: 54 },
+      { month: 'Apr', urgent: 10, routine: 40, completed: 48 },
+      { month: 'May', urgent: 9, routine: 44, completed: 50 },
+      { month: 'Jun', urgent: 11, routine: 41, completed: 49 }
     ]
   },
   {
     id: 3,
-    title: "Financial Overview",
-    description: "Overview of financial performance",
+    title: "Financial Performance",
+    description: "Monthly financial metrics and trends",
     type: "FinancialOverview",
-    chartType: "bar",
-    tags: ["financial", "overview"],
+    chartType: "area",
+    tags: ["financial", "revenue", "expenses"],
     data: [
-      { month: 'Jan', revenue: 10000, expenses: 5000, profit: 5000 },
-      { month: 'Feb', revenue: 12000, expenses: 6000, profit: 6000 },
-      { month: 'Mar', revenue: 15000, expenses: 7000, profit: 8000 },
-      { month: 'Apr', revenue: 13000, expenses: 6500, profit: 6500 },
-      { month: 'May', revenue: 14000, expenses: 7000, profit: 7000 },
-      { month: 'Jun', revenue: 16000, expenses: 7500, profit: 8500 },
+      { month: 'Jan', revenue: 85000, expenses: 35000, profit: 50000 },
+      { month: 'Feb', revenue: 88000, expenses: 36000, profit: 52000 },
+      { month: 'Mar', revenue: 92000, expenses: 37000, profit: 55000 },
+      { month: 'Apr', revenue: 90000, expenses: 36500, profit: 53500 },
+      { month: 'May', revenue: 94000, expenses: 37500, profit: 56500 },
+      { month: 'Jun', revenue: 96000, expenses: 38000, profit: 58000 }
     ]
   },
   {
     id: 4,
-    title: "Ticket Status",
-    description: "Current distribution of ticket statuses",
-    type: "TicketStatus",
+    title: "Tenant Satisfaction",
+    description: "Tenant satisfaction metrics and feedback analysis",
+    type: "TenantOverview",
     chartType: "pie",
-    tags: ["ticket", "status"],
+    tags: ["tenant", "satisfaction", "feedback"],
     data: [
-      { name: 'Open', value: 30 },
-      { name: 'In Progress', value: 45 },
-      { name: 'Closed', value: 25 },
+      { name: 'Very Satisfied', value: 45 },
+      { name: 'Satisfied', value: 35 },
+      { name: 'Neutral', value: 15 },
+      { name: 'Dissatisfied', value: 5 }
     ]
   },
   {
     id: 5,
-    title: "Expense Overview",
-    description: "Breakdown of expenses over time",
-    type: "ExpenseOverview",
-    chartType: "area",
-    tags: ["financial", "expenses"],
+    title: "Lease Analytics",
+    description: "Lease renewal rates and vacancy analysis",
+    type: "LeaseOverview",
+    chartType: "doughnut",
+    tags: ["lease", "renewals", "vacancy"],
     data: [
-      { month: 'Jan', maintenance: 2000, utilities: 1500, salaries: 3000 },
-      { month: 'Feb', maintenance: 1800, utilities: 1600, salaries: 3000 },
-      { month: 'Mar', maintenance: 2200, utilities: 1700, salaries: 3100 },
-      { month: 'Apr', maintenance: 1900, utilities: 1550, salaries: 3000 },
-      { month: 'May', maintenance: 2100, utilities: 1650, salaries: 3050 },
-      { month: 'Jun', maintenance: 2300, utilities: 1750, salaries: 3100 },
+      { name: 'Renewed', value: 75 },
+      { name: 'New Leases', value: 15 },
+      { name: 'Pending', value: 7 },
+      { name: 'Vacant', value: 3 }
     ]
   },
   {
     id: 6,
-    title: "Revenue Overview",
-    description: "Breakdown of revenue sources over time",
-    type: "RevenueOverview",
-    chartType: "area",
-    tags: ["financial", "revenue"],
+    title: "Utility Costs",
+    description: "Monthly utility consumption and cost analysis",
+    type: "UtilityOverview",
+    chartType: "bar",
+    tags: ["utilities", "costs", "consumption"],
     data: [
-      { month: 'Jan', rent: 8000, fees: 1500, other: 500 },
-      { month: 'Feb', rent: 9000, fees: 2000, other: 1000 },
-      { month: 'Mar', rent: 11000, fees: 2500, other: 1500 },
-      { month: 'Apr', rent: 10000, fees: 2000, other: 1000 },
-      { month: 'May', rent: 10500, fees: 2200, other: 1300 },
-      { month: 'Jun', rent: 12000, fees: 2500, other: 1500 },
+      { month: 'Jan', electricity: 5200, water: 2800, gas: 1800 },
+      { month: 'Feb', electricity: 4800, water: 2600, gas: 2000 },
+      { month: 'Mar', electricity: 4500, water: 2700, gas: 1900 },
+      { month: 'Apr', electricity: 4200, water: 2900, gas: 1700 },
+      { month: 'May', electricity: 4600, water: 3000, gas: 1600 },
+      { month: 'Jun', electricity: 5000, water: 3200, gas: 1500 }
     ]
-  },
+  }
 ];
 
+// Utility Functions
+const generateChart = (chartType, chartConfig) => {
+  switch (chartType) {
+    case 'bar':
+      return <Bar data={chartConfig} options={chartConfig.options} />;
+    case 'line':
+      return <Line data={chartConfig} options={chartConfig.options} />;
+    case 'pie':
+      return <Pie data={chartConfig} options={chartConfig.options} />;
+    case 'doughnut':
+      return <Doughnut data={chartConfig} options={chartConfig.options} />;
+    case 'area':
+      return <Line data={chartConfig} options={{ ...chartConfig.options, fill: true }} />;
+    default:
+      return null;
+  }
+};
+
+const downloadReport = async (format, report, chartRef) => {
+  switch (format) {
+    case 'csv':
+      // CSV download is handled by CSVLink component
+      break;
+    case 'excel':
+      const ws = XLSX.utils.json_to_sheet(report.data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Report");
+      XLSX.writeFile(wb, `${report.title}.xlsx`);
+      break;
+    case 'pdf':
+      const doc = new jsPDF();
+      doc.text(report.title, 20, 10);
+      doc.autoTable({
+        head: [Object.keys(report.data[0])],
+        body: report.data.map(Object.values),
+      });
+      doc.save(`${report.title}.pdf`);
+      break;
+    case 'png':
+      if (chartRef.current) {
+        const canvas = await html2canvas(chartRef.current);
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = `${report.title}.png`;
+        link.click();
+      }
+      break;
+    default:
+      throw new Error('Unsupported format');
+  }
+};
+
+// Component Sections
+const FilterSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, filterTags, setFilterTags }) => (
+  <Grid container spacing={2} mb={3}>
+    <Grid item xs={12} sm={4}>
+      <TextField
+        fullWidth
+        variant="outlined"
+        placeholder="Search Reports"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        }}
+      />
+    </Grid>
+    <Grid item xs={12} sm={4}>
+      <FormControl fullWidth variant="outlined">
+        <InputLabel>Filter by Type</InputLabel>
+        <Select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          label="Filter by Type"
+        >
+          <MenuItem value="">All Types</MenuItem>
+          {Array.from(new Set(sampleReports.map(report => report.type))).map((type) => (
+            <MenuItem key={type} value={type}>{type}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Grid>
+    <Grid item xs={12} sm={4}>
+      <FormControl fullWidth variant="outlined">
+        <InputLabel>Filter by Tags</InputLabel>
+        <Select
+          multiple
+          value={filterTags}
+          onChange={(e) => setFilterTags(e.target.value)}
+          label="Filter by Tags"
+          renderValue={(selected) => (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {selected.map((value) => (
+                <Chip key={value} label={value} size="small" />
+              ))}
+            </Box>
+          )}
+        >
+          {Array.from(new Set(sampleReports.flatMap(report => report.tags))).map((tag) => (
+            <MenuItem key={tag} value={tag}>{tag}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Grid>
+  </Grid>
+);
+
+const ReportsGrid = ({ reports, renderChart, onReportSelect }) => (
+  <Grid container spacing={3}>
+    {reports.map((report) => (
+      <Grid item xs={12} sm={6} md={4} key={report.id}>
+        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>{report.title}</Typography>
+            <Typography variant="body2" color="textSecondary" paragraph>
+              {report.description}
+            </Typography>
+            <Box mb={2}>
+              {report.tags.map((tag) => (
+                <Chip 
+                  key={tag} 
+                  label={tag} 
+                  size="small" 
+                  sx={{ mr: 0.5, mb: 0.5 }} 
+                />
+              ))}
+            </Box>
+            <Box height={300}>
+              {renderChart(report.type, report.data, report.chartType)}
+            </Box>
+            <Box mt={2} display="flex" justifyContent="space-between">
+              <Button
+                variant="outlined"
+                startIcon={<VisibilityIcon />}
+                onClick={() => onReportSelect(report)}
+              >
+                View Details
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    ))}
+  </Grid>
+);
+
+const PaginationSection = ({ count, page, onChange }) => (
+  <Box display="flex" justifyContent="center" mt={3}>
+    <Pagination 
+      count={count} 
+      page={page} 
+      onChange={onChange} 
+      color="primary" 
+    />
+  </Box>
+);
+
+const ReportDialog = ({ 
+  report, 
+  onClose, 
+  frequency, 
+  chartType, 
+  onFrequencyChange, 
+  onChartTypeChange, 
+  renderChart, 
+  onDownload, 
+  chartRef 
+}) => (
+  <Dialog
+    open={!!report}
+    onClose={onClose}
+    fullWidth
+    maxWidth="md"
+  >
+    {report && (
+      <>
+        <DialogTitle>
+          {report.title}
+          <IconButton
+            onClick={onClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'grey.500'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body1" paragraph>{report.description}</Typography>
+          <Typography variant="subtitle1" gutterBottom>Report Type: {report.type}</Typography>
+          <Box mb={2}>
+            {report.tags.map((tag) => (
+              <Chip key={tag} label={tag} sx={{ mr: 0.5, mb: 0.5 }} />
+            ))}
+          </Box>
+          <Grid container spacing={2} mb={2}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Frequency</InputLabel>
+                <Select value={frequency} onChange={onFrequencyChange} label="Frequency">
+                  <MenuItem value="daily">Daily</MenuItem>
+                  <MenuItem value="weekly">Weekly</MenuItem>
+                  <MenuItem value="monthly">Monthly</MenuItem>
+                  <MenuItem value="yearly">Yearly</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Chart Type</InputLabel>
+                <Select 
+                  value={chartType || report.chartType} 
+                  onChange={onChartTypeChange} 
+                  label="Chart Type"
+                >
+                  <MenuItem value="bar">Bar Chart</MenuItem>
+                  <MenuItem value="line">Line Chart</MenuItem>
+                  <MenuItem value="pie">Pie Chart</MenuItem>
+                  <MenuItem value="area">Area Chart</MenuItem>
+                  <MenuItem value="doughnut">Doughnut Chart</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+          <Box ref={chartRef} height={400}>
+            {renderChart(report.type, report.data, chartType || report.chartType)}
+          </Box>
+          <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {Object.keys(report.data[0]).map((key) => (
+                    <TableCell key={key}>
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {report.data.map((row, index) => (
+                  <TableRow key={index}>
+                    {Object.values(row).map((value, cellIndex) => (
+                      <TableCell key={cellIndex}>{value}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <CSVLink
+            data={report.data}
+            filename={`${report.title}.csv`}
+            className="hidden"
+          >
+            <Button startIcon={<DownloadIcon />} onClick={() => onDownload('csv')}>
+              Download CSV
+            </Button>
+          </CSVLink>
+          <Button onClick={() => onDownload('excel')} startIcon={<ExcelIcon />}>
+            Download Excel
+          </Button>
+          <Button onClick={() => onDownload('pdf')} startIcon={<PdfIcon />}>
+            Download PDF
+          </Button>
+          <Button onClick={() => onDownload('png')} startIcon={<ImageIcon />}>
+            Download PNG
+          </Button>
+          <Button onClick={onClose}>Close</Button>
+        </DialogActions>
+      </>
+    )}
+  </Dialog>
+);
+
+// Main Component
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterTags, setFilterTags] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [snackbarState, setSnackbarState] = useState({
+    open: false,
+    message: "",
+    severity: "success"
+  });
   const [frequency, setFrequency] = useState("monthly");
   const [chartType, setChartType] = useState("");
-
   const chartRef = useRef(null);
 
+  // Memoized Filters
   const filteredReports = useMemo(() => {
-    return sampleReports.filter((report) => {
+    return sampleReports.filter(report => {
       const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         report.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = !filterType || report.type === filterType;
-      const matchesTags = filterTags.length === 0 || filterTags.every((tag) => report.tags.includes(tag));
+      const matchesTags = filterTags.length === 0 || 
+        filterTags.every(tag => report.tags.includes(tag));
       return matchesSearch && matchesType && matchesTags;
     });
   }, [searchTerm, filterType, filterTags]);
@@ -173,340 +448,124 @@ const Reports = () => {
     return filteredReports.slice(startIndex, startIndex + REPORTS_PER_PAGE);
   }, [filteredReports, currentPage]);
 
-  const handlePageChange = (_, value) => setCurrentPage(value);
-
   const renderChart = useCallback((type, data, chartType) => {
-    const labels = data.map(item => item.month);
-    const datasets = Object.keys(data[0])
-      .filter(key => key !== 'month')
-      .map((key, index) => ({
-        label: key,
-        data: data.map(item => item[key]),
-        backgroundColor: COLORS[index % COLORS.length],
-        borderColor: COLORS[index % COLORS.length],
-        fill: chartType === 'area',
-      }));
+    const labels = data.map(item => item.month || item.name);
+    const datasets = item => item.month 
+      ? Object.keys(data[0])
+          .filter(key => key !== 'month')
+          .map((key, index) => ({
+            label: key,
+            data: data.map(item => item[key]),
+            backgroundColor: COLORS[index % COLORS.length],
+            borderColor: COLORS[index % COLORS.length],
+            fill: chartType === 'area',
+          }))
+      : [{
+          data: data.map(item => item.value),
+          backgroundColor: COLORS,
+          borderColor: COLORS,
+        }];
 
-    const chartData = { labels, datasets };
-
-    const options = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-        },
-        title: {
-          display: true,
-          text: type,
-        },
-      },
+    const chartConfig = {
+      labels,
+      datasets: datasets(data[0]),
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' },
+          title: { display: true, text: type }
+        }
+      }
     };
 
-    switch (chartType) {
-      case 'bar':
-        return <Bar data={chartData} options={options} />;
-      case 'line':
-        return <Line data={chartData} options={options} />;
-      case 'pie':
-      case 'doughnut':
-        const pieData = {
-          labels: data.map(item => item.name),
-          datasets: [{
-            data: data.map(item => item.value),
-            backgroundColor: COLORS,
-          }],
-        };
-        return chartType === 'pie' ? <Pie data={pieData} options={options} /> : <Doughnut data={pieData} options={options} />;
-      case 'area':
-        return <Line data={chartData} options={{ ...options, fill: true }} />;
-      default:
-        return <Typography>Unsupported chart type</Typography>;
-    }
+    return generateChart(chartType, chartConfig);
   }, []);
 
   const handleDownload = async (format) => {
     if (!selectedReport) return;
-
-    switch (format) {
-      case 'csv':
-        // CSV download logic is handled by CSVLink component
-        break;
-      case 'excel':
-        const ws = XLSX.utils.json_to_sheet(selectedReport.data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Report");
-        XLSX.writeFile(wb, `${selectedReport.title}.xlsx`);
-        break;
-      case 'pdf':
-        const doc = new jsPDF();
-        doc.text(selectedReport.title, 20, 10);
-        doc.autoTable({
-          head: [Object.keys(selectedReport.data[0])],
-          body: selectedReport.data.map(Object.values),
-        });
-        doc.save(`${selectedReport.title}.pdf`);
-        break;
-      case 'png':
-        if (chartRef.current) {
-          const canvas = await html2canvas(chartRef.current);
-          const imgData = canvas.toDataURL('image/png');
-          const link = document.createElement('a');
-          link.href = imgData;
-          link.download = `${selectedReport.title}.png`;
-          link.click();
-        }
-        break;
-      default:
-        console.error('Unsupported format');
+    
+    try {
+      await downloadReport(format, selectedReport, chartRef);
+      showSnackbar(`${format.toUpperCase()} downloaded successfully`, "success");
+    } catch (error) {
+      showSnackbar(`Failed to download ${format.toUpperCase()}`, "error");
+      console.error('Download error:', error);
     }
-
-    setSnackbarMessage(`${format.toUpperCase()} downloaded successfully`);
-    setSnackbarSeverity("success");
-    setSnackbarOpen(true);
   };
 
   const handleFrequencyChange = (event) => {
     setFrequency(event.target.value);
-    setSnackbarMessage(`Frequency changed to ${event.target.value}`);
-    setSnackbarSeverity("info");
-    setSnackbarOpen(true);
+    showSnackbar(`Frequency changed to ${event.target.value}`, "info");
   };
 
   const handleChartTypeChange = (event) => {
     setChartType(event.target.value);
-    setSnackbarMessage(`Chart type changed to ${event.target.value}`);
-    setSnackbarSeverity("info");
-    setSnackbarOpen(true);
+    showSnackbar(`Chart type changed to ${event.target.value}`, "info");
+  };
+
+  const showSnackbar = (message, severity) => {
+    setSnackbarState({ open: true, message, severity });
   };
 
   return (
-    <PageWrapper>
+    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
       <Typography variant="h4" gutterBottom>Reports Dashboard</Typography>
-
       <Typography variant="body1" paragraph>
-        Welcome to the Reports Dashboard. Here you can view and analyze various aspects of your property management business.
-        Use the filters below to find specific reports, and click on a report to view more details.
+        Welcome to the Reports Dashboard. Here you can view and analyze various aspects 
+        of your property management business.
       </Typography>
 
-      <Grid container spacing={2} mb={3}>
-        <Grid item xs={12} sm={4}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Search Reports"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Filter by Type</InputLabel>
-            <Select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              label="Filter by Type"
-            >
-              <MenuItem value="">All Types</MenuItem>
-              <MenuItem value="PropertyOverview">Property Overview</MenuItem>
-              <MenuItem value="TicketSummary">Ticket Summary</MenuItem>
-              <MenuItem value="FinancialOverview">Financial Overview</MenuItem>
-              <MenuItem value="TicketStatus">Ticket Status</MenuItem>
-              <MenuItem value="ExpenseOverview">Expense Overview</MenuItem>
-              <MenuItem value="RevenueOverview">Revenue Overview</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Filter by Tags</InputLabel>
-            <Select
-              multiple
-              value={filterTags}
-              onChange={(e) => setFilterTags(e.target.value)}
-              label="Filter by Tags"
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} />
-                  ))}
-                </Box>
-              )}
-            >
-              {Array.from(new Set(sampleReports.flatMap(report => report.tags))).map((tag) => (
-                <MenuItem key={tag} value={tag}>
-                  {tag}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
+      <FilterSection 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        filterType={filterType}
+        setFilterType={setFilterType}
+        filterTags={filterTags}
+        setFilterTags={setFilterTags}
+      />
 
-      <Grid container spacing={3}>
-        {paginatedReports.map((report) => (
-          <Grid item xs={12} sm={6} md={4} key={report.id}>
-            <ReportCard>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>{report.title}</Typography>
-                <Typography variant="body2" color="textSecondary" paragraph>{report.description}</Typography>
-                <Box mb={2}>
-                  {report.tags.map((tag) => (
-                    <Chip key={tag} label={tag} size="small" style={{ marginRight: 4, marginBottom: 4 }} />
-                  ))}
-                </Box>
-                <Box height={300}>
-                  {renderChart(report.type, report.data, report.chartType)}
-                </Box>
-                <Box mt={2} display="flex" justifyContent="space-between">
-                  <Button
-                    variant="outlined"
-                    startIcon={<VisibilityIcon />}
-                    onClick={() => setSelectedReport(report)}
-                  >
-                    View Details
-                  </Button>
-                </Box>
-              </CardContent>
-            </ReportCard>
-          </Grid>
-        ))}
-      </Grid>
+      <ReportsGrid 
+        reports={paginatedReports}
+        renderChart={renderChart}
+        onReportSelect={setSelectedReport}
+      />
 
       {filteredReports.length > REPORTS_PER_PAGE && (
-        <Box display="flex" justifyContent="center" mt={3}>
-          <Pagination
-            count={Math.ceil(filteredReports.length / REPORTS_PER_PAGE)}
-            page={currentPage}
-            onChange={handlePageChange}
-            color="primary"
-          />
-        </Box>
+        <PaginationSection 
+          count={Math.ceil(filteredReports.length / REPORTS_PER_PAGE)}
+          page={currentPage}
+          onChange={(_, value) => setCurrentPage(value)}
+        />
       )}
 
-      <Dialog
-        open={!!selectedReport}
+      <ReportDialog 
+        report={selectedReport}
         onClose={() => setSelectedReport(null)}
-        fullWidth
-        maxWidth="md"
-      >
-        {selectedReport && (
-          <>
-            <DialogTitle>
-              {selectedReport.title}
-              <IconButton
-                aria-label="close"
-                onClick={() => setSelectedReport(null)}
-                sx={{
-                  position: 'absolute',
-                  right: 8,
-                  top: 8,
-                  color: (theme) => theme.palette.grey[500],
-                }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Typography variant="body1" paragraph>{selectedReport.description}</Typography>
-              <Typography variant="subtitle1" gutterBottom>Report Type: {selectedReport.type}</Typography>
-              <Box mb={2}>
-                {selectedReport.tags.map((tag) => (
-                  <Chip key={tag} label={tag} style={{ marginRight: 4, marginBottom: 4 }} />
-                ))}
-              </Box>
-              <Grid container spacing={2} mb={2}>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Frequency</InputLabel>
-                    <Select value={frequency} onChange={handleFrequencyChange} label="Frequency">
-                      <MenuItem value="daily">Daily</MenuItem>
-                      <MenuItem value="weekly">Weekly</MenuItem>
-                      <MenuItem value="monthly">Monthly</MenuItem>
-                      <MenuItem value="yearly">Yearly</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Chart Type</InputLabel>
-                    <Select value={chartType || selectedReport.chartType} onChange={handleChartTypeChange} label="Chart Type">
-                      <MenuItem value="bar">Bar Chart</MenuItem>
-                      <MenuItem value="line">Line Chart</MenuItem>
-                      <MenuItem value="pie">Pie Chart</MenuItem>
-                      <MenuItem value="area">Area Chart</MenuItem>
-                      <MenuItem value="doughnut">Doughnut Chart</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-              <Box ref={chartRef} height={400}>
-                {renderChart(selectedReport.type, selectedReport.data, chartType || selectedReport.chartType)}
-              </Box>
-              <TableContainer component={Paper} style={{ marginTop: 20 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      {Object.keys(selectedReport.data[0]).map((key) => (
-                        <TableCell key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {selectedReport.data.map((row, index) => (
-                      <TableRow key={index}>
-                        {Object.values(row).map((value, cellIndex) => (
-                          <TableCell key={cellIndex}>{value}</TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </DialogContent>
-            <DialogActions>
-              <CSVLink
-                data={selectedReport.data}
-                filename={`${selectedReport.title}.csv`}
-                className="hidden"
-              >
-                <Button startIcon={<DownloadIcon />} onClick={() => handleDownload('csv')}>
-                  Download CSV
-                </Button>
-              </CSVLink>
-              <Button onClick={() => handleDownload('excel')} startIcon={<ExcelIcon />}>
-                Download Excel
-              </Button>
-              <Button onClick={() => handleDownload('pdf')} startIcon={<PdfIcon />}>
-                Download PDF
-              </Button>
-              <Button onClick={() => handleDownload('png')} startIcon={<ImageIcon />}>
-                Download PNG
-              </Button>
-              <Button onClick={() => setSelectedReport(null)}>Close</Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
+        frequency={frequency}
+        chartType={chartType}
+        onFrequencyChange={handleFrequencyChange}
+        onChartTypeChange={handleChartTypeChange}
+        renderChart={renderChart}
+        onDownload={handleDownload}
+        chartRef={chartRef}
+      />
 
       <Snackbar
-        open={snackbarOpen}
+        open={snackbarState.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
+        onClose={() => setSnackbarState(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
-        <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
-          {snackbarMessage}
+        <Alert 
+          onClose={() => setSnackbarState(prev => ({ ...prev, open: false }))} 
+          severity={snackbarState.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarState.message}
         </Alert>
       </Snackbar>
-    </PageWrapper>
+    </Box>
   );
 };
 

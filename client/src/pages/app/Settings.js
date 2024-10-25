@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Typography, Grid, Box, Card, Button, TextField, Select, MenuItem, FormControl,
-  FormControlLabel, Switch, InputLabel, Avatar, Tooltip, IconButton, useTheme,
+  FormControlLabel, Switch, InputLabel, Avatar, Tooltip, IconButton,
   Snackbar, Alert, InputAdornment, Dialog, DialogActions, DialogContent,
   DialogTitle, CircularProgress, Autocomplete
 } from '@mui/material';
@@ -16,6 +16,7 @@ import {
 import { useUser } from '../../context/UserContext';
 import { userApi, authApi } from '../../api';
 import moment from 'moment-timezone';
+import './Settings.css';
 
 const usePasswordVisibility = () => {
   const [showPasswords, setShowPasswords] = useState({
@@ -29,8 +30,356 @@ const usePasswordVisibility = () => {
   return [showPasswords, togglePasswordVisibility];
 };
 
+const TabButton = ({ icon, label, active, onClick }) => (
+  <Button
+    startIcon={icon}
+    onClick={onClick}
+    fullWidth
+    className={`tab-button ${active ? 'active' : ''}`}
+  >
+    {label}
+  </Button>
+);
+
+const SectionTitle = ({ icon, title, tooltipText }) => (
+  <Box className="section-title">
+    {icon}
+    <Typography variant="h6" fontWeight="bold">
+      {title}
+    </Typography>
+    <Tooltip title={tooltipText}>
+      <IconButton size="small">
+        <InfoIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  </Box>
+);
+
+const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, handleSave, avatarPreview }) => {
+  const timezones = moment.tz.names().map(tz => ({
+    value: tz,
+    label: `${tz} (${moment.tz(tz).format('Z')})`
+  }));
+  const currencies = [
+    { code: 'USD', name: 'US Dollar' },
+    { code: 'EUR', name: 'Euro' },
+    { code: 'GBP', name: 'British Pound' },
+    { code: 'JPY', name: 'Japanese Yen' },
+    { code: 'AUD', name: 'Australian Dollar' },
+    { code: 'CAD', name: 'Canadian Dollar' },
+    { code: 'CHF', name: 'Swiss Franc' },
+    { code: 'CNY', name: 'Chinese Yuan' },
+    { code: 'SEK', name: 'Swedish Krona' },
+    { code: 'NZD', name: 'New Zealand Dollar' },
+  ];
+  const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'es', name: 'Spanish' },
+    { code: 'fr', name: 'French' },
+    { code: 'de', name: 'German' },
+    { code: 'it', name: 'Italian' },
+    { code: 'pt', name: 'Portuguese' },
+    { code: 'ru', name: 'Russian' },
+    { code: 'zh', name: 'Chinese' },
+    { code: 'ja', name: 'Japanese' },
+    { code: 'ko', name: 'Korean' },
+  ];
+
+  return (
+    <div className="preferences-container">
+      <SectionTitle
+        icon={<PersonIcon />}
+        title="User Preferences"
+        tooltipText="Manage your personal preferences"
+      />
+      <div className="avatar-container">
+        <div className="avatar-wrapper">
+          <Avatar
+            src={avatarPreview || (settings.profilePicture && `${process.env.REACT_APP_API_URL}${settings.profilePicture}`)}
+            className="profile-avatar"
+          />
+          <label htmlFor="profile-picture-input" className="camera-button-wrapper">
+            <IconButton 
+              component="span"
+              className="camera-icon-button"
+              size="small"
+            >
+              <CameraIcon />
+            </IconButton>
+          </label>
+          <input
+            id="profile-picture-input"
+            type="file"
+            accept="image/*"
+            onChange={handleProfilePictureChange}
+            style={{ display: 'none' }}
+          />
+        </div>
+      </div>
+      <Grid container spacing={2} className="form-grid">
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Username"
+            variant="outlined"
+            name="username"
+            value={settings.username}
+            onChange={handleChange}
+            fullWidth
+            className="form-field"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth className="form-field">
+            <InputLabel>Language</InputLabel>
+            <Select
+              name="language"
+              value={settings.language}
+              onChange={handleChange}
+            >
+              {languages.map((lang) => (
+                <MenuItem key={lang.code} value={lang.code}>{lang.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Autocomplete
+            options={timezones}
+            getOptionLabel={(option) => option.label}
+            value={timezones.find(tz => tz.value === settings.timeZone) || null}
+            onChange={(event, newValue) => {
+              handleChange({
+                target: { name: 'timeZone', value: newValue ? newValue.value : '' }
+              });
+            }}
+            renderInput={(params) => <TextField {...params} label="Time Zone" className="form-field" />}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth className="form-field">
+            <InputLabel>Currency</InputLabel>
+            <Select
+              name="currency"
+              value={settings.currency}
+              onChange={handleChange}
+            >
+              {currencies.map((curr) => (
+                <MenuItem key={curr.code} value={curr.code}>{`${curr.code} - ${curr.name}`}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth className="form-field">
+            <InputLabel>Date Format</InputLabel>
+            <Select
+              name="dateFormat"
+              value={settings.dateFormat}
+              onChange={handleChange}
+            >
+              <MenuItem value="MM/DD/YYYY">MM/DD/YYYY</MenuItem>
+              <MenuItem value="DD/MM/YYYY">DD/MM/YYYY</MenuItem>
+              <MenuItem value="YYYY-MM-DD">YYYY-MM-DD</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth className="form-field">
+            <InputLabel>Measurement Unit</InputLabel>
+            <Select
+              name="measurementUnit"
+              value={settings.measurementUnit}
+              onChange={handleChange}
+            >
+              <MenuItem value="metric">Metric</MenuItem>
+              <MenuItem value="imperial">Imperial</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+      <Box className="save-button-container">
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSave}
+          startIcon={<SaveIcon />}
+          className="save-button"
+        >
+          Save Preferences
+        </Button>
+      </Box>
+    </div>
+  );
+};
+
+const NotificationSettings = ({ settings, handleChange }) => (
+  <div className="notifications-container">
+    <SectionTitle
+      icon={<NotificationsIcon />}
+      title="Notification Settings"
+      tooltipText="Configure your notification preferences"
+    />
+    <FormControlLabel
+      control={
+        <Switch
+          checked={settings.emailNotifications}
+          onChange={handleChange}
+          name="emailNotifications"
+          className="settings-switch"
+        />
+      }
+      label="Email Notifications"
+      className="switch-label"
+    />
+    <FormControlLabel
+      control={
+        <Switch
+          checked={settings.pushNotifications}
+          onChange={handleChange}
+          name="pushNotifications"
+          className="settings-switch"
+        />
+      }
+      label="Push Notifications"
+      className="switch-label"
+    />
+    <FormControlLabel
+      control={
+        <Switch
+          checked={settings.inAppNotifications}
+          onChange={handleChange}
+          name="inAppNotifications"
+          className="settings-switch"
+        />
+      }
+      label="In-App Notifications"
+      className="switch-label"
+    />
+  </div>
+);
+
+const AppearanceSettings = ({ settings, handleChange }) => (
+  <div className="appearance-container">
+    <SectionTitle
+      icon={<PaletteIcon />}
+      title="Appearance"
+      tooltipText="Customize your app appearance"
+    />
+    <FormControl fullWidth className="form-field">
+      <InputLabel>Theme</InputLabel>
+      <Select
+        name="theme"
+        value={settings.theme}
+        onChange={handleChange}
+      >
+        <MenuItem value="light">Light</MenuItem>
+        <MenuItem value="dark">Dark</MenuItem>
+      </Select>
+    </FormControl>
+    <FormControl fullWidth className="form-field">
+      <InputLabel>Font Size</InputLabel>
+      <Select
+        name="fontSize"
+        value={settings.fontSize}
+        onChange={handleChange}
+      >
+        <MenuItem value="small">Small</MenuItem>
+        <MenuItem value="medium">Medium</MenuItem>
+        <MenuItem value="large">Large</MenuItem>
+      </Select>
+    </FormControl>
+  </div>
+);
+
+const SecuritySettings = ({ settings, handleChange, handleChangePassword, handleEmailChangeRequest, userEmail }) => (
+  <div className="security-container">
+    <SectionTitle
+      icon={<SecurityIcon />}
+      title="Security Settings"
+      tooltipText="Manage your security settings"
+    />
+    <FormControlLabel
+      control={
+        <Switch
+          checked={settings.twoFactorAuth}
+          onChange={handleChange}
+          name="twoFactorAuth"
+          className="settings-switch"
+        />
+      }
+      label="Two-Factor Authentication"
+      className="switch-label"
+    />
+    <FormControlLabel
+      control={
+        <Switch
+          checked={settings.loginAlerts}
+          onChange={handleChange}
+          name="loginAlerts"
+          className="settings-switch"
+        />
+      }
+      label="Login Alerts"
+      className="switch-label"
+    />
+    <Box className="email-section">
+      <SectionTitle
+        icon={<EmailIcon />}
+        title="Email Address"
+        tooltipText="Change your email address"
+      />
+      <Box className="email-change-container">
+        <Typography variant="body1" className="current-email">{userEmail}</Typography>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleEmailChangeRequest}
+          className="change-email-button"
+        >
+          Change Email
+        </Button>
+      </Box>
+    </Box>
+    <Box className="password-section">
+      <SectionTitle
+        icon={<LockIcon />}
+        title="Change Password"
+        tooltipText="Update your password"
+      />
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleChangePassword}
+        startIcon={<LockIcon />}
+        className="change-password-button"
+      >
+        Change Password
+      </Button>
+    </Box>
+  </div>
+);
+
+const getTabIcon = (tab) => {
+  switch (tab) {
+    case 'preferences': return <PersonIcon />;
+    case 'notifications': return <NotificationsIcon />;
+    case 'appearance': return <PaletteIcon />;
+    case 'security': return <SecurityIcon />;
+    default: return null;
+  }
+};
+
+const getTabLabel = (tab) => {
+  switch (tab) {
+    case 'preferences': return 'User Preferences';
+    case 'notifications': return 'Notification Settings';
+    case 'appearance': return 'Appearance';
+    case 'security': return 'Security';
+    default: return '';
+  }
+};
+
 const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
-  const theme = useTheme();
   const [activeTab, setActiveTab] = useState('preferences');
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -118,7 +467,6 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
     } catch (error) {
       console.error('Error updating setting:', error);
       setSnackbar({ open: true, message: `Failed to update setting: ${error.message}`, severity: 'error' });
-      // Revert the change in local state if the API call fails
       setSettings(prev => ({
         ...prev,
         [section]: {
@@ -132,21 +480,58 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
   const handleProfilePictureChange = useCallback(async (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Please select a valid image file', 
+          severity: 'error' 
+        });
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Image size should be less than 5MB', 
+          severity: 'error' 
+        });
+        return;
+      }
+
       try {
         setLoading(true);
         const formData = new FormData();
         formData.append('avatar', file);
-        const response = await userApi.uploadAvatar(formData);
-        setSettings(prev => ({
-          ...prev,
-          preferences: { ...prev.preferences, profilePicture: response.avatarUrl },
-        }));
-        setAvatarPreview(`${process.env.REACT_APP_API_URL}${response.avatarUrl}`);
-        await updateUserSettings({ avatar: response.avatarUrl });
-        setSnackbar({ open: true, message: 'Profile picture updated successfully', severity: 'success' });
+        
+        const config = {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        };
+
+        const response = await userApi.uploadAvatar(formData, config);
+        
+        if (response && response.avatarUrl) {
+          setSettings(prev => ({
+            ...prev,
+            preferences: { ...prev.preferences, profilePicture: response.avatarUrl },
+          }));
+          setAvatarPreview(URL.createObjectURL(file));
+          await updateUserSettings({ avatar: response.avatarUrl });
+          setSnackbar({ 
+            open: true, 
+            message: 'Profile picture updated successfully', 
+            severity: 'success' 
+          });
+        }
       } catch (error) {
         console.error('Error uploading avatar:', error);
-        setSnackbar({ open: true, message: 'Failed to upload profile picture', severity: 'error' });
+        setSnackbar({ 
+          open: true, 
+          message: error.response?.data?.message || 'Failed to upload profile picture', 
+          severity: 'error' 
+        });
       } finally {
         setLoading(false);
       }
@@ -221,13 +606,13 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
   }), [settings, handleChange, handleProfilePictureChange, handleSave, user.email, avatarPreview]);
 
   return (
-    <Box sx={{ padding: { xs: '1rem', sm: '2rem' }, backgroundColor: theme.palette.background.default, minHeight: '100vh', color: theme.palette.text.primary }}>
-      <Typography variant="h4" fontWeight="bold" mb={3}>
+    <Box className="settings-page">
+      <Typography variant="h4" className="page-title">
         Settings
       </Typography>
       <Grid container spacing={3}>
         <Grid item xs={12} md={3}>
-          <Card sx={{ padding: '1rem', boxShadow: theme.shadows[1], borderRadius: '12px', backgroundColor: theme.palette.background.paper, height: '100%' }}>
+          <Card className="sidebar-card">
             {Object.keys(tabContent).map((tab) => (
               <TabButton
                 key={tab}
@@ -240,9 +625,9 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
           </Card>
         </Grid>
         <Grid item xs={12} md={9}>
-          <Card sx={{ padding: '1.5rem', boxShadow: theme.shadows[1], borderRadius: '12px', backgroundColor: theme.palette.background.paper }}>
+          <Card className="content-card">
             {loading ? (
-              <Box display="flex" justifyContent="center" alignItems="center" height="300px">
+              <Box className="loading-container">
                 <CircularProgress />
               </Box>
             ) : (
@@ -257,20 +642,15 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
           </Card>
         </Grid>
       </Grid>
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+
+      <Dialog 
+        open={dialogState.email.open} 
+        onClose={() => setDialogState(prev => ({ ...prev, email: { ...prev.email, open: false } }))}
+        className="dialog-container"
       >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-      <Dialog open={dialogState.email.open} onClose={() => setDialogState(prev => ({ ...prev, email: { ...prev.email, open: false } }))}>
         <DialogTitle>Change Email Address</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" mb={2}>
+        <DialogContent className="dialog-content">
+          <Typography variant="body2" color="text.secondary" className="dialog-description">
             You can only change your email address once every 24 hours. Are you sure you want to proceed?
           </Typography>
           <TextField
@@ -281,6 +661,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.email.newEmail}
             onChange={(e) => setDialogState(prev => ({ ...prev, email: { ...prev.email, newEmail: e.target.value } }))}
+            className="dialog-field"
           />
           <TextField
             margin="dense"
@@ -289,17 +670,27 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.email.password}
             onChange={(e) => setDialogState(prev => ({ ...prev, email: { ...prev.email, password: e.target.value } }))}
+            className="dialog-field"
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogState(prev => ({ ...prev, email: { ...prev.email, open: false } }))}>Cancel</Button>
-          <Button onClick={handleEmailChange} color="primary">Change Email</Button>
+        <DialogActions className="dialog-actions">
+          <Button onClick={() => setDialogState(prev => ({ ...prev, email: { ...prev.email, open: false } }))}>
+            Cancel
+          </Button>
+          <Button onClick={handleEmailChange} color="primary">
+            Change Email
+          </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={dialogState.password.open} onClose={() => setDialogState(prev => ({ ...prev, password: { ...prev.password, open: false } }))}>
+
+      <Dialog 
+        open={dialogState.password.open} 
+        onClose={() => setDialogState(prev => ({ ...prev, password: { ...prev.password, open: false } }))}
+        className="dialog-container"
+      >
         <DialogTitle>Change Password</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" mb={2}>
+        <DialogContent className="dialog-content">
+          <Typography variant="body2" color="text.secondary" className="dialog-description">
             You can only change your password once every 30 minutes. Are you sure you want to proceed?
           </Typography>
           <TextField
@@ -309,6 +700,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.password.oldPassword}
             onChange={(e) => setDialogState(prev => ({ ...prev, password: { ...prev.password, oldPassword: e.target.value } }))}
+            className="dialog-field"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -330,6 +722,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.password.newPassword}
             onChange={(e) => setDialogState(prev => ({ ...prev, password: { ...prev.password, newPassword: e.target.value } }))}
+            className="dialog-field"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -351,6 +744,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.password.confirmPassword}
             onChange={(e) => setDialogState(prev => ({ ...prev, password: { ...prev.password, confirmPassword: e.target.value } }))}
+            className="dialog-field"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -366,369 +760,33 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogState(prev => ({ ...prev, password: { ...prev.password, open: false } }))}>Cancel</Button>
-          <Button onClick={handleChangePassword} color="primary">Change Password</Button>
+        <DialogActions className="dialog-actions">
+          <Button onClick={() => setDialogState(prev => ({ ...prev, password: { ...prev.password, open: false } }))}>
+            Cancel
+          </Button>
+          <Button onClick={handleChangePassword} color="primary">
+            Change Password
+          </Button>
         </DialogActions>
       </Dialog>
-    </Box>
-  );
-};
 
-const TabButton = ({ icon, label, active, onClick }) => {
-  const theme = useTheme();
-  return (
-    <Button
-      startIcon={icon}
-      onClick={onClick}
-      fullWidth
-      sx={{
-        justifyContent: 'flex-start',
-        padding: '0.75rem 1rem',
-        marginBottom: '0.5rem',
-        borderRadius: '8px',
-        color: active ? theme.palette.primary.main : theme.palette.text.primary,
-        backgroundColor: active ? theme.palette.action.selected : 'transparent',
-        '&:hover': {
-          backgroundColor: theme.palette.action.hover,
-        },
-      }}
-    >
-      {label}
-    </Button>
-  );
-};
-
-const SectionTitle = ({ icon, title, tooltipText }) => (
-  <Box display="flex" alignItems="center" mb={2}>
-    {icon}
-    <Typography variant="h6" fontWeight="bold" ml={1}>
-      {title}
-    </Typography>
-    <Tooltip title={tooltipText}>
-      <IconButton size="small" sx={{ ml: 1 }}>
-        <InfoIcon fontSize="small" />
-      </IconButton>
-    </Tooltip>
-  </Box>
-);
-
-const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, handleSave, avatarPreview }) => {
-  const timezones = moment.tz.names().map(tz => ({
-    value: tz,
-    label: `${tz} (${moment.tz(tz).format('Z')})`
-  }));
-  const currencies = [
-    { code: 'USD', name: 'US Dollar' },
-    { code: 'EUR', name: 'Euro' },
-    { code: 'GBP', name: 'British Pound' },
-    { code: 'JPY', name: 'Japanese Yen' },
-    { code: 'AUD', name: 'Australian Dollar' },
-    { code: 'CAD', name: 'Canadian Dollar' },
-    { code: 'CHF', name: 'Swiss Franc' },
-    { code: 'CNY', name: 'Chinese Yuan' },
-    { code: 'SEK', name: 'Swedish Krona' },
-    { code: 'NZD', name: 'New Zealand Dollar' },
-  ];
-  const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'fr', name: 'French' },
-    { code: 'de', name: 'German' },
-    { code: 'it', name: 'Italian' },
-    { code: 'pt', name: 'Portuguese' },
-    { code: 'ru', name: 'Russian' },
-    { code: 'zh', name: 'Chinese' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'ko', name: 'Korean' },
-  ];
-
-  return (
-    <>
-      <SectionTitle
-        icon={<PersonIcon />}
-        title="User Preferences"
-        tooltipText="Manage your personal preferences"
-      />
-      <Box display="flex" justifyContent="center" mb={3}>
-        <Box position="relative">
-          <Avatar
-            src={avatarPreview || (settings.profilePicture && `${process.env.REACT_APP_API_URL}${settings.profilePicture}`)}
-            sx={{ width: 120, height: 120, cursor: 'pointer' }}
-          />
-          <label htmlFor="profile-picture-input">
-            <IconButton
-              sx={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                backgroundColor: (theme) => theme.palette.primary.main,
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: (theme) => theme.palette.primary.dark,
-                },
-              }}
-              component="span"
-            >
-              <CameraIcon />
-            </IconButton>
-          </label>
-          <input
-            id="profile-picture-input"
-            type="file"
-            accept="image/*"
-            onChange={handleProfilePictureChange}
-            style={{ display: 'none' }}
-          />
-        </Box>
-      </Box>
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            label="Username"
-            variant="outlined"
-            name="username"
-            value={settings.username}
-            onChange={handleChange}
-            fullWidth
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
-            <InputLabel>Language</InputLabel>
-            <Select
-              name="language"
-              value={settings.language}
-              onChange={handleChange}
-            >
-              {languages.map((lang) => (
-                <MenuItem key={lang.code} value={lang.code}>{lang.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Autocomplete
-            options={timezones}
-            getOptionLabel={(option) => option.label}
-            value={timezones.find(tz => tz.value === settings.timeZone) || null}
-            onChange={(event, newValue) => {
-              handleChange({
-                target: { name: 'timeZone', value: newValue ? newValue.value : '' }
-              });
-            }}
-            renderInput={(params) => <TextField {...params} label="Time Zone" />}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
-            <InputLabel>Currency</InputLabel>
-            <Select
-              name="currency"
-              value={settings.currency}
-              onChange={handleChange}
-            >
-              {currencies.map((curr) => (
-                <MenuItem key={curr.code} value={curr.code}>{`${curr.code} - ${curr.name}`}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
-            <InputLabel>Date Format</InputLabel>
-            <Select
-              name="dateFormat"
-              value={settings.dateFormat}
-              onChange={handleChange}
-            >
-              <MenuItem value="MM/DD/YYYY">MM/DD/YYYY</MenuItem>
-              <MenuItem value="DD/MM/YYYY">DD/MM/YYYY</MenuItem>
-              <MenuItem value="YYYY-MM-DD">YYYY-MM-DD</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
-            <InputLabel>Measurement Unit</InputLabel>
-            <Select
-              name="measurementUnit"
-              value={settings.measurementUnit}
-              onChange={handleChange}
-            >
-              <MenuItem value="metric">Metric</MenuItem>
-              <MenuItem value="imperial">Imperial</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
-      <Box mt={3}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSave}
-          startIcon={<SaveIcon />}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        className="snackbar"
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          className="alert"
         >
-          Save Preferences
-        </Button>
-      </Box>
-    </>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
-};
-
-const NotificationSettings = ({ settings, handleChange }) => (
-  <>
-    <SectionTitle
-      icon={<NotificationsIcon />}
-      title="Notification Settings"
-      tooltipText="Configure your notification preferences"
-    />
-    <FormControlLabel
-      control={
-        <Switch
-          checked={settings.emailNotifications}
-          onChange={handleChange}
-          name="emailNotifications"
-        />
-      }
-      label="Email Notifications"
-    />
-    <FormControlLabel
-      control={
-        <Switch
-          checked={settings.pushNotifications}
-          onChange={handleChange}
-          name="pushNotifications"
-        />
-      }
-      label="Push Notifications"
-    />
-    <FormControlLabel
-      control={
-        <Switch
-          checked={settings.inAppNotifications}
-          onChange={handleChange}
-          name="inAppNotifications"
-        />
-      }
-      label="In-App Notifications"
-    />
-  </>
-);
-
-const AppearanceSettings = ({ settings, handleChange }) => (
-  <>
-    <SectionTitle
-      icon={<PaletteIcon />}
-      title="Appearance"
-      tooltipText="Customize your app appearance"
-    />
-    <FormControl fullWidth sx={{ mb: 3 }}>
-      <InputLabel>Theme</InputLabel>
-      <Select
-        name="theme"
-        value={settings.theme}
-        onChange={handleChange}
-      >
-        <MenuItem value="light">Light</MenuItem>
-        <MenuItem value="dark">Dark</MenuItem>
-      </Select>
-    </FormControl>
-    <FormControl fullWidth sx={{ mb: 3 }}>
-      <InputLabel>Font Size</InputLabel>
-      <Select
-        name="fontSize"
-        value={settings.fontSize}
-        onChange={handleChange}
-      >
-        <MenuItem value="small">Small</MenuItem>
-        <MenuItem value="medium">Medium</MenuItem>
-        <MenuItem value="large">Large</MenuItem>
-      </Select>
-    </FormControl>
-  </>
-);
-
-const SecuritySettings = ({ settings, handleChange, handleChangePassword, handleEmailChangeRequest, userEmail }) => (
-  <>
-    <SectionTitle
-      icon={<SecurityIcon />}
-      title="Security Settings"
-      tooltipText="Manage your security settings"
-    />
-    <FormControlLabel
-      control={
-        <Switch
-          checked={settings.twoFactorAuth}
-          onChange={handleChange}
-          name="twoFactorAuth"
-        />
-      }
-      label="Two-Factor Authentication"
-    />
-    <FormControlLabel
-      control={
-        <Switch
-          checked={settings.loginAlerts}
-          onChange={handleChange}
-          name="loginAlerts"
-        />
-      }
-      label="Login Alerts"
-    />
-    <Box mt={3}>
-      <SectionTitle
-        icon={<EmailIcon />}
-        title="Email Address"
-        tooltipText="Change your email address"
-      />
-      <Box display="flex" alignItems="center" mb={2}>
-        <Typography variant="body1" mr={2}>{userEmail}</Typography>
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={handleEmailChangeRequest}
-        >
-          Change Email
-        </Button>
-      </Box>
-    </Box>
-    <Box mt={3}>
-      <SectionTitle
-        icon={<LockIcon />}
-        title="Change Password"
-        tooltipText="Update your password"
-      />
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleChangePassword}
-        startIcon={<LockIcon />}
-      >
-        Change Password
-      </Button>
-    </Box>
-  </>
-);
-
-const getTabIcon = (tab) => {
-  switch (tab) {
-    case 'preferences': return <PersonIcon />;
-    case 'notifications': return <NotificationsIcon />;
-    case 'appearance': return <PaletteIcon />;
-    case 'security': return <SecurityIcon />;
-    default: return null;
-  }
-};
-
-const getTabLabel = (tab) => {
-  switch (tab) {
-    case 'preferences': return 'User Preferences';
-    case 'notifications': return 'Notification Settings';
-    case 'appearance': return 'Appearance';
-    case 'security': return 'Security';
-    default: return '';
-  }
 };
 
 export default SettingsPage;

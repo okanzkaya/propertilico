@@ -1,8 +1,6 @@
-import React, { useState, useMemo, useCallback, useEffect, forwardRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  Box,
   Typography,
-  Grid,
   TextField,
   InputAdornment,
   IconButton,
@@ -12,7 +10,7 @@ import {
   DialogContent,
   DialogTitle,
   Snackbar,
-  Alert as MuiAlert,
+  Alert,
   useTheme,
   Card,
   CardContent,
@@ -57,186 +55,41 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 
-import { styled, alpha } from '@mui/material/styles';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { ErrorBoundary } from 'react-error-boundary';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
 import { formatDistanceToNow } from 'date-fns';
 import axiosInstance from '../../axiosSetup';
+import './Documents.css';
 
 // Constants
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_TOTAL_FILES = 10;
-const MAX_TOTAL_SIZE = MAX_FILE_SIZE * MAX_TOTAL_FILES;
-const ALLOWED_FILE_TYPES = {
-  documents: {
-    mimeTypes: [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain'
-    ],
-    extensions: ['.pdf', '.doc', '.docx', '.txt']
-  },
-  images: {
-    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-  },
-  videos: {
-    mimeTypes: ['video/mp4', 'video/webm', 'video/avi'],
-    extensions: ['.mp4', '.webm', '.avi']
+const FILE_CONFIG = {
+  MAX_SIZE: 10 * 1024 * 1024, // 10MB
+  MAX_TOTAL_FILES: 10,
+  MAX_TOTAL_SIZE: 10 * 1024 * 1024 * 10,
+  ALLOWED_TYPES: {
+    documents: {
+      mimeTypes: [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+      ],
+      extensions: ['.pdf', '.doc', '.docx', '.txt']
+    },
+    images: {
+      mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+    },
+    videos: {
+      mimeTypes: ['video/mp4', 'video/webm', 'video/avi'],
+      extensions: ['.mp4', '.webm', '.avi']
+    }
   }
 };
 
-// Priority Queue for Preview Loading
-class PriorityQueue {
-  constructor() {
-    this.values = [];
-  }
-
-  enqueue(element, priority) {
-    this.values.push({ element, priority, timestamp: Date.now() });
-    this.sort();
-  }
-
-  dequeue() {
-    return this.values.shift()?.element;
-  }
-
-  sort() {
-    this.values.sort((a, b) => {
-      if (b.priority !== a.priority) {
-        return b.priority - a.priority;
-      }
-      return a.timestamp - b.timestamp;
-    });
-  }
-
-  isEmpty() {
-    return this.values.length === 0;
-  }
-}
-
-// Preview Queue System
-const previewQueue = {
-  queue: new Map(),
-  inProgress: new Set(),
-  maxConcurrent: 3,
-  priorityQueue: new PriorityQueue(),
-
-  async add(fileId, loadFn, priority = 1) {
-    if (this.queue.has(fileId)) {
-      return this.queue.get(fileId);
-    }
-
-    if (this.inProgress.has(fileId)) {
-      return new Promise((resolve) => {
-        const checkInterval = setInterval(() => {
-          if (!this.inProgress.has(fileId)) {
-            clearInterval(checkInterval);
-            resolve(this.queue.get(fileId));
-          }
-        }, 100);
-      });
-    }
-
-    const promise = new Promise((resolve, reject) => {
-      if (this.inProgress.size >= this.maxConcurrent) {
-        this.priorityQueue.enqueue({
-          fileId,
-          loadFn,
-          resolve,
-          reject,
-          priority,
-        }, priority);
-      } else {
-        this.process(fileId, loadFn).then(resolve).catch(reject);
-      }
-    });
-
-    this.queue.set(fileId, promise);
-    return promise;
-  },
-
-  async process(fileId, loadFn) {
-    this.inProgress.add(fileId);
-    try {
-      const result = await loadFn();
-      return result;
-    } finally {
-      this.inProgress.delete(fileId);
-      setTimeout(() => this.processNext(), 50);
-    }
-  },
-
-  processNext() {
-    if (this.inProgress.size >= this.maxConcurrent || this.priorityQueue.isEmpty()) {
-      return;
-    }
-
-    while (this.inProgress.size < this.maxConcurrent && !this.priorityQueue.isEmpty()) {
-      const { fileId, loadFn, resolve, reject } = this.priorityQueue.dequeue();
-      this.process(fileId, loadFn).then(resolve).catch(reject);
-    }
-  },
-
-  clear() {
-    this.queue.clear();
-    this.inProgress.clear();
-    this.priorityQueue = new PriorityQueue();
-  }
-};
-
-// Utility Functions
-const validateFiles = (files) => {
-  const results = {
-    valid: [],
-    errors: []
-  };
-
-  let totalSize = 0;
-
-  Array.from(files).forEach(file => {
-    const errors = [];
-    totalSize += file.size;
-
-    // Check individual file size
-    if (file.size > MAX_FILE_SIZE) {
-      errors.push(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
-    }
-
-    // Check file type
-    const isAllowedType = Object.values(ALLOWED_FILE_TYPES)
-      .flatMap(type => type.mimeTypes)
-      .includes(file.type);
-
-    if (!isAllowedType) {
-      errors.push('File type not supported');
-    }
-
-    if (errors.length === 0) {
-      results.valid.push(file);
-    } else {
-      results.errors.push({
-        name: file.name,
-        errors
-      });
-    }
-  });
-
-  // Check total size
-  if (totalSize > MAX_TOTAL_SIZE) {
-    results.errors.push({
-      name: 'Total Size',
-      errors: [`Total size exceeds ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit`]
-    });
-    results.valid = [];
-  }
-
-  return results;
-};
-
+// Utility functions
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -245,71 +98,45 @@ const formatFileSize = (bytes) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
-// Styled Components
-const StyledCard = styled(motion(Card))(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  transition: 'all 0.2s ease-in-out',
-  cursor: 'pointer',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[8],
-  },
-}));
-const StyledDropzone = styled('div', {
-  shouldForwardProp: prop => !['isDragActive', 'isDragReject'].includes(prop)
-})(({ theme, isDragActive, isDragReject }) => ({
-  padding: theme.spacing(4),
-  border: `2px dashed ${isDragReject
-    ? theme.palette.error.main
-    : isDragActive
-      ? theme.palette.primary.main
-      : theme.palette.divider}`,
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: isDragActive
-    ? alpha(theme.palette.primary.main, 0.1)
-    : isDragReject
-      ? alpha(theme.palette.error.main, 0.1)
-      : theme.palette.background.default,
-  textAlign: 'center',
-  cursor: 'pointer',
-  transition: 'all 0.2s ease-in-out',
-}));
+const validateFiles = (files) => {
+  const results = { valid: [], errors: [] };
+  let totalSize = 0;
 
-const PageWrapper = styled(Box)(({ theme }) => ({
-  minHeight: '100vh',
-  padding: theme.spacing(3),
-  backgroundColor: theme.palette.background.default,
-  color: theme.palette.text.primary,
-}));
+  Array.from(files).forEach(file => {
+    const errors = [];
+    totalSize += file.size;
 
-const HeaderWrapper = styled(Box)(({ theme }) => ({
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  marginBottom: theme.spacing(3),
-  paddingBottom: theme.spacing(2),
-}));
+    if (file.size > FILE_CONFIG.MAX_SIZE) {
+      errors.push(`File size exceeds ${FILE_CONFIG.MAX_SIZE / 1024 / 1024}MB limit`);
+    }
 
-// Alert Component
-const Alert = forwardRef((props, ref) => (
-  <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />
-));
+    const isAllowedType = Object.values(FILE_CONFIG.ALLOWED_TYPES)
+      .flatMap(type => type.mimeTypes)
+      .includes(file.type);
+
+    if (!isAllowedType) {
+      errors.push('File type not supported');
+    }
+
+    errors.length === 0 ? results.valid.push(file) : results.errors.push({ name: file.name, errors });
+  });
+
+  if (totalSize > FILE_CONFIG.MAX_TOTAL_SIZE) {
+    results.errors.push({
+      name: 'Total Size',
+      errors: [`Total size exceeds ${FILE_CONFIG.MAX_TOTAL_SIZE / 1024 / 1024}MB limit`]
+    });
+    results.valid = [];
+  }
+
+  return results;
+};
 
 // Error Fallback Component
 const ErrorFallback = ({ error, resetErrorBoundary }) => (
-  <Box sx={{
-    p: 3,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 400,
-  }}>
-    <ErrorIcon color="error" sx={{ fontSize: 64, mb: 2 }} />
-    <Typography variant="h6" color="error" gutterBottom>
-      Something went wrong
-    </Typography>
-    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+  <div className="error-fallback">
+    <ErrorIcon className="error-icon" />
+    <Typography variant="h6" className="error-message">
       {error.message}
     </Typography>
     <Button
@@ -319,221 +146,130 @@ const ErrorFallback = ({ error, resetErrorBoundary }) => (
     >
       Try Again
     </Button>
-  </Box>
+  </div>
 );
 
-// FilePreview Component
+// File Preview Component
 const FilePreview = React.memo(({ file, onLoadError }) => {
-  const [state, setState] = useState({
-    isLoading: true,
+  const [previewState, setPreviewState] = useState({
+    loading: true,
     error: false,
-    previewUrl: '',
+    url: '',
     showPlaceholder: false
   });
 
-  // Cleanup function
-  useEffect(() => {
-    return () => {
-      if (state.previewUrl && !state.previewUrl.startsWith('data:')) {
-        URL.revokeObjectURL(state.previewUrl);
-      }
-    };
-  }, [state.previewUrl]);
-
-  // Load preview only for images
-  useEffect(() => {
-    let mounted = true;
+  // Modify the FilePreview component's useEffect
+useEffect(() => {
+  let mounted = true;
+  let currentUrl = '';
+  
+  const loadPreview = async () => {
+    if (!file?.id || file.category !== 'image') {
+      setPreviewState(prev => ({
+        ...prev,
+        loading: false,
+        showPlaceholder: true
+      }));
+      return;
+    }
     
-    const loadPreview = async () => {
-      if (!file?.id || file.category !== 'image') {
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          showPlaceholder: true
-        }));
-        return;
-      }
+    try {
+      const response = await axiosInstance.get(`/api/documents/${file.id}/preview`, {
+        responseType: 'blob',
+        headers: { 'Accept': 'image/*' }
+      });
+
+      if (!mounted) return;
+
+      // Create URL and store it 
+      currentUrl = URL.createObjectURL(new Blob([response.data]));
       
-      try {
-        setState(prev => ({ ...prev, isLoading: true, error: false }));
-
-        const response = await axiosInstance.get(`/api/documents/${file.id}/preview`, {
-          responseType: 'arraybuffer',
-          headers: {
-            'Accept': 'image/jpeg,image/svg+xml,*/*',
-          }
+      setPreviewState({
+        loading: false,
+        error: false,
+        url: currentUrl,
+        showPlaceholder: false
+      });
+    } catch (error) {
+      console.error('Preview error:', { error, fileId: file.id });
+      if (mounted) {
+        setPreviewState({
+          loading: false,
+          error: true,
+          url: '',
+          showPlaceholder: true
         });
-
-        if (!mounted) return;
-
-        const contentType = response.headers['content-type'];
-        const blob = new Blob([response.data], { type: contentType });
-        const url = URL.createObjectURL(blob);
-
-        // Verify the image loads correctly
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = url;
-        });
-
-        if (mounted) {
-          setState(prev => ({
-            ...prev,
-            isLoading: false,
-            previewUrl: url,
-            showPlaceholder: false
-          }));
-        }
-      } catch (error) {
-        console.error('Preview loading error:', {
-          error,
-          fileId: file.id
-        });
-        if (mounted) {
-          setState(prev => ({
-            ...prev,
-            isLoading: false,
-            error: true,
-            showPlaceholder: true
-          }));
-          onLoadError?.(file.id);
-        }
+        onLoadError?.(file.id);
       }
-    };
+    }
+  };
 
-    loadPreview();
+  loadPreview();
 
-    return () => {
-      mounted = false;
-    };
-  }, [file?.id, file?.category, onLoadError]);
+  return () => {
+    mounted = false;
+    if (currentUrl) {
+      URL.revokeObjectURL(currentUrl);
+    }
+  };
+}, [file?.id, file?.category, onLoadError]);
 
-  // Enhanced placeholder with better styling
   const renderPlaceholder = () => (
-    <Box sx={{ 
-      textAlign: 'center',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
-      color: theme => theme.palette.text.secondary
-    }}>
+    <div className="preview-placeholder">
       {file.category === 'document' ? (
-        <DescriptionIcon sx={{ fontSize: 64, color: 'primary.main' }} />
+        <DescriptionIcon className="placeholder-icon" />
       ) : file.category === 'video' ? (
-        <VideoFileIcon sx={{ fontSize: 64, color: 'error.main' }} />
+        <VideoFileIcon className="placeholder-icon" />
       ) : (
-        <FileIcon sx={{ fontSize: 64, color: 'action.active' }} />
+        <FileIcon className="placeholder-icon" />
       )}
-      <Typography 
-        variant="caption" 
-        display="block" 
-        sx={{ 
-          mt: 1,
-          maxWidth: '100%',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          px: 2
-        }}
-      >
+      <Typography variant="caption" className="placeholder-text">
         {file.name}
       </Typography>
-      <Typography 
-        variant="caption" 
-        color="textSecondary"
-        sx={{ mt: 0.5 }}
-      >
+      <Typography variant="caption" className="placeholder-size">
         {formatFileSize(file.size)}
       </Typography>
-    </Box>
+    </div>
   );
+
+  if (previewState.loading) {
+    return (
+      <div className="preview-container">
+        <CircularProgress size={24} />
+      </div>
+    );
+  }
 
   return (
-    <PreviewContainer>
-      {state.isLoading && (
-        <CircularProgress
-          size={24}
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 1
+    <div className="preview-container">
+      {previewState.url && !previewState.error && file.category === 'image' ? (
+        <img
+          src={previewState.url}
+          alt={file.name}
+          className="preview-image"
+          onError={() => {
+            setPreviewState(prev => ({
+              ...prev,
+              error: true,
+              showPlaceholder: true
+            }));
           }}
         />
+      ) : (
+        renderPlaceholder()
       )}
-
-      {!state.isLoading && state.previewUrl && !state.error && file.category === 'image' && (
-        <Box sx={{ 
-          width: '100%', 
-          height: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
-        }}>
-          <PreviewImage
-            src={state.previewUrl}
-            alt={file.name}
-            onLoad={() => console.log('Preview rendered:', file.id)}
-            onError={(e) => {
-              console.error('Preview render error:', {
-                fileId: file.id,
-                error: e
-              });
-              setState(prev => ({
-                ...prev,
-                error: true,
-                showPlaceholder: true
-              }));
-            }}
-            sx={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
-            }}
-          />
-        </Box>
-      )}
-
-      {(file.category !== 'image' || state.error || state.showPlaceholder) && !state.isLoading && renderPlaceholder()}
-    </PreviewContainer>
+    </div>
   );
 });
 
-// Update PreviewContainer styled component
-const PreviewContainer = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  width: '100%',
-  height: '200px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: theme.palette.action.hover,
-  borderRadius: theme.shape.borderRadius,
-  overflow: 'hidden',
-  padding: theme.spacing(2),
-}));
-
-// Update PreviewImage styled component
-const PreviewImage = styled('img')({
-  maxWidth: '100%',
-  maxHeight: '100%',
-  objectFit: 'contain',
-  transition: 'opacity 0.3s ease-in-out',
-});
-// UploadDialog Component
+// Upload Dialog Component
 const UploadDialog = React.memo(({
   open,
   onClose,
   onUpload,
   isUploading,
-  uploadProgress,
+  uploadProgress
 }) => {
-  const theme = useTheme();
   const {
     getRootProps,
     getInputProps,
@@ -542,17 +278,14 @@ const UploadDialog = React.memo(({
     acceptedFiles,
     fileRejections
   } = useDropzone({
-    accept: Object.values(ALLOWED_FILE_TYPES).reduce((acc, curr) => {
+    accept: Object.values(FILE_CONFIG.ALLOWED_TYPES).reduce((acc, curr) => {
       curr.mimeTypes.forEach(type => {
         acc[type] = curr.extensions;
       });
       return acc;
     }, {}),
-    maxSize: MAX_FILE_SIZE,
-    maxFiles: MAX_TOTAL_FILES,
-    onDropRejected: (rejections) => {
-      console.log('Drop rejected:', rejections);
-    }
+    maxSize: FILE_CONFIG.MAX_SIZE,
+    maxFiles: FILE_CONFIG.MAX_TOTAL_FILES
   });
 
   useEffect(() => {
@@ -567,52 +300,47 @@ const UploadDialog = React.memo(({
       onClose={!isUploading ? onClose : undefined}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: {
-          m: 2,
-          maxHeight: '90vh'
-        }
-      }}
+      className="upload-dialog"
     >
-      <DialogTitle>
+      <DialogTitle className="dialog-title">
         Upload Files
         {!isUploading && (
           <IconButton
             aria-label="close"
             onClick={onClose}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
+            className="close-button"
           >
             <CloseIcon />
           </IconButton>
         )}
       </DialogTitle>
+
       <DialogContent>
-        <StyledDropzone
+        <div
           {...getRootProps()}
-          isDragActive={isDragActive}
-          isDragReject={isDragReject}
+          className={`dropzone ${isDragActive ? 'active' : ''} ${isDragReject ? 'reject' : ''}`}
         >
           <input {...getInputProps()} />
-          <CloudUploadOutlined sx={{ fontSize: 48, mb: 2, color: 'primary.main' }} />
-          <Typography variant="h6" gutterBottom>
+          <CloudUploadOutlined className="upload-icon" />
+          <Typography variant="h6">
             Drag & Drop Files Here
           </Typography>
-          <Typography variant="body2" color="textSecondary" gutterBottom>
+          <Typography variant="body2" color="textSecondary">
             or click to select files
           </Typography>
           <Typography variant="caption" color="textSecondary">
-            Supported formats: {Object.values(ALLOWED_FILE_TYPES)
+            Supported formats: {Object.values(FILE_CONFIG.ALLOWED_TYPES)
               .flatMap(type => type.extensions)
               .join(', ')}
           </Typography>
-          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-            Maximum file size: {formatFileSize(MAX_FILE_SIZE)}
+          <Typography variant="caption" color="textSecondary">
+            Maximum file size: {formatFileSize(FILE_CONFIG.MAX_SIZE)}
           </Typography>
-        </StyledDropzone>
+        </div>
 
         {acceptedFiles.length > 0 && (
-          <Paper variant="outlined" sx={{ mt: 2, maxHeight: 200, overflow: 'auto' }}>
-            <List dense>
+          <Paper className="accepted-files">
+            <List>
               {acceptedFiles.map((file, index) => (
                 <ListItem key={index}>
                   <ListItemIcon>
@@ -642,9 +370,9 @@ const UploadDialog = React.memo(({
         )}
 
         {fileRejections.length > 0 && (
-          <Alert severity="error" sx={{ mt: 2 }}>
+          <Alert severity="error" className="rejection-alert">
             {fileRejections.length} file(s) were rejected:
-            <List dense>
+            <List>
               {fileRejections.map(({ file, errors }) => (
                 <ListItem key={file.path}>
                   <ListItemText
@@ -658,62 +386,36 @@ const UploadDialog = React.memo(({
         )}
 
         {isUploading && (
-          <Box sx={{ mt: 2 }}>
+          <div className="upload-progress">
             <LinearProgress
               variant="determinate"
               value={uploadProgress}
-              sx={{
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                '& .MuiLinearProgress-bar': {
-                  borderRadius: 4,
-                }
-              }}
             />
-            <Typography
-              variant="caption"
-              color="textSecondary"
-              align="center"
-              sx={{ mt: 1, display: 'block' }}
-            >
+            <Typography variant="caption" align="center">
               Uploading... {uploadProgress}%
             </Typography>
-          </Box>
+          </div>
         )}
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onClose} disabled={isUploading}>
           Cancel
         </Button>
-        <Box sx={{ position: 'relative' }}>
-          <Button
-            onClick={() => onUpload(acceptedFiles)}
-            disabled={acceptedFiles.length === 0 || isUploading}
-            variant="contained"
-            startIcon={<UploadIcon />}
-          >
-            Upload {acceptedFiles.length > 0 ? `(${acceptedFiles.length})` : ''}
-          </Button>
-          {isUploading && (
-            <CircularProgress
-              size={24}
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                marginTop: '-12px',
-                marginLeft: '-12px',
-              }}
-            />
-          )}
-        </Box>
+        <Button
+          onClick={() => onUpload(acceptedFiles)}
+          disabled={acceptedFiles.length === 0 || isUploading}
+          variant="contained"
+          startIcon={<UploadIcon />}
+        >
+          Upload {acceptedFiles.length > 0 ? `(${acceptedFiles.length})` : ''}
+        </Button>
       </DialogActions>
     </Dialog>
   );
 });
 
-// File Details Dialog Component
+// FileDetailsDialog Component
 const FileDetailsDialog = React.memo(({
   open,
   onClose,
@@ -722,7 +424,6 @@ const FileDetailsDialog = React.memo(({
   isUpdating,
   updateProgress
 }) => {
-  const theme = useTheme();
   const [editedFile, setEditedFile] = useState(file);
   const fileExtension = useMemo(() => file?.name?.split('.').pop() || '', [file?.name]);
   const [localUpdateProgress, setLocalUpdateProgress] = useState(0);
@@ -762,38 +463,34 @@ const FileDetailsDialog = React.memo(({
       onClose={!isUpdating ? onClose : undefined}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          m: 2,
-          maxHeight: '90vh'
-        }
-      }}
+      className="file-details-dialog"
     >
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <DialogTitle className="dialog-title">
+        <div className="dialog-title-content">
           <Typography variant="h6">File Details</Typography>
           {!isUpdating && (
             <IconButton
               aria-label="close"
               onClick={onClose}
               size="small"
+              className="close-button"
             >
               <CloseIcon />
             </IconButton>
           )}
-        </Box>
+        </div>
       </DialogTitle>
-      <DialogContent dividers>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+      <DialogContent dividers className="dialog-content">
+        <div className="file-details-grid">
+          <div className="preview-section">
             <FilePreview 
               file={file}
               onLoadError={(fileId) => {
                 console.error(`Failed to load preview for file ${fileId}`);
               }}
             />
-          </Grid>
-          <Grid item xs={12} md={6}>
+          </div>
+          <div className="details-section">
             <TextField
               fullWidth
               label="File Name"
@@ -802,7 +499,7 @@ const FileDetailsDialog = React.memo(({
                 ...editedFile,
                 name: `${e.target.value.trim()}.${fileExtension}`
               })}
-              sx={{ mb: 2 }}
+              className="filename-input"
               error={!isValidName}
               helperText={!isValidName ? "File name cannot be empty" : ""}
               disabled={isUpdating}
@@ -817,107 +514,91 @@ const FileDetailsDialog = React.memo(({
               }}
             />
 
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
+            <div className="file-metadata-grid">
+              <div className="metadata-item">
                 <Typography variant="subtitle2" color="textSecondary">
                   Type
                 </Typography>
                 <Typography variant="body1">
                   {file.category.charAt(0).toUpperCase() + file.category.slice(1)}
                 </Typography>
-              </Grid>
-              <Grid item xs={6}>
+              </div>
+              <div className="metadata-item">
                 <Typography variant="subtitle2" color="textSecondary">
                   Size
                 </Typography>
                 <Typography variant="body1">
                   {formatFileSize(file.size)}
                 </Typography>
-              </Grid>
-              <Grid item xs={12}>
+              </div>
+              <div className="metadata-item">
                 <Typography variant="subtitle2" color="textSecondary">
                   Created
                 </Typography>
                 <Typography variant="body1">
                   {formatDistanceToNow(new Date(file.createdAt))} ago
                 </Typography>
-              </Grid>
-              <Grid item xs={12}>
+              </div>
+              <div className="metadata-item">
                 <Typography variant="subtitle2" color="textSecondary">
                   Last Modified
                 </Typography>
                 <Typography variant="body1">
                   {formatDistanceToNow(new Date(file.updatedAt))} ago
                 </Typography>
-              </Grid>
-              <Grid item xs={12}>
+              </div>
+              <div className="metadata-item">
                 <Typography variant="subtitle2" color="textSecondary">
                   MIME Type
                 </Typography>
-                <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
+                <Typography variant="body1" className="mime-type">
                   {file.mimeType}
                 </Typography>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {isUpdating && (
-          <Box sx={{ mt: 2 }}>
+          <div className="update-progress">
             <LinearProgress
               variant="determinate"
               value={localUpdateProgress}
-              sx={{
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                '& .MuiLinearProgress-bar': {
-                  borderRadius: 4,
-                }
-              }}
+              className="progress-bar"
             />
-            <Typography variant="caption" color="textSecondary" align="center" sx={{ mt: 1, display: 'block' }}>
+            <Typography variant="caption" className="progress-text">
               Updating... {localUpdateProgress}%
             </Typography>
-          </Box>
+          </div>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={isUpdating}>
+      <DialogActions className="dialog-actions">
+        <Button onClick={onClose} disabled={isUpdating} className="cancel-button">
           Cancel
         </Button>
-        <Box sx={{ position: 'relative' }}>
+        <div className="save-button-container">
           <Button
             onClick={() => onUpdate(editedFile)}
             disabled={isUpdating || !isValidName}
             variant="contained"
             startIcon={<SaveIcon />}
+            className="save-button"
           >
             Save Changes
           </Button>
           {isUpdating && (
-            <CircularProgress
-              size={24}
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                marginTop: '-12px',
-                marginLeft: '-12px',
-              }}
-            />
+            <CircularProgress size={24} className="save-progress" />
           )}
-        </Box>
+        </div>
       </DialogActions>
     </Dialog>
   );
 });
-
 // Main Documents Component
 const Documents = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [state, setState] = useState({
     searchTerm: '',
@@ -940,7 +621,7 @@ const Documents = () => {
   }, []);
 
   // Queries
-  const documentsQuery = useQuery(
+  const { data: documents = [], isLoading: isLoadingDocuments } = useQuery(
     'documents',
     async () => {
       const response = await axiosInstance.get('/api/documents');
@@ -963,14 +644,13 @@ const Documents = () => {
     }
   );
 
-  const storageQuery = useQuery(
+  const { data: storageData } = useQuery(
     'storage',
     async () => {
       const response = await axiosInstance.get('/api/documents/storage');
-      console.log('Storage response:', response.data); // Add debugging
       return {
         used: parseInt(response.data.used) || 0,
-        limit: parseInt(response.data.limit) || 256 * 1024 * 1024, // 256MB default
+        limit: parseInt(response.data.limit) || 256 * 1024 * 1024,
         available: parseInt(response.data.available) || 256 * 1024 * 1024
       };
     },
@@ -983,7 +663,6 @@ const Documents = () => {
       }
     }
   );
-  
 
   // Mutations
   const uploadMutation = useMutation(
@@ -1016,13 +695,10 @@ const Documents = () => {
     {
       onSuccess: ({ response, validationErrors }) => {
         const newFiles = response.data?.files || [];
-        
-        // Update cache with new files
         queryClient.setQueryData('documents', (oldData = []) => {
           return [...newFiles, ...oldData];
         });
 
-        // Show status message
         updateState({
           snackbar: {
             open: true,
@@ -1035,7 +711,6 @@ const Documents = () => {
           uploadProgress: 0
         });
 
-        // Refresh queries
         queryClient.invalidateQueries(['documents', 'storage']);
       },
       onError: (error) => {
@@ -1126,45 +801,7 @@ const Documents = () => {
     }
   );
 
-  const updateMutation = useMutation(
-    async (document) => {
-      const response = await axiosInstance.put(`/api/documents/${document.id}`, document);
-      return response.data;
-    },
-    {
-      onSuccess: (updatedDoc) => {
-        queryClient.setQueryData('documents', (old = []) =>
-          old.map(doc =>
-            doc.id === updatedDoc.id ? updatedDoc : doc
-          )
-        );
-
-        updateState({
-          snackbar: {
-            open: true,
-            message: 'Document updated successfully',
-            severity: 'success'
-          },
-          isFileDetailsOpen: false,
-          isUpdating: false,
-          updateProgress: 0
-        });
-      },
-      onError: (error) => {
-        updateState({
-          snackbar: {
-            open: true,
-            message: 'Error updating document',
-            severity: 'error'
-          },
-          isUpdating: false,
-          updateProgress: 0
-        });
-      }
-    }
-  );
-
-  // Handlers
+  // Event Handlers
   const handleFileUpload = useCallback((files) => {
     if (!files?.length) return;
     uploadMutation.mutate(files);
@@ -1187,7 +824,7 @@ const Documents = () => {
         responseType: 'blob'
       });
   
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fileName);
@@ -1207,25 +844,11 @@ const Documents = () => {
     }
   }, [updateState]);
 
-  // Handle document selection and details
-  const handleFileDetails = useCallback((file) => {
-    updateState({
-      selectedFile: file,
-      isFileDetailsOpen: true
-    });
-  }, [updateState]);
-  
-  const handleUpdateDocument = useCallback((updatedFile) => {
-    if (!updatedFile?.id) return;
-    updateState({ isUpdating: true });
-    updateMutation.mutate(updatedFile);
-  }, [updateMutation, updateState]);
-
   // Filter and sort documents
   const filteredAndSortedDocuments = useMemo(() => {
-    if (!documentsQuery.data) return [];
+    if (!documents) return [];
 
-    let result = documentsQuery.data;
+    let result = [...documents];
 
     // Apply search filter
     if (state.searchTerm) {
@@ -1249,9 +872,8 @@ const Documents = () => {
     const isDesc = state.sortBy.startsWith('-');
     const sortField = isDesc ? state.sortBy.slice(1) : state.sortBy;
 
-    return result.sort((a, b) => {
+    result.sort((a, b) => {
       let comparison = 0;
-      
       switch (sortField) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -1265,73 +887,114 @@ const Documents = () => {
         default:
           comparison = 0;
       }
-
       return isDesc ? -comparison : comparison;
     });
-  }, [documentsQuery.data, state.searchTerm, state.filterBy, state.tabValue, state.sortBy]);
 
-  // Context menu component
-  const ContextMenu = useCallback(({ anchorEl, onClose }) => {
-    const selectedDocument = documentsQuery.data?.find(
-      doc => doc.id === state.selectedFileId
-    );
+    return result;
+  }, [documents, state.searchTerm, state.filterBy, state.tabValue, state.sortBy]);
 
-    if (!selectedDocument) return null;
-
-    return (
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={onClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+  const renderDocumentCard = useCallback((doc) => (
+    <motion.div
+      key={doc.id}
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+      className="document-card-container"
+    >
+      <Card 
+        className="document-card"
+        onClick={() => updateState({
+          selectedFile: doc,
+          isFileDetailsOpen: true
+        })}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          updateState({
+            selectedFileId: doc.id,
+            menuAnchorEl: e.currentTarget
+          });
+        }}
       >
-        <MenuItem onClick={() => {
-          handleDownload(selectedDocument.id, selectedDocument.name);
-          onClose();
-        }}>
-          <ListItemIcon>
-            <DownloadIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Download</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => {
-          handleToggleFavorite(selectedDocument.id);
-          onClose();
-        }}>
-          <ListItemIcon>
-            {selectedDocument.isFavorite ? (
-              <StarIcon fontSize="small" color="warning" />
-            ) : (
-              <StarBorderIcon fontSize="small" />
+        <FilePreview
+          file={doc}
+          onLoadError={(fileId) => {
+            console.error(`Failed to load preview for file ${fileId}`);
+          }}
+        />
+        <CardContent className="card-content">
+          <Typography variant="subtitle1" className="document-name">
+            {doc.name}
+          </Typography>
+          <Typography variant="body2" className="document-size">
+            {formatFileSize(doc.size)}
+          </Typography>
+          <div className="document-tags">
+            <Chip
+              label={doc.category}
+              size="small"
+              color={
+                doc.category === 'document' ? 'primary' :
+                doc.category === 'image' ? 'secondary' :
+                doc.category === 'video' ? 'error' : 'default'
+              }
+              className="category-chip"
+            />
+            {doc.isFavorite && (
+              <Chip
+                label="Favorite"
+                size="small"
+                color="warning"
+                icon={<StarIcon />}
+                className="favorite-chip"
+              />
             )}
-          </ListItemIcon>
-          <ListItemText>
-            {selectedDocument.isFavorite ? "Remove from Favorites" : "Add to Favorites"}
-          </ListItemText>
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => {
-          handleDeleteDocument(selectedDocument.id);
-          onClose();
-        }} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
-        </MenuItem>
-      </Menu>
-    );
-  }, [documentsQuery.data, state.selectedFileId, handleDownload, handleToggleFavorite, handleDeleteDocument]);
+          </div>
+        </CardContent>
+        <CardActions className="card-actions">
+          <Tooltip title={doc.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleFavorite(doc.id);
+              }}
+              size="small"
+              className={`favorite-button ${doc.isFavorite ? 'active' : ''}`}
+            >
+              {doc.isFavorite ? <StarIcon /> : <StarBorderIcon />}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Download">
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload(doc.id, doc.name);
+              }}
+              size="small"
+              className="download-button"
+            >
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteDocument(doc.id);
+              }}
+              size="small"
+              className="delete-button"
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Tooltip>
+        </CardActions>
+      </Card>
+    </motion.div>
+  ), [handleToggleFavorite, handleDownload, handleDeleteDocument, updateState]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      previewQueue.clear();
-    };
-  }, []);
-
-  // Main render
+  // Render
   return (
     <ErrorBoundary
       FallbackComponent={ErrorFallback}
@@ -1345,58 +1008,53 @@ const Documents = () => {
         });
       }}
     >
-      <PageWrapper>
-        <HeaderWrapper>
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 2
-          }}>
-            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-              Documents
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+      <div className="documents-page">
+        <div className="documents-container">
+          <div className="documents-header">
+            <div className="header-title">
+              <Typography variant="h4" className="title-text">
+                Documents
+              </Typography>
               <Button
                 variant="contained"
                 startIcon={<UploadIcon />}
                 onClick={() => updateState({ isUploadDialogOpen: true })}
+                className="upload-button"
               >
                 Upload
               </Button>
-            </Box>
-          </Box>
+            </div>
 
-          {storageQuery.data && (
-  <Box sx={{ mt: 3 }}>
-    <Typography variant="subtitle2" gutterBottom>
-      Storage Used: {formatFileSize(storageQuery.data.used)} of {formatFileSize(storageQuery.data.limit)}
-    </Typography>
-    <LinearProgress
-      variant="determinate"
-      value={Math.min(((storageQuery.data.used / storageQuery.data.limit) || 0) * 100, 100)}
-      sx={{ height: 8, borderRadius: 4 }}
-    />
-  </Box>
-)}
+            {storageData && (
+              <div className="storage-info">
+                <Typography variant="subtitle2">
+                  Storage Used: {formatFileSize(storageData.used)} of {formatFileSize(storageData.limit)}
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.min(((storageData.used / storageData.limit) || 0) * 100, 100)}
+                  className="storage-progress"
+                />
+              </div>
+            )}
 
-          <Tabs
-            value={state.tabValue}
-            onChange={(_, newValue) => updateState({ tabValue: newValue })}
-            sx={{ mb: 2, mt: 3 }}
-          >
-            <Tab label="All Documents" />
-            <Tab label="Favorites" />
-          </Tabs>
+            <Tabs
+              value={state.tabValue}
+              onChange={(_, newValue) => updateState({ tabValue: newValue })}
+              className="document-tabs"
+              variant={isMobile ? "fullWidth" : "standard"}
+            >
+              <Tab label="All Documents" />
+              <Tab label="Favorites" />
+            </Tabs>
 
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
+            <div className="search-filter-section">
               <TextField
                 fullWidth
                 placeholder="Search documents..."
                 value={state.searchTerm}
                 onChange={(e) => updateState({ searchTerm: e.target.value })}
+                className="search-field"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -1405,29 +1063,28 @@ const Documents = () => {
                   ),
                 }}
               />
-            </Grid>
-            <Grid item xs={12} md={4}>
+
               <FormControl fullWidth>
                 <Select
                   value={state.sortBy}
                   onChange={(e) => updateState({ sortBy: e.target.value })}
-                  startAdornment={<SortIcon sx={{ mr: 1 }} />}
+                  className="sort-select"
+                  startAdornment={<SortIcon className="select-icon" />}
                 >
                   <MenuItem value="name">Name (A-Z)</MenuItem>
                   <MenuItem value="-name">Name (Z-A)</MenuItem>
                   <MenuItem value="size">Size (Smallest)</MenuItem>
                   <MenuItem value="-size">Size (Largest)</MenuItem>
-                  <MenuItem value="createdAt">Date (Oldest)</MenuItem>
                   <MenuItem value="-createdAt">Date (Newest)</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
+
               <FormControl fullWidth>
                 <Select
                   value={state.filterBy}
                   onChange={(e) => updateState({ filterBy: e.target.value })}
-                  startAdornment={<FilterIcon sx={{ mr: 1 }} />}
+                  className="filter-select"
+                  startAdornment={<FilterIcon className="select-icon" />}
                 >
                   <MenuItem value="all">All Types</MenuItem>
                   <MenuItem value="document">Documents</MenuItem>
@@ -1435,194 +1092,157 @@ const Documents = () => {
                   <MenuItem value="video">Videos</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-          </Grid>
-        </HeaderWrapper>
+            </div>
+          </div>
 
-        {documentsQuery.isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : filteredAndSortedDocuments.length === 0 ? (
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 400,
-            p: 4
-          }}>
-            <FolderIcon sx={{ fontSize: 64, color: 'action.disabled', mb: 2 }} />
-            <Typography variant="h6" color="textSecondary" gutterBottom>
-              {state.searchTerm
-                ? "No documents match your search"
-                : state.tabValue === 1
-                  ? "No favorite documents"
-                  : "No documents found"}
-            </Typography>
-            <Typography variant="body2" color="textSecondary" align="center" sx={{ mb: 2 }}>
-              {state.searchTerm
-                ? "Try adjusting your search criteria"
-                : state.tabValue === 1
-                  ? "Mark some documents as favorites to see them here"
-                  : "Upload some files to get started"}
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<UploadIcon />}
-              onClick={() => updateState({ isUploadDialogOpen: true })}
+          <div className="documents-content">
+            {isLoadingDocuments ? (
+              <div className="loading-state">
+                <CircularProgress />
+              </div>
+            ) : filteredAndSortedDocuments.length === 0 ? (
+              <div className="empty-state">
+                <FolderIcon className="empty-icon" />
+                <Typography variant="h6" className="empty-title">
+                  {state.searchTerm
+                    ? "No documents match your search"
+                    : state.tabValue === 1
+                      ? "No favorite documents"
+                      : "No documents found"}
+                </Typography>
+                <Typography variant="body2" className="empty-description">
+                  {state.searchTerm
+                    ? "Try adjusting your search criteria"
+                    : state.tabValue === 1
+                      ? "Mark some documents as favorites to see them here"
+                      : "Upload some files to get started"}
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<UploadIcon />}
+                  onClick={() => updateState({ isUploadDialogOpen: true })}
+                  className="empty-upload-button"
+                >
+                  Upload Files
+                </Button>
+              </div>
+            ) : (
+              <div className="documents-grid">
+                <AnimatePresence mode="sync">
+                  {filteredAndSortedDocuments.map(renderDocumentCard)}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          {/* Context Menu */}
+          <Menu
+            anchorEl={state.menuAnchorEl}
+            open={Boolean(state.menuAnchorEl)}
+            onClose={() => updateState({ menuAnchorEl: null })}
+            className="context-menu"
+          >
+            <MenuItem 
+              onClick={() => {
+                handleDownload(state.selectedFileId, 
+                  documents.find(doc => doc.id === state.selectedFileId)?.name
+                );
+                updateState({ menuAnchorEl: null });
+              }}
             >
-              Upload Files
-            </Button>
-          </Box>
-        ) : (
-          <Grid container spacing={isSmallScreen ? 2 : 3}>
-            <AnimatePresence mode="sync">
-              {filteredAndSortedDocuments.map((doc) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={doc.id}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <StyledCard
-                      onClick={() => handleFileDetails(doc)}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        updateState({
-                          selectedFileId: doc.id,
-                          menuAnchorEl: e.currentTarget
-                        });
-                      }}
-                    >
-                      <FilePreview
-                        file={doc}
-                        onLoadError={(fileId) => {
-                          console.error(`Failed to load preview for file ${fileId}`);
-                        }}
-                      />
-                      <CardContent>
-                        <Typography variant="subtitle1" noWrap title={doc.name}>
-                          {doc.name}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {formatFileSize(doc.size)}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                          <Chip
-                            label={doc.category}
-                            size="small"
-                            color={
-                              doc.category === 'document' ? 'primary' :
-                              doc.category === 'image' ? 'secondary' :
-                              doc.category === 'video' ? 'error' : 'default'
-                            }
-                          />
-                          {doc.isFavorite && (
-                            <Chip
-                              label="Favorite"
-                              size="small"
-                              color="warning"
-                              icon={<StarIcon />}
-                            />
-                          )}
-                        </Box>
-                      </CardContent>
-                      <CardActions>
-                        <Tooltip title={doc.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleFavorite(doc.id);
-                            }}
-                            size="small"
-                            color={doc.isFavorite ? "warning" : "default"}
-                          >
-                            {doc.isFavorite ? <StarIcon /> : <StarBorderIcon />}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Download">
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(doc.id, doc.name);
-                            }}
-                            size="small"
-                          >
-                            <DownloadIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteDocument(doc.id);
-                            }}
-                            size="small"
-                            color="error"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </CardActions>
-                    </StyledCard>
-                  </motion.div>
-                </Grid>
-              ))}
-            </AnimatePresence>
-          </Grid>
-        )}
+              <ListItemIcon>
+                <DownloadIcon className="menu-icon" />
+              </ListItemIcon>
+              <ListItemText>Download</ListItemText>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => {
+                handleToggleFavorite(state.selectedFileId);
+                updateState({ menuAnchorEl: null });
+              }}
+            >
+              <ListItemIcon>
+                {documents.find(doc => doc.id === state.selectedFileId)?.isFavorite ? (
+                  <StarIcon className="menu-icon favorite" />
+                ) : (
+                  <StarBorderIcon className="menu-icon" />
+                )}
+              </ListItemIcon>
+              <ListItemText>
+                {documents.find(doc => doc.id === state.selectedFileId)?.isFavorite
+                  ? "Remove from Favorites"
+                  : "Add to Favorites"}
+              </ListItemText>
+            </MenuItem>
+            <Divider />
+            <MenuItem
+              onClick={() => {
+                handleDeleteDocument(state.selectedFileId);
+                updateState({ menuAnchorEl: null });
+              }}
+              className="delete-menu-item"
+            >
+              <ListItemIcon>
+                <DeleteIcon className="menu-icon delete" />
+              </ListItemIcon>
+              <ListItemText>Delete</ListItemText>
+            </MenuItem>
+          </Menu>
 
-        <UploadDialog
-          open={state.isUploadDialogOpen}
-          onClose={() => updateState({
-            isUploadDialogOpen: false,
-            uploadProgress: 0
-          })}
-          onUpload={handleFileUpload}
-          isUploading={uploadMutation.isLoading}
-          uploadProgress={state.uploadProgress}
-        />
+          {/* Upload Dialog */}
+          <UploadDialog
+            open={state.isUploadDialogOpen}
+            onClose={() => updateState({
+              isUploadDialogOpen: false,
+              uploadProgress: 0
+            })}
+            onUpload={handleFileUpload}
+            isUploading={uploadMutation.isLoading}
+            uploadProgress={state.uploadProgress}
+          />
 
-        <FileDetailsDialog
-          open={state.isFileDetailsOpen}
-          onClose={() => updateState({
-            isFileDetailsOpen: false,
-            selectedFile: null,
-            updateProgress: 0
-          })}
-          file={state.selectedFile}
-          onUpdate={handleUpdateDocument}
-          isUpdating={state.isUpdating}
-          updateProgress={state.updateProgress}
-        />
+          {/* File Details Dialog */}
+          {state.selectedFile && (
+            <FileDetailsDialog
+              open={state.isFileDetailsOpen}
+              onClose={() => updateState({
+                isFileDetailsOpen: false,
+                selectedFile: null,
+                updateProgress: 0
+              })}
+              file={state.selectedFile}
+              onUpdate={(file) => {
+                updateState({ isUpdating: true });
+                // Implement file update logic here
+              }}
+              isUpdating={state.isUpdating}
+              updateProgress={state.updateProgress}
+            />
+          )}
 
-        <ContextMenu
-          anchorEl={state.menuAnchorEl}
-          onClose={() => updateState({ menuAnchorEl: null })}
-        />
-
-        <Snackbar
-          open={state.snackbar.open}
-          autoHideDuration={6000}
-          onClose={() => updateState({
-            snackbar: { ...state.snackbar, open: false }
-          })}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        >
-          <Alert
+          {/* Snackbar for notifications */}
+          <Snackbar
+            open={state.snackbar.open}
+            autoHideDuration={6000}
             onClose={() => updateState({
               snackbar: { ...state.snackbar, open: false }
             })}
-            severity={state.snackbar.severity}
-            variant="filled"
-            sx={{ width: '100%' }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            className="snackbar"
           >
-            {state.snackbar.message}
-          </Alert>
-        </Snackbar>
-      </PageWrapper>
+            <Alert
+              onClose={() => updateState({
+                snackbar: { ...state.snackbar, open: false }
+              })}
+              severity={state.snackbar.severity}
+              variant="filled"
+              className="alert"
+            >
+              {state.snackbar.message}
+            </Alert>
+          </Snackbar>
+        </div>
+      </div>
     </ErrorBoundary>
   );
 };

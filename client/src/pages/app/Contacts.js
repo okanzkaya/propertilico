@@ -4,7 +4,7 @@ import {
   TextField, Dialog, DialogTitle, DialogContent, DialogActions, Button, Chip,
   Snackbar, Alert, useTheme, Fab, Tooltip, CircularProgress, InputAdornment,
   Menu, MenuItem, FormControl, InputLabel, Select, Pagination, ListItemIcon,
-  ListItemText, useMediaQuery, styled, Paper, Tabs, Tab, Collapse
+  ListItemText, useMediaQuery, Paper, Tabs, Tab, Collapse
 } from '@mui/material';
 import {
   Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Phone as PhoneIcon,
@@ -14,28 +14,7 @@ import {
   ExpandLess as ExpandLessIcon, Close as CloseIcon
 } from '@mui/icons-material';
 import { contactApi } from '../../api';
-
-const StyledCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  transition: 'all 0.3s ease-in-out',
-  cursor: 'pointer',
-  background: theme.palette.background.paper,
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: theme.shadows[10],
-  },
-}));
-
-const StyledAvatar = styled(Avatar)(({ theme }) => ({
-  width: theme.spacing(12),
-  height: theme.spacing(12),
-  margin: 'auto',
-  marginBottom: theme.spacing(2),
-  border: `4px solid ${theme.palette.primary.main}`,
-  boxShadow: theme.shadows[3],
-}));
+import './Contacts.css';
 
 const roles = [
   'All', 'Manager', 'Employee', 'Client', 'Contractor', 'Vendor', 'Investor',
@@ -52,16 +31,16 @@ const ContactDetailsDialog = ({ open, onClose, contact, handleOpenDialog }) => {
         <IconButton
           aria-label="close"
           onClick={onClose}
-          sx={{ position: 'absolute', right: 8, top: 8 }}
+          className="dialog-close-button"
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+        <Box className="contact-details-container">
           <Avatar
             src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''}
-            sx={{ width: 100, height: 100, mb: 2 }}
+            className="contact-details-avatar"
           />
           <Typography variant="h5">{contact.name}</Typography>
           <Typography variant="subtitle1" color="textSecondary">{contact.role}</Typography>
@@ -86,9 +65,7 @@ const ContactDetailsDialog = ({ open, onClose, contact, handleOpenDialog }) => {
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => handleOpenDialog(contact)} color="primary">
-          Edit
-        </Button>
+        <Button onClick={() => handleOpenDialog(contact)} color="primary">Edit</Button>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
     </Dialog>
@@ -149,14 +126,10 @@ const Contacts = () => {
   const handleSaveContact = async (event) => {
     event.preventDefault();
     const formData = new FormData();
-
-    const formFields = event.target.elements;
-    for (let i = 0; i < formFields.length; i++) {
-      const field = formFields[i];
-      if (field.name && field.name !== 'avatar') {
-        formData.append(field.name, field.value);
-      }
-    }
+    
+    Array.from(event.target.elements)
+      .filter(field => field.name && field.name !== 'avatar')
+      .forEach(field => formData.append(field.name, field.value));
 
     if (avatarFile) {
       formData.append('avatar', avatarFile);
@@ -168,12 +141,20 @@ const Contacts = () => {
       } else {
         await contactApi.createContact(formData);
       }
-      setSnackbar({ open: true, message: `Contact ${currentContact ? 'updated' : 'created'} successfully`, severity: 'success' });
+      setSnackbar({ 
+        open: true, 
+        message: `Contact ${currentContact ? 'updated' : 'created'} successfully`, 
+        severity: 'success' 
+      });
       fetchContacts();
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving contact:', error);
-      setSnackbar({ open: true, message: `Failed to ${currentContact ? 'update' : 'create'} contact: ${error.response?.data?.message || error.message}`, severity: 'error' });
+      setSnackbar({ 
+        open: true, 
+        message: `Failed to ${currentContact ? 'update' : 'create'} contact: ${error.response?.data?.message || error.message}`, 
+        severity: 'error' 
+      });
     }
   };
 
@@ -189,7 +170,11 @@ const Contacts = () => {
       setAnchorEl(null);
     } catch (error) {
       console.error('Error deleting contact:', error);
-      setSnackbar({ open: true, message: `Failed to delete contact: ${error.response?.data?.message || error.message}`, severity: 'error' });
+      setSnackbar({ 
+        open: true, 
+        message: `Failed to delete contact: ${error.response?.data?.message || error.message}`, 
+        severity: 'error' 
+      });
     }
   }, [fetchContacts]);
 
@@ -241,6 +226,7 @@ END:VCARD`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }, []);
 
   const handleOpenDetailsDialog = useCallback((contact) => {
@@ -255,26 +241,39 @@ END:VCARD`;
 
   const renderContactCard = useCallback((contact) => (
     <Grid item xs={12} sm={6} md={4} lg={3} key={contact.id}>
-      <StyledCard onClick={() => handleOpenDetailsDialog(contact)}>
+      <Card className="contact-card" onClick={() => handleOpenDetailsDialog(contact)}>
         <CardContent>
-          <StyledAvatar src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''} alt={contact.name} />
+          <Avatar 
+            src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''} 
+            alt={contact.name}
+            className="contact-avatar"
+          />
           <Typography variant="h6" align="center" gutterBottom>{contact.name}</Typography>
-          <Typography variant="subtitle1" align="center" color="textSecondary" gutterBottom>{contact.role}</Typography>
-          <Box display="flex" justifyContent="center" flexWrap="wrap" gap={1} mt={2}>
+          <Typography variant="subtitle1" align="center" color="textSecondary" gutterBottom>
+            {contact.role}
+          </Typography>
+          <Box className="contact-chips">
             <Chip icon={<PhoneIcon />} label={contact.phone} size="small" />
             <Chip icon={<EmailIcon />} label={contact.email} size="small" />
             <Chip icon={<WorkIcon />} label={contact.role} size="small" />
           </Box>
         </CardContent>
-        <CardActions sx={{ justifyContent: 'center', mt: 'auto' }}>
-          <IconButton onClick={(e) => { e.stopPropagation(); handleOpenDialog(contact); }} color="primary">
+        <CardActions className="contact-actions">
+          <IconButton onClick={(e) => { 
+            e.stopPropagation(); 
+            handleOpenDialog(contact); 
+          }} color="primary">
             <EditIcon />
           </IconButton>
-          <IconButton onClick={(e) => { e.stopPropagation(); setCurrentContact(contact); setAnchorEl(e.currentTarget); }} color="default">
+          <IconButton onClick={(e) => { 
+            e.stopPropagation(); 
+            setCurrentContact(contact); 
+            setAnchorEl(e.currentTarget); 
+          }} color="default">
             <MoreVertIcon />
           </IconButton>
         </CardActions>
-      </StyledCard>
+      </Card>
     </Grid>
   ), [handleOpenDialog, handleOpenDetailsDialog]);
 
@@ -283,28 +282,32 @@ END:VCARD`;
       {paginatedContacts.map((contact) => (
         <Box key={contact.id}>
           <Box
-            sx={{
-              p: 2,
-              borderBottom: 1,
-              borderColor: 'divider',
-              '&:last-child': { borderBottom: 0 },
-              cursor: 'pointer'
-            }}
+            className="contact-list-item"
             onClick={() => setExpandedContact(expandedContact === contact.id ? null : contact.id)}
           >
             <Grid container alignItems="center" spacing={2}>
               <Grid item>
-                <Avatar src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''} alt={contact.name} />
+                <Avatar 
+                  src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''} 
+                  alt={contact.name} 
+                />
               </Grid>
               <Grid item xs>
                 <Typography variant="subtitle1">{contact.name}</Typography>
                 <Typography variant="body2" color="textSecondary">{contact.role}</Typography>
               </Grid>
               <Grid item>
-                <IconButton onClick={(e) => { e.stopPropagation(); handleOpenDialog(contact); }}>
+                <IconButton onClick={(e) => { 
+                  e.stopPropagation(); 
+                  handleOpenDialog(contact); 
+                }}>
                   <EditIcon />
                 </IconButton>
-                <IconButton onClick={(e) => { e.stopPropagation(); setCurrentContact(contact); setAnchorEl(e.currentTarget); }}>
+                <IconButton onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setCurrentContact(contact); 
+                  setAnchorEl(e.currentTarget); 
+                }}>
                   <MoreVertIcon />
                 </IconButton>
                 <IconButton>
@@ -314,11 +317,15 @@ END:VCARD`;
             </Grid>
           </Box>
           <Collapse in={expandedContact === contact.id}>
-            <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
+            <Box className="contact-details">
               <Typography variant="body2"><strong>Email:</strong> {contact.email}</Typography>
               <Typography variant="body2"><strong>Phone:</strong> {contact.phone}</Typography>
-              <Typography variant="body2"><strong>Address:</strong> {contact.address || 'Not Available'}</Typography>
-              <Typography variant="body2"><strong>Notes:</strong> {contact.notes || 'Not Available'}</Typography>
+              <Typography variant="body2">
+                <strong>Address:</strong> {contact.address || 'Not Available'}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Notes:</strong> {contact.notes || 'Not Available'}
+              </Typography>
             </Box>
           </Collapse>
         </Box>
@@ -326,10 +333,21 @@ END:VCARD`;
     </Paper>
   ), [paginatedContacts, expandedContact, handleOpenDialog]);
 
+  if (loading) {
+    return (
+      <Box className="loading-container">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ p: 3, background: theme.palette.background.default, minHeight: '100vh' }}>
-      <Typography variant="h4" gutterBottom sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>Contacts</Typography>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+    <Box className="contacts-container">
+      <Typography variant="h4" gutterBottom className="page-title">
+        Contacts
+      </Typography>
+      
+      <Box className="controls-container">
         <TextField
           variant="outlined"
           placeholder="Search contacts..."
@@ -345,9 +363,10 @@ END:VCARD`;
               </InputAdornment>
             ),
           }}
-          sx={{ flexGrow: 1, maxWidth: 300 }}
+          className="search-field"
         />
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        
+        <Box className="filters-container">
           <FormControl variant="outlined" size="small">
             <InputLabel>Sort By</InputLabel>
             <Select
@@ -365,6 +384,7 @@ END:VCARD`;
               <MenuItem value="email">Email</MenuItem>
             </Select>
           </FormControl>
+          
           <FormControl variant="outlined" size="small">
             <InputLabel>Filter Role</InputLabel>
             <Select
@@ -377,49 +397,57 @@ END:VCARD`;
               ))}
             </Select>
           </FormControl>
+          
           <Tooltip title="Add new contact">
-            <Fab color="primary" size="medium" onClick={() => handleOpenDialog()} sx={{ boxShadow: theme.shadows[3] }}>
+            <Fab 
+              color="primary" 
+              size="medium" 
+              onClick={() => handleOpenDialog()} 
+              className="add-button"
+            >
               <AddIcon />
             </Fab>
           </Tooltip>
         </Box>
       </Box>
-      <Tabs value={viewMode} onChange={(_, newValue) => setViewMode(newValue)} sx={{ mb: 2 }}>
+
+      <Tabs 
+        value={viewMode} 
+        onChange={(_, newValue) => setViewMode(newValue)} 
+        className="view-tabs"
+      >
         <Tab label="Grid View" value="grid" />
         <Tab label="List View" value="list" />
       </Tabs>
-      {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
-          <CircularProgress />
-        </Box>
+
+      {viewMode === 'grid' ? (
+        <Grid container spacing={3}>
+          {paginatedContacts.map(renderContactCard)}
+        </Grid>
       ) : (
-        <>
-          {viewMode === 'grid' ? (
-            <Grid container spacing={3}>
-              {paginatedContacts.map(renderContactCard)}
-            </Grid>
-          ) : (
-            renderContactList()
-          )}
-          {pageCount > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-              <Pagination
-                count={pageCount}
-                page={page}
-                onChange={(_, value) => setPage(value)}
-                color="primary"
-                size={isMobile ? 'small' : 'medium'}
-              />
-            </Box>
-          )}
-        </>
+        renderContactList()
       )}
+
+      {pageCount > 1 && (
+        <Box className="pagination-container">
+          <Pagination
+            count={pageCount}
+            page={page}
+            onChange={(_, value) => setPage(value)}
+            color="primary"
+            size={isMobile ? 'small' : 'medium'}
+          />
+        </Box>
+      )}
+
       <Dialog open={dialogOpen} onClose={handleCloseDialog} fullWidth maxWidth="sm">
         <form onSubmit={handleSaveContact} encType="multipart/form-data">
-          <DialogTitle>{currentContact ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
+          <DialogTitle>
+            {currentContact ? 'Edit Contact' : 'Add New Contact'}
+          </DialogTitle>
           <DialogContent>
             <Grid container spacing={2}>
-              <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Grid item xs={12} className="avatar-upload-container">
                 <input
                   accept="image/*"
                   style={{ display: 'none' }}
@@ -430,13 +458,14 @@ END:VCARD`;
                 <label htmlFor="avatar-file-input">
                   <Avatar
                     src={avatarPreview || (currentContact && `${process.env.REACT_APP_API_URL}/${currentContact.avatar}`)}
-                    sx={{ width: 100, height: 100, cursor: 'pointer' }}
+                    className="upload-avatar"
                   />
-                  <Typography variant="caption" display="block" align="center" sx={{ mt: 1 }}>
+                  <Typography variant="caption" display="block" align="center" className="upload-text">
                     Click to upload avatar
                   </Typography>
                 </label>
               </Grid>
+              
               {['name', 'role', 'email', 'phone'].map((field) => (
                 <Grid item xs={12} sm={6} key={field}>
                   <TextField
@@ -449,6 +478,7 @@ END:VCARD`;
                   />
                 </Grid>
               ))}
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -459,6 +489,7 @@ END:VCARD`;
                   rows={2}
                 />
               </Grid>
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -479,43 +510,52 @@ END:VCARD`;
           </DialogActions>
         </form>
       </Dialog>
+
       <ContactDetailsDialog
         open={detailsDialogOpen}
         onClose={handleCloseDetailsDialog}
         contact={selectedContact}
         handleOpenDialog={handleOpenDialog}
       />
+
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
       >
-        <MenuItem onClick={() => { handleOpenDialog(currentContact); setAnchorEl(null); }}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
+        <MenuItem onClick={() => { 
+          handleOpenDialog(currentContact); 
+          setAnchorEl(null); 
+        }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary="Edit" />
         </MenuItem>
-        <MenuItem onClick={() => { handleDownloadVCard(currentContact); setAnchorEl(null); }}>
-          <ListItemIcon>
-            <DownloadIcon fontSize="small" />
-          </ListItemIcon>
+        <MenuItem onClick={() => { 
+          handleDownloadVCard(currentContact); 
+          setAnchorEl(null); 
+        }}>
+          <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary="Download vCard" />
         </MenuItem>
-        <MenuItem onClick={() => { handleDeleteContact(currentContact?.id); setAnchorEl(null); }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
+        <MenuItem onClick={() => { 
+          handleDeleteContact(currentContact?.id); 
+          setAnchorEl(null); 
+        }}>
+          <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary="Delete" />
         </MenuItem>
       </Menu>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}>
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

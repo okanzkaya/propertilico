@@ -12,84 +12,17 @@ import {
   Warning as WarningIcon, Dashboard as DashboardIcon, Assignment as AssignmentIcon,
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
-import { styled, useTheme, alpha } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import { createTicket, getTickets, updateTicket, deleteTicket, addNoteToTicket } from '../../api';
+import './Tickets.css';
 
-const PageWrapper = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
-  backgroundColor: theme.palette.background.default,
-  minHeight: '100vh',
-}));
-
-const StyledCard = styled(Paper)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  transition: 'all 0.3s ease',
-  cursor: 'pointer',
-  '&:hover': {
-    boxShadow: theme.shadows[10],
-    transform: 'translateY(-5px)',
-  },
-  borderRadius: theme.shape.borderRadius * 2,
-  overflow: 'hidden',
-  background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-}));
-
-const CardHeader = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-  color: theme.palette.primary.contrastText,
-}));
-
-const CardContent = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  flexGrow: 1,
-}));
-
-const CardFooter = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  borderTop: `1px solid ${theme.palette.divider}`,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-}));
-
-const SearchBar = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: theme.shape.borderRadius * 5,
-    backgroundColor: alpha(theme.palette.common.white, 0.15),
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.common.white, 0.25),
-    },
-    '& fieldset': {
-      borderColor: 'transparent',
-    },
-    '&:hover fieldset': {
-      borderColor: 'transparent',
-    },
-    '&.Mui-focused fieldset': {
-      borderColor: theme.palette.primary.main,
-    },
-  },
-}));
-
-const StyledTabs = styled(Tabs)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.background.paper, 0.8),
-  borderRadius: theme.shape.borderRadius * 2,
-  '& .MuiTab-root': {
-    minWidth: 'auto',
-    padding: theme.spacing(1, 2),
-    fontWeight: theme.typography.fontWeightMedium,
-  },
-}));
-
-const StyledTab = styled(Tab)(({ theme }) => ({
-  '&.Mui-selected': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-    borderRadius: theme.shape.borderRadius,
-  },
-}));
+const TABS = [
+  { label: 'All', icon: <DashboardIcon /> },
+  { label: 'Open', icon: <AssignmentIcon /> },
+  { label: 'In Progress', icon: <AccessTimeIcon /> },
+  { label: 'Closed', icon: <CheckCircleIcon /> },
+  { label: 'Expired', icon: <WarningIcon /> }
+];
 
 const Tickets = () => {
   const theme = useTheme();
@@ -98,7 +31,14 @@ const Tickets = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    status: 'Open',
+    priority: 'Low',
+    assignee: '',
+    dueDate: ''
+  });
   const [formErrors, setFormErrors] = useState({});
   const [noteContent, setNoteContent] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -132,7 +72,7 @@ const Tickets = () => {
   }, []);
 
   const filteredTickets = useMemo(() => {
-    const statusFilter = ['All', 'Open', 'In Progress', 'Closed', 'Expired'][currentTab];
+    const statusFilter = TABS[currentTab].label;
     return tickets
       .filter(ticket => ticket && ticket.title && ticket.description)
       .filter(({ title, description, status, priority, dueDate }) => {
@@ -164,8 +104,15 @@ const Tickets = () => {
         ...ticket,
         dueDate: ticket.dueDate ? new Date(ticket.dueDate).toISOString().split('T')[0] : ''
       });
-    } else {
-      setFormData({ status: 'Open', priority: 'Low' });
+    } else if (type === 'add') {
+      setFormData({
+        title: '',
+        description: '',
+        status: 'Open',
+        priority: 'Low',
+        assignee: '',
+        dueDate: ''
+      });
     }
     setFormErrors({});
     setDialogOpen(true);
@@ -184,42 +131,42 @@ const Tickets = () => {
     setFormErrors(prev => ({ ...prev, [name]: '' }));
   }, []);
 
-  const handleSubmit = useCallback(async () => {
-    const validateForm = () => {
-      const errors = {};
-      if (!formData.title) errors.title = 'Title is required';
-      if (!formData.description) errors.description = 'Description is required';
-      if (!formData.status) errors.status = 'Status is required';
-      if (!formData.priority) errors.priority = 'Priority is required';
-      setFormErrors(errors);
-      return Object.keys(errors).length === 0;
-    };
+  const validateForm = useCallback(() => {
+    const errors = {};
+    if (!formData.title) errors.title = 'Title is required';
+    if (!formData.description) errors.description = 'Description is required';
+    if (!formData.status) errors.status = 'Status is required';
+    if (!formData.priority) errors.priority = 'Priority is required';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [formData]);
 
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
 
     try {
       if (dialogType === 'add') {
         await createTicket(formData);
+        setSnackbar({ open: true, message: 'Ticket created successfully', severity: 'success' });
       } else if (dialogType === 'edit') {
         await updateTicket(selectedTicket.id, formData);
+        setSnackbar({ open: true, message: 'Ticket updated successfully', severity: 'success' });
       }
-      setSnackbar({ open: true, message: `Ticket ${dialogType === 'add' ? 'created' : 'updated'} successfully`, severity: 'success' });
       handleCloseDialog();
       fetchTickets();
     } catch (error) {
       console.error('Error submitting ticket:', error);
-      let errorMessage = 'Failed to submit ticket';
-      if (error.response && error.response.data && error.response.data.message) {
-        errorMessage = error.response.data.message;
-      }
-      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Failed to submit ticket',
+        severity: 'error'
+      });
     }
-  }, [dialogType, formData, selectedTicket, handleCloseDialog, fetchTickets]);
+  }, [dialogType, formData, selectedTicket, handleCloseDialog, fetchTickets, validateForm]);
 
   const handleDeleteTicket = useCallback(async () => {
-    if (!selectedTicket || !selectedTicket.id) {
+    if (!selectedTicket?.id) {
       setSnackbar({ open: true, message: 'Invalid ticket selected', severity: 'error' });
-      handleCloseDialog();
       return;
     }
 
@@ -286,12 +233,14 @@ const Tickets = () => {
   const renderTicketCard = useCallback((ticket) => (
     <Grid item xs={12} sm={6} md={4} key={ticket.id}>
       <Fade in={true} timeout={500}>
-        <StyledCard onClick={() => handleOpenDialog('view', ticket)} elevation={3}>
-          <CardHeader>
-            <Typography variant="h6" noWrap sx={{ color: 'white', fontWeight: 'bold' }}>{ticket.title}</Typography>
-          </CardHeader>
-          <CardContent>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 2, height: '3em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <Paper className="ticket-card" onClick={() => handleOpenDialog('view', ticket)}>
+          <Box className="card-header">
+            <Typography variant="h6" noWrap className="card-title">
+              {ticket.title}
+            </Typography>
+          </Box>
+          <Box className="card-content">
+            <Typography variant="body2" color="textSecondary" className="card-description">
               {ticket.description}
             </Typography>
             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -300,11 +249,11 @@ const Tickets = () => {
                 {renderPriorityIcon(ticket.priority)}
               </Tooltip>
             </Box>
-          </CardContent>
-          <CardFooter>
+          </Box>
+          <Box className="card-footer">
             <Tooltip title="Assignee">
               <Box display="flex" alignItems="center">
-                <Avatar sx={{ width: 24, height: 24, mr: 1, bgcolor: theme.palette.primary.main }}>
+                <Avatar className="assignee-avatar">
                   <PersonIcon fontSize="small" />
                 </Avatar>
                 <Typography variant="body2">{ticket.assignee || 'Unassigned'}</Typography>
@@ -312,29 +261,36 @@ const Tickets = () => {
             </Tooltip>
             <Tooltip title="Due Date">
               <Box display="flex" alignItems="center">
-                <AccessTimeIcon fontSize="small" sx={{ mr: 0.5 }} />
-                <Typography variant="body2" color={isTicketExpired(ticket.dueDate) ? 'error.main' : 'inherit'}>
+                <AccessTimeIcon fontSize="small" className="due-date-icon" />
+                <Typography
+                  variant="body2"
+                  className={isTicketExpired(ticket.dueDate) ? 'expired-date' : ''}
+                >
                   {ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : 'Not set'}
                 </Typography>
-                {isTicketExpired(ticket.dueDate) && <WarningIcon color="error" fontSize="small" sx={{ ml: 0.5 }} />}
+                {isTicketExpired(ticket.dueDate) && (
+                  <WarningIcon color="error" fontSize="small" className="warning-icon" />
+                )}
               </Box>
             </Tooltip>
-          </CardFooter>
-        </StyledCard>
+          </Box>
+        </Paper>
       </Fade>
     </Grid>
-  ), [handleOpenDialog, renderStatusChip, renderPriorityIcon, isTicketExpired, theme]);
+  ), [handleOpenDialog, renderStatusChip, renderPriorityIcon, isTicketExpired]);
 
-  const dialogContent = useCallback(() => {
+  const renderDialogContent = useCallback(() => {
     switch (dialogType) {
       case 'view':
         return selectedTicket ? (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+              <Typography variant="h5" gutterBottom className="dialog-title">
                 {selectedTicket.title}
               </Typography>
-              <Typography variant="body1" paragraph>{selectedTicket.description}</Typography>
+              <Typography variant="body1" paragraph>
+                {selectedTicket.description}
+              </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="subtitle2">Status</Typography>
@@ -344,35 +300,24 @@ const Tickets = () => {
               <Typography variant="subtitle2">Priority</Typography>
               <Box display="flex" alignItems="center">
                 {renderPriorityIcon(selectedTicket.priority)}
-                <Typography variant="body2" sx={{ ml: 1 }}>{selectedTicket.priority}</Typography>
+                <Typography variant="body2" sx={{ ml: 1 }}>
+                  {selectedTicket.priority}
+                </Typography>
               </Box>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2">Assignee</Typography>
-              <Typography variant="body2">{selectedTicket.assignee || 'Unassigned'}</Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2">Due Date</Typography>
-              <Typography variant="body2" color={isTicketExpired(selectedTicket.dueDate) ? 'error.main' : 'inherit'}>
-                {selectedTicket.dueDate ? new Date(selectedTicket.dueDate).toLocaleDateString() : 'Not set'}
-                {isTicketExpired(selectedTicket.dueDate) && (
-                  <Tooltip title="Expired">
-                    <WarningIcon color="error" fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                  </Tooltip>
-                )}
-              </Typography>
             </Grid>
             <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>Notes</Typography>
-              <List>
-                {selectedTicket.notes && selectedTicket.notes.map((note, index) => (
-                  <ListItem key={index} sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), mb: 1, borderRadius: 1 }}>
+              <Typography variant="h6" gutterBottom className="section-title">
+                Notes
+              </Typography>
+              <List className="notes-list">
+                {selectedTicket.notes?.map((note, index) => (
+                  <ListItem key={index} className="note-item">
                     <ListItemText
                       primary={new Date(note.createdAt).toLocaleString()}
                       secondary={note.content}
-                      primaryTypographyProps={{ variant: 'caption', color: 'textSecondary' }}
-                      secondaryTypographyProps={{ variant: 'body2' }}
+                      primaryTypographyProps={{ className: 'note-timestamp' }}
+                      secondaryTypographyProps={{ className: 'note-content' }}
                     />
                   </ListItem>
                 ))}
@@ -380,14 +325,15 @@ const Tickets = () => {
               <Button
                 startIcon={<AddIcon />}
                 onClick={() => setDialogType('addNote')}
-                sx={{ mt: 2 }}
                 variant="outlined"
+                className="add-note-button"
               >
                 Add Note
               </Button>
             </Grid>
           </Grid>
         ) : null;
+
       case 'add':
       case 'edit':
         return (
@@ -395,62 +341,53 @@ const Tickets = () => {
             <Grid item xs={12}>
               <TextField
                 autoFocus
-                margin="dense"
                 name="title"
                 label="Title"
-                type="text"
                 fullWidth
-                variant="outlined"
-                value={formData.title || ''}
+                value={formData.title}
                 onChange={handleInputChange}
-                required
                 error={!!formErrors.title}
                 helperText={formErrors.title}
+                className="form-field"
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
-                margin="dense"
                 name="description"
                 label="Description"
-                type="text"
                 fullWidth
-                variant="outlined"
                 multiline
                 rows={4}
-                value={formData.description || ''}
+                value={formData.description}
                 onChange={handleInputChange}
-                required
                 error={!!formErrors.description}
                 helperText={formErrors.description}
+                className="form-field"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth variant="outlined" error={!!formErrors.status}>
+              <FormControl fullWidth error={!!formErrors.status}>
                 <InputLabel>Status</InputLabel>
                 <Select
                   name="status"
-                  value={formData.status || ''}
+                  value={formData.status}
                   onChange={handleInputChange}
                   label="Status"
-                  required
                 >
                   <MenuItem value="Open">Open</MenuItem>
                   <MenuItem value="In Progress">In Progress</MenuItem>
                   <MenuItem value="Closed">Closed</MenuItem>
-                </Select>
-                {formErrors.status && <FormHelperText>{formErrors.status}</FormHelperText>}
+                </Select>{formErrors.status && <FormHelperText>{formErrors.status}</FormHelperText>}
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth variant="outlined" error={!!formErrors.priority}>
+              <FormControl fullWidth error={!!formErrors.priority}>
                 <InputLabel>Priority</InputLabel>
                 <Select
                   name="priority"
-                  value={formData.priority || ''}
+                  value={formData.priority}
                   onChange={handleInputChange}
                   label="Priority"
-                  required
                 >
                   <MenuItem value="Low">Low</MenuItem>
                   <MenuItem value="Medium">Medium</MenuItem>
@@ -461,62 +398,58 @@ const Tickets = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                margin="dense"
                 name="assignee"
                 label="Assignee"
-                type="text"
                 fullWidth
-                variant="outlined"
-                value={formData.assignee || ''}
+                value={formData.assignee}
                 onChange={handleInputChange}
+                className="form-field"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                margin="dense"
                 name="dueDate"
                 label="Due Date"
                 type="date"
                 fullWidth
-                variant="outlined"
-                InputLabelProps={{
-                  shrink: true,
-                }}
-                value={formData.dueDate || ''}
+                value={formData.dueDate}
                 onChange={handleInputChange}
+                InputLabelProps={{ shrink: true }}
+                className="form-field"
               />
             </Grid>
           </Grid>
         );
+
       case 'delete':
         return (
-          <Typography>
+          <Typography className="dialog-message">
             Are you sure you want to delete this ticket? This action cannot be undone.
           </Typography>
         );
+
       case 'addNote':
         return (
           <TextField
             autoFocus
-            margin="dense"
             name="noteContent"
             label="Note Content"
-            type="text"
             fullWidth
-            variant="outlined"
             multiline
             rows={4}
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
+            className="note-input"
           />
         );
+
       default:
         return null;
     }
-  }, [dialogType, selectedTicket, formData, formErrors, handleInputChange, noteContent, renderStatusChip, renderPriorityIcon, isTicketExpired, theme, setDialogType]);
+  }, [dialogType, selectedTicket, formData, formErrors, handleInputChange, noteContent, renderStatusChip, renderPriorityIcon]);
 
   return (
-    <PageWrapper>
+    <Box className="page-wrapper">
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
           <IconButton
@@ -524,11 +457,11 @@ const Tickets = () => {
             color="inherit"
             aria-label="menu"
             onClick={() => setDrawerOpen(true)}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ display: { sm: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: theme.palette.primary.main }}>
+          <Typography variant="h5" component="div" className="page-title">
             Ticket Management
           </Typography>
           <Button
@@ -536,7 +469,7 @@ const Tickets = () => {
             color="secondary"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog('add')}
-            sx={{ borderRadius: '20px', textTransform: 'none' }}
+            className="add-button"
           >
             New Ticket
           </Button>
@@ -548,33 +481,32 @@ const Tickets = () => {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
       >
-        <Box
-          sx={{ width: 250 }}
-          role="presentation"
-          onClick={() => setDrawerOpen(false)}
-          onKeyDown={() => setDrawerOpen(false)}
-        >
+        <Box className="drawer-content">
           <List>
             <ListItem>
-              <ListItemText
-                primary="Ticket Dashboard"
-                primaryTypographyProps={{ variant: 'h6', color: 'primary' }}
-              />
+              <ListItemText primary="Ticket Dashboard" className="drawer-title" />
             </ListItem>
             <Divider />
-            {['All Tickets', 'Open Tickets', 'In Progress Tickets', 'Closed Tickets', 'Expired Tickets'].map((text, index) => (
-              <ListItem button key={text} onClick={() => setCurrentTab(index)}>
-                <ListItemText primary={text} />
+            {TABS.map((tab, index) => (
+              <ListItem 
+                button 
+                key={tab.label} 
+                onClick={() => {
+                  setCurrentTab(index);
+                  setDrawerOpen(false);
+                }}
+              >
+                <ListItemText primary={`${tab.label} Tickets`} />
               </ListItem>
             ))}
           </List>
         </Box>
       </Drawer>
 
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Grid container spacing={3} alignItems="center">
+      <Box className="content-wrapper">
+        <Grid container spacing={3} className="filters-container">
           <Grid item xs={12} md={4}>
-            <SearchBar
+            <TextField
               fullWidth
               variant="outlined"
               placeholder="Search Tickets"
@@ -586,15 +518,16 @@ const Tickets = () => {
                 ),
               }}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-field"
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel>Sort</InputLabel>
+              <InputLabel>Sort By</InputLabel>
               <Select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                label="Sort"
+                label="Sort By"
                 startAdornment={
                   <InputAdornment position="start">
                     <SortIcon />
@@ -609,11 +542,11 @@ const Tickets = () => {
           </Grid>
           <Grid item xs={12} md={4}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel>Filter Priority</InputLabel>
+              <InputLabel>Priority Filter</InputLabel>
               <Select
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value)}
-                label="Filter Priority"
+                label="Priority Filter"
                 startAdornment={
                   <InputAdornment position="start">
                     <FilterListIcon />
@@ -628,132 +561,147 @@ const Tickets = () => {
             </FormControl>
           </Grid>
         </Grid>
-      </Box>
 
-      <StyledTabs
-        value={currentTab}
-        onChange={(e, newValue) => setCurrentTab(newValue)}
-        indicatorColor="primary"
-        textColor="primary"
-        centered={!isMobile}
-        variant={isMobile ? "scrollable" : "standard"}
-        sx={{ mb: 4 }}
-      >
-        <StyledTab label="All" icon={<DashboardIcon />} iconPosition="start" />
-        <StyledTab label="Open" icon={<AssignmentIcon />} iconPosition="start" />
-        <StyledTab label="In Progress" icon={<AccessTimeIcon />} iconPosition="start" />
-        <StyledTab label="Closed" icon={<CheckCircleIcon />} iconPosition="start" />
-        <StyledTab label="Expired" icon={<WarningIcon />} iconPosition="start" />
-      </StyledTabs>
-
-      {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
-          <CircularProgress />
-        </Box>
-      ) : (
-        <>
-          {filteredTickets.length === 0 ? (
-            <Paper elevation={3} sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
-              <Typography variant="h6" color="textSecondary">
-                No tickets found. Try adjusting your filters or create a new ticket.
-              </Typography>
-            </Paper>
-          ) : (
-            <Grid container spacing={3}>
-              {filteredTickets.map(renderTicketCard)}
-            </Grid>
-          )}
-        </>
-      )}
-
-      <Dialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            borderRadius: '16px',
-            overflow: 'hidden',
-          }
-        }}
-      >
-        <DialogTitle
-          sx={{
-            background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-            color: 'white',
-            fontWeight: 'bold'
-          }}
+        <Tabs
+          value={currentTab}
+          onChange={(e, newValue) => setCurrentTab(newValue)}
+          indicatorColor="primary"
+          textColor="primary"
+          centered={!isMobile}
+          variant={isMobile ? "scrollable" : "standard"}
+          className="custom-tabs"
         >
-          {dialogType === 'add'
-            ? 'Create New Ticket'
-            : dialogType === 'edit'
-              ? 'Edit Ticket'
-              : dialogType === 'view'
-                ? selectedTicket?.title
-                : dialogType === 'addNote'
-                  ? 'Add Note'
-                  : 'Confirm Delete'}
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: 'white',
-            }}
+          {TABS.map((tab) => (
+            <Tab
+              key={tab.label}
+              label={tab.label}
+              icon={tab.icon}
+              iconPosition="start"
+              className="custom-tab"
+            />
+          ))}
+        </Tabs>
+
+        {loading ? (
+          <Box className="loading-container">
+            <CircularProgress />
+          </Box>
+        ) : filteredTickets.length === 0 ? (
+          <Paper elevation={3} className="empty-state">
+            <Typography variant="h6" color="textSecondary">
+              No tickets found. Try adjusting your filters or create a new ticket.
+            </Typography>
+          </Paper>
+        ) : (
+          <Grid container spacing={3}>
+            {filteredTickets.map(renderTicketCard)}
+          </Grid>
+        )}
+
+        <Dialog
+          open={dialogOpen}
+          onClose={handleCloseDialog}
+          fullWidth
+          maxWidth="md"
+          className="custom-dialog"
+        >
+          <DialogTitle className="dialog-header">
+            {dialogType === 'add'
+              ? 'Create New Ticket'
+              : dialogType === 'edit'
+                ? 'Edit Ticket'
+                : dialogType === 'view'
+                  ? selectedTicket?.title
+                  : dialogType === 'addNote'
+                    ? 'Add Note'
+                    : 'Confirm Delete'}
+            <IconButton
+              onClick={handleCloseDialog}
+              className="dialog-close-button"
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            {renderDialogContent()}
+          </DialogContent>
+          <DialogActions className="dialog-actions">
+            <Button 
+              onClick={handleCloseDialog}
+              color="primary"
+              variant="outlined"
+              className="action-button"
+            >
+              Cancel
+            </Button>
+            {dialogType === 'add' || dialogType === 'edit' ? (
+              <Button
+                onClick={handleSubmit}
+                color="primary"
+                variant="contained"
+                className="action-button"
+              >
+                {dialogType === 'add' ? 'Create Ticket' : 'Save Changes'}
+              </Button>
+            ) : dialogType === 'delete' ? (
+              <Button
+                onClick={handleDeleteTicket}
+                color="error"
+                variant="contained"
+                className="action-button"
+              >
+                Delete
+              </Button>
+            ) : dialogType === 'addNote' ? (
+              <Button
+                onClick={handleAddNote}
+                color="primary"
+                variant="contained"
+                className="action-button"
+              >
+                Add Note
+              </Button>
+            ) : dialogType === 'view' ? (
+              <>
+                <Button
+                  onClick={() => handleOpenDialog('edit', selectedTicket)}
+                  color="primary"
+                  variant="contained"
+                  className="action-button"
+                >
+                  Edit Ticket
+                </Button>
+                <Button
+                  onClick={() => handleOpenDialog('delete', selectedTicket)}
+                  color="error"
+                  variant="contained"
+                  className="action-button"
+                >
+                  Delete Ticket
+                </Button>
+              </>
+            ) : null}
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert
+            onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+            severity={snackbar.severity}
+            className="snackbar-alert"
+            elevation={6}
+            variant="filled"
           >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>{dialogContent()}</DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary" variant="outlined" sx={{ borderRadius: '20px' }}>
-            Cancel
-          </Button>
-          {dialogType === 'add' || dialogType === 'edit' ? (
-            <Button onClick={handleSubmit} color="primary" variant="contained" sx={{ borderRadius: '20px' }}>
-              {dialogType === 'add' ? 'Create Ticket' : 'Save Changes'}
-            </Button>
-          ) : dialogType === 'delete' ? (
-            <Button onClick={handleDeleteTicket} color="error" variant="contained" sx={{ borderRadius: '20px' }}>
-              Delete
-            </Button>
-          ) : dialogType === 'addNote' ? (
-            <Button onClick={handleAddNote} color="primary" variant="contained" sx={{ borderRadius: '20px' }}>
-              Add Note
-            </Button>
-          ) : dialogType === 'view' ? (
-            <>
-              <Button onClick={() => handleOpenDialog('edit', selectedTicket)} color="primary" variant="contained" sx={{ borderRadius: '20px', mr: 1 }}>
-                Edit Ticket
-              </Button>
-              <Button onClick={() => handleOpenDialog('delete', selectedTicket)} color="error" variant="contained" sx={{ borderRadius: '20px' }}>
-                Delete Ticket
-              </Button>
-            </>
-          ) : null}
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%', borderRadius: '20px' }}
-          elevation={6}
-          variant="filled"
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </PageWrapper>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    </Box>
   );
 };
 
