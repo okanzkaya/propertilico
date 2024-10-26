@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 const { models, sequelize } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -22,7 +24,13 @@ exports.updateUserProfile = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const updatableFields = ['name', 'email', 'language', 'timeZone', 'currency', 'dateFormat', 'measurementUnit', 'fontSize', 'theme', 'emailNotifications', 'pushNotifications', 'inAppNotifications', 'twoFactorAuth', 'loginAlerts'];
+    const updatableFields = [
+      'name', 'email', 'language', 'timeZone', 'currency', 
+      'dateFormat', 'measurementUnit', 'fontSize', 'theme', 
+      'emailNotifications', 'pushNotifications', 'inAppNotifications', 
+      'twoFactorAuth', 'loginAlerts'
+    ];
+    
     updatableFields.forEach(field => {
       if (req.body[field] !== undefined) user[field] = req.body[field];
     });
@@ -52,7 +60,11 @@ exports.changeEmail = async (req, res) => {
       return res.status(400).json({ message: 'Invalid password' });
     }
 
-    const existingUser = await models.User.findOne({ where: { email: newEmail }, transaction: t });
+    const existingUser = await models.User.findOne({ 
+      where: { email: newEmail }, 
+      transaction: t 
+    });
+
     if (existingUser) {
       await t.rollback();
       return res.status(400).json({ message: 'Email is already in use' });
@@ -113,27 +125,59 @@ exports.changePassword = async (req, res) => {
 
 exports.uploadAvatar = async (req, res) => {
   const t = await sequelize.transaction();
+  
   try {
     if (!req.file) {
       await t.rollback();
-      return res.status(400).json({ message: 'No file uploaded' });
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image file'
+      });
     }
 
     const user = await models.User.findByPk(req.user.id, { transaction: t });
+    
     if (!user) {
       await t.rollback();
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
-    user.avatar = `/uploads/avatars/${req.file.filename}`;
+    // Delete old avatar if it exists
+    if (user.avatar) {
+      const oldAvatarPath = path.join(__dirname, '..', user.avatar);
+      if (fs.existsSync(oldAvatarPath)) {
+        try {
+          fs.unlinkSync(oldAvatarPath);
+        } catch (error) {
+          console.error('Error deleting old avatar:', error);
+        }
+      }
+    }
+
+    // Update user with new avatar path
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    user.avatar = avatarUrl;
     await user.save({ transaction: t });
 
     await t.commit();
-    res.json({ message: 'Avatar uploaded successfully', avatarUrl: user.avatar });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Avatar uploaded successfully',
+      avatarUrl
+    });
+    
   } catch (error) {
     await t.rollback();
-    console.error('Error uploading avatar:', error);
-    res.status(400).json({ message: 'Failed to upload avatar', error: error.message });
+    console.error('Error in uploadAvatar:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload avatar',
+      error: error.message
+    });
   }
 };
 

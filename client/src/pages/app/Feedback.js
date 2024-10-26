@@ -15,7 +15,9 @@ import {
   ListItem,
   ListItemSecondaryAction,
   MenuItem,
+  Box,
 } from '@mui/material';
+import StarIcon from '@mui/icons-material/Star';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
@@ -31,6 +33,57 @@ const INITIAL_STATE = {
   attachment: null,
 };
 
+const StarRating = ({ value, onChange }) => {
+  const [hover, setHover] = useState(-1);
+
+  return (
+    <Box 
+      className="star-rating"
+      sx={{ 
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px'
+      }}
+    >
+      {[1, 2, 3, 4, 5].map((star) => (
+        <IconButton
+          key={star}
+          onClick={() => onChange(star)}
+          onMouseEnter={() => setHover(star)}
+          onMouseLeave={() => setHover(-1)}
+          size="large"
+          sx={{
+            padding: '4px',
+            color: (hover !== -1 ? star <= hover : star <= value) 
+              ? '#FFB400'
+              : 'rgba(0, 0, 0, 0.38)',
+            '&:hover': {
+              background: 'transparent',
+            }
+          }}
+        >
+          <StarIcon 
+            sx={{ 
+              fontSize: '2rem',
+              transition: 'color 0.2s ease-in-out',
+            }} 
+          />
+        </IconButton>
+      ))}
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          marginLeft: '8px',
+          minWidth: '60px',
+          color: 'text.secondary'
+        }}
+      >
+        {value ? `${value} Star${value !== 1 ? 's' : ''}` : 'No rating'}
+      </Typography>
+    </Box>
+  );
+};
+
 const FeedbackPage = () => {
   const [feedback, setFeedback] = useState(INITIAL_STATE);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -44,12 +97,11 @@ const FeedbackPage = () => {
   useEffect(() => {
     const checkSubmissionLimit = async () => {
       try {
-        setError(null);
         const { canSubmit, timeUntilNext } = await checkFeedbackLimit();
         setCanSubmit(canSubmit);
         setTimeUntilNextSubmission(timeUntilNext);
       } catch (error) {
-        console.error('Error in checkSubmissionLimit:', error);
+        console.error('Error checking submission limit:', error);
         handleError(error);
       }
     };
@@ -84,6 +136,12 @@ const FeedbackPage = () => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFeedback((prev) => ({ ...prev, [name]: value }));
+    if (error) setError(null);
+  };
+
+  const handleRatingChange = (value) => {
+    setFeedback((prev) => ({ ...prev, rating: value }));
+    if (error) setError(null);
   };
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -93,9 +151,10 @@ const FeedbackPage = () => {
         handleError(new Error('File size exceeds 50MB limit.'));
       } else {
         setFeedback((prev) => ({ ...prev, attachment: file }));
+        if (error) setError(null);
       }
     }
-  }, []);
+  }, [error]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -122,22 +181,23 @@ const FeedbackPage = () => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      Object.entries(feedback).forEach(([key, value]) => {
-        if (value && key !== 'attachment') {
-          formData.append(key, value);
-        }
-      });
+      
+      formData.append('message', feedback.message.trim());
+      formData.append('feedbackType', feedback.feedbackType);
+      formData.append('rating', String(feedback.rating));
       
       if (feedback.attachment) {
         formData.append('attachment', feedback.attachment);
       }
 
       await sendFeedback(formData);
+      
       setSnackbarMessage('Feedback submitted successfully!');
       setSnackbarSeverity('success');
       setFeedback(INITIAL_STATE);
       setCanSubmit(false);
       setTimeUntilNextSubmission(300);
+      setError(null);
     } catch (error) {
       console.error('Error submitting feedback:', error);
       handleError(error);
@@ -175,8 +235,10 @@ const FeedbackPage = () => {
                   value={feedback.feedbackType}
                   onChange={handleChange}
                   required
+                  fullWidth
                   displayEmpty
                   className="select-field"
+                  error={Boolean(error && !feedback.feedbackType)}
                 >
                   <MenuItem value="" disabled>Select feedback type</MenuItem>
                   <MenuItem value="bug">Report a Bug</MenuItem>
@@ -197,15 +259,19 @@ const FeedbackPage = () => {
                   onChange={handleChange}
                   placeholder="Please provide detailed feedback (minimum 10 characters)..."
                   required
+                  fullWidth
                   className="text-field"
+                  error={Boolean(error && feedback.message.length < 10)}
+                  helperText={feedback.message.length < 10 ? "Message must be at least 10 characters long" : ""}
                 />
               </div>
 
               <div className="custom-form-control">
                 <label className="input-label">Rating (Optional)</label>
-                <div className="custom-rating">
-                  {/* Implement your rating component here */}
-                </div>
+                <StarRating 
+                  value={feedback.rating} 
+                  onChange={handleRatingChange} 
+                />
               </div>
 
               <div className="custom-form-control">
@@ -213,23 +279,29 @@ const FeedbackPage = () => {
                 <div className="dropzone-area" {...getRootProps()}>
                   <input {...getInputProps()} />
                   <Typography>
-                    {isDragActive ? 'Drop the file here ...' : 
-                     'Drag \'n\' drop an image, video, or audio file here, or click to select a file'}
+                    {isDragActive
+                      ? 'Drop the file here ...'
+                      : "Drag 'n' drop an image, video, or audio file here, or click to select a file"}
                   </Typography>
                 </div>
                 {feedback.attachment && (
                   <List className="file-list">
                     <ListItem className="file-list-item">
                       <div className="list-item-text">
-                        <div className="list-item-text-primary">{feedback.attachment.name}</div>
+                        <div className="list-item-text-primary">
+                          {feedback.attachment.name}
+                        </div>
                         <div className="list-item-text-secondary">
                           {`${(feedback.attachment.size / 1024 / 1024).toFixed(2)} MB`}
                         </div>
                       </div>
                       <ListItemSecondaryAction>
-                        <IconButton 
-                          edge="end" 
-                          onClick={() => setFeedback(prev => ({ ...prev, attachment: null }))}
+                        <IconButton
+                          edge="end"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFeedback((prev) => ({ ...prev, attachment: null }));
+                          }}
                         >
                           <DeleteIcon />
                         </IconButton>

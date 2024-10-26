@@ -152,3 +152,46 @@
     --text-secondary: rgba(0, 0, 0, 0.6);
     --action-hover: rgba(0, 0, 0, 0.04);
   }
+  /* Star Rating styles */
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-rating .MuiIconButton-root {
+  padding: 4px;
+  transition: transform 0.2s ease-in-out;
+}
+
+.star-rating .MuiIconButton-root:hover {
+  transform: scale(1.2);
+}
+
+/* Custom button additional styles */
+.custom-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background-color: var(--primary-main);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.custom-button:disabled {
+  background-color: rgba(0, 0, 0, 0.12);
+  cursor: not-allowed;
+}
+
+.custom-button.submitting {
+  opacity: 0.7;
+}
+
+.custom-button .MuiCircularProgress-root {
+  margin-right: 8px;
+}
