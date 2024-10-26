@@ -1,50 +1,284 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  Typography, Grid, Box, Button, IconButton, Tabs, Tab, Table,
-  TableHead, TableRow, TableCell, TableBody, Menu, MenuItem,
-  Fade, useMediaQuery, Chip, CircularProgress, Snackbar, Alert, TablePagination,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select,
-  Tooltip
+  Typography,
+  Grid,
+  Box,
+  Button,
+  IconButton,
+  Tabs,
+  Tab,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Menu,
+  MenuItem,
+  useMediaQuery,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  Card,
+  CardContent,
+  CardHeader,
+  useTheme,
+  Paper,
+  Fade,
+  Zoom,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import {
   Add as AddIcon,
-  Edit as EditIcon, Delete as DeleteIcon, TrendingUp as TrendingUpIcon,
-  Savings as SavingsIcon, AccountBalance as AccountBalanceIcon,
-  Home as HomeIcon, Business as BusinessIcon,
-  BarChart as BarChartIcon, PieChart as PieChartIcon,
-  Timeline as TimelineIcon, AttachMoney as MoneyIcon,
-  Info as InfoIcon
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  TrendingUp as TrendingUpIcon,
+  AccountBalance as AccountBalanceIcon,
+  BarChart as BarChartIcon,
+  Timeline as TimelineIcon,
+  AttachMoney as MoneyIcon,
+  FilterList as FilterIcon,
+  Sort as SortIcon,
+  Search as SearchIcon,
+  CompareArrows as CompareArrowsIcon,
+  AccountBalanceWallet as WalletIcon,
+  MoreVert as MoreVertIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
 } from '@mui/icons-material';
-import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend, CategoryScale, LinearScale, BarElement, PointElement, LineElement } from 'chart.js';
-import { Bar, Pie, Line } from 'react-chartjs-2';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getFinancialSummary } from '../../api';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip as ChartTooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Filler,
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import { format, parseISO, isValid } from 'date-fns';
 import './Finances.css';
 
-ChartJS.register(ArcElement, ChartTooltip, Legend, CategoryScale, LinearScale, BarElement, PointElement, LineElement);
+ChartJS.register(
+  ArcElement,
+  ChartTooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Filler
+);
 
-// Constants
-const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F06292'];
-const ROWS_PER_PAGE_OPTIONS = [5, 10, 25];
 const TRANSACTION_TYPES = {
-  income: ['Rent', 'Late Fees', 'Parking', 'Other Income'],
-  expense: ['Maintenance', 'Utilities', 'Property Management', 'Insurance', 'Property Tax', 'Mortgage', 'Other Expenses']
+  income: [
+    'Rent',
+    'Late Fees',
+    'Parking',
+    'Utilities Reimbursement',
+    'Security Deposit',
+    'Pet Rent',
+    'Application Fees',
+    'Other Income',
+  ],
+  expense: [
+    'Maintenance',
+    'Utilities',
+    'Property Management',
+    'Insurance',
+    'Property Tax',
+    'Mortgage',
+    'Repairs',
+    'Marketing',
+    'Legal',
+    'Cleaning',
+    'Landscaping',
+    'Other Expenses',
+  ],
 };
 
-// Helper Functions
-const formatCurrency = (value) => new Intl.NumberFormat('en-US', { 
-  style: 'currency', 
-  currency: 'USD' 
-}).format(value);
+const CHART_COLORS = [
+  '#6366F1',
+  '#22C55E',
+  '#F59E0B',
+  '#EF4444',
+  '#06B6D4',
+  '#8B5CF6',
+  '#EC4899',
+  '#14B8A6',
+  '#F97316',
+  '#64748B',
+];
 
-const getChartOptions = (theme) => ({
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const formatPercent = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value / 100);
+};
+
+const formatDate = (date) => {
+  if (!date) return '';
+  const parsedDate = typeof date === 'string' ? parseISO(date) : date;
+  return isValid(parsedDate) ? format(parsedDate, 'MMM dd, yyyy') : '';
+};
+
+const getTransactions = async (filterConfig) => {
+  try {
+    const response = await fetch('http://localhost:5000/api/finances/transactions', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return filterConfig === 'all' ? data : data.filter(t => t.type === filterConfig);
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    throw error;
+  }
+};
+
+const addTransaction = async (transaction) => {
+  try {
+    const response = await fetch('http://localhost:5000/api/finances/transactions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(transaction)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error adding transaction:', error);
+    throw error;
+  }
+};
+
+const updateTransaction = async (id, data) => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/finances/transactions/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    throw error;
+  }
+};
+
+const deleteTransaction = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/finances/transactions/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return id;
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    throw error;
+  }
+};
+const getFinancialSummary = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/finances/summary', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching financial summary:', error);
+    throw error;
+  }
+};
+
+const getChartOptions = (theme, title = '') => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
       position: 'top',
-      labels: { color: theme.palette.text.primary },
+      align: 'end',
+      labels: {
+        color: theme.palette.text.primary,
+        usePointStyle: true,
+        pointStyle: 'circle',
+        padding: 20,
+        font: {
+          family: theme.typography.fontFamily,
+          size: 12,
+        },
+      },
     },
     tooltip: {
       backgroundColor: theme.palette.background.paper,
@@ -52,294 +286,227 @@ const getChartOptions = (theme) => ({
       bodyColor: theme.palette.text.secondary,
       borderColor: theme.palette.divider,
       borderWidth: 1,
+      padding: 12,
+      cornerRadius: 8,
+      titleFont: {
+        family: theme.typography.fontFamily,
+        size: 14,
+        weight: 600,
+      },
+      bodyFont: {
+        family: theme.typography.fontFamily,
+        size: 13,
+      },
+      callbacks: {
+        label: (context) => {
+          const label = context.dataset.label || '';
+          const value = formatCurrency(context.raw);
+          return label ? `${label}: ${value}` : value;
+        },
+      },
     },
+    title: title ? {
+      display: true,
+      text: title,
+      color: theme.palette.text.primary,
+      font: {
+        family: theme.typography.fontFamily,
+        size: 16,
+        weight: 600,
+      },
+      padding: 20,
+    } : undefined,
   },
   scales: {
     x: {
-      ticks: { color: theme.palette.text.primary },
-      grid: { color: theme.palette.divider },
+      grid: {
+        display: false,
+      },
+      ticks: {
+        color: theme.palette.text.secondary,
+        font: {
+          family: theme.typography.fontFamily,
+          size: 12,
+        },
+      },
     },
     y: {
+      grid: {
+        color: theme.palette.divider,
+        drawBorder: false,
+      },
       ticks: {
-        color: theme.palette.text.primary,
+        color: theme.palette.text.secondary,
+        font: {
+          family: theme.typography.fontFamily,
+          size: 12,
+        },
         callback: (value) => formatCurrency(value),
       },
-      grid: { color: theme.palette.divider },
     },
+  },
+  interaction: {
+    mode: 'nearest',
+    intersect: false,
+    axis: 'x',
+  },
+  animation: {
+    duration: 1000,
+    easing: 'easeInOutQuart',
   },
 });
 
-// Chart Component
-const ChartComponent = React.memo(({ type, data, keys = [] }) => {
-  const theme = useTheme();
-  
-  if (!data || data.length === 0) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-        <Typography variant="body1" color="textSecondary">
-          No data available
-        </Typography>
-      </Box>
-    );
-  }
-
-  const getBarData = (data, keys) => ({
-    labels: data.map(item => item.name),
-    datasets: (keys && keys.length > 0) ? keys.map((key, index) => ({
-      label: key.charAt(0).toUpperCase() + key.slice(1),
-      data: data.map(item => item[key]),
-      backgroundColor: COLORS[index % COLORS.length],
-    })) : [{
-      label: 'Value',
-      data: data.map(item => item.value),
-      backgroundColor: COLORS[0],
-    }]
-  });
-
-  const getPieData = (data) => ({
-    labels: data.map(item => item.id || item.name),
-    datasets: [{
-      data: data.map(item => item.value),
-      backgroundColor: COLORS,
-    }]
-  });
-
-  const getLineData = (data) => ({
-    labels: data.map(item => item.name),
-    datasets: [{
-      label: 'Net Profit',
-      data: data.map(item => item.netProfit || item.value),
-      borderColor: theme.palette.primary.main,
-      backgroundColor: theme.palette.primary.main,
-      tension: 0.4,
-    }]
-  });
-
-  const chartData = {
-    bar: getBarData(data, keys),
-    pie: getPieData(data),
-    line: getLineData(data)
-  };
-
-  const ChartTypes = { 
-    bar: Bar, 
-    pie: Pie, 
-    line: Line 
-  };
-
-  const SelectedChart = ChartTypes[type?.toLowerCase()] || ChartTypes.bar;
-  
+const StatsCard = React.memo(({ title, value, trend, trendValue, icon: Icon, color = 'primary', delay = 0 }) => {
   return (
-    <Box height="100%" width="100%" position="relative">
-      <SelectedChart 
-        data={chartData[type?.toLowerCase() || 'bar']} 
-        options={getChartOptions(theme)} 
+    <Zoom in style={{ transitionDelay: `${delay}ms` }}>
+      <Card className={`stats-card stats-card-${color}`}>
+        <CardContent>
+          <Box className="stats-card-header">
+            <Box className={`stats-card-icon ${color}`}>
+              <Icon />
+            </Box>
+            <Typography variant="h6" className="stats-card-title">
+              {title}
+            </Typography>
+          </Box>
+          <Typography variant="h3" className="stats-card-value">
+            {value}
+          </Typography>
+          <Fade in timeout={800}>
+            <Box className={`stats-card-trend ${trend}`}>
+              {trend === 'up' ? (
+                <KeyboardArrowUpIcon className="trend-icon" />
+              ) : (
+                <KeyboardArrowDownIcon className="trend-icon" />
+              )}
+              <Typography variant="body2">
+                {trendValue}% vs last month
+              </Typography>
+            </Box>
+          </Fade>
+        </CardContent>
+      </Card>
+    </Zoom>
+  );
+});
+
+const ChartCard = React.memo(({ title, subtitle, chart: Chart, data, type = 'bar', height = 400, action }) => {
+  const theme = useTheme();
+
+  return (
+    <Card className="chart-card">
+      <CardHeader
+        title={title}
+        subheader={subtitle}
+        action={action}
+        className="chart-header"
       />
-    </Box>
-  );
-});
-
-
-// Financial Insights Component
-const InsightItem = React.memo(({ icon, label, value, theme }) => (
-  <Box display="flex" alignItems="center" className="insight-item">
-    <Box className="insight-icon" sx={{ mr: 1, color: theme.palette.primary.main }}>{icon}</Box>
-    <Typography variant="body1">
-      <strong>{label}:</strong> {value}
-    </Typography>
-  </Box>
-));
-
-const FinancialInsights = React.memo(({ financialSummary }) => {
-  const theme = useTheme();
-  const { 
-    totalIncome = 0, 
-    totalExpense = 0, 
-    occupancyRate = 0, 
-    averageRent = 0 
-  } = financialSummary || {};
-
-  const netOperatingIncome = totalIncome - totalExpense;
-  const capRate = totalIncome > 0 ? ((netOperatingIncome / (totalIncome * 12)) * 100) : 0;
-
-  return (
-    <div className="insight-card">
-      <Typography variant="h6" gutterBottom className="insight-title">
-        Property Financial Insights
-      </Typography>
-      <Box display="flex" flexDirection="column" gap={2}>
-        <InsightItem 
-          icon={<MoneyIcon />} 
-          label="Net Operating Income" 
-          value={formatCurrency(netOperatingIncome)}
-          theme={theme}
-        />
-        <InsightItem 
-          icon={<TrendingUpIcon />} 
-          label="Cap Rate" 
-          value={`${capRate.toFixed(2)}%`}
-          theme={theme}
-        />
-        <InsightItem 
-          icon={<HomeIcon />} 
-          label="Occupancy Rate" 
-          value={`${occupancyRate.toFixed(2)}%`}
-          theme={theme}
-        />
-        <InsightItem 
-          icon={<BusinessIcon />} 
-          label="Average Rent" 
-          value={formatCurrency(averageRent)}
-          theme={theme}
-        />
-      </Box>
-      <Tooltip title="Performance Indicator">
-        <Typography variant="body2" className="insight-summary">
-          <SavingsIcon sx={{ 
-            mr: 1, 
-            color: theme.palette[capRate > 8 ? 'success' : 'warning'].main 
-          }} />
-          {capRate > 8 
-            ? 'Excellent cap rate! Your property is performing well.' 
-            : 'Consider strategies to improve your cap rate for better returns.'
-          }
-        </Typography>
-      </Tooltip>
-      <Tooltip title="Occupancy Status">
-        <Typography variant="body2" className="insight-summary">
-          <AccountBalanceIcon sx={{ 
-            mr: 1, 
-            color: theme.palette[occupancyRate > 90 ? 'success' : 'warning'].main 
-          }} />
-          {occupancyRate > 90 
-            ? 'High occupancy rate indicates strong demand.' 
-            : 'There\'s room to improve occupancy. Consider marketing strategies.'
-          }
-        </Typography>
-      </Tooltip>
-    </div>
-  );
-});
-
-// Transaction Modal Component
-const TransactionModal = React.memo(({ 
-  isOpen, 
-  onClose, 
-  currentTransaction, 
-  handleInputChange, 
-  handleTransactionSubmit, 
-  isEditing 
-}) => {
-  const theme = useTheme();
-  const today = new Date().toISOString().split('T')[0];
-
-  const renderFormField = (props) => (
-    <Grid item xs={12}>
-      <FormControl fullWidth margin="normal" sx={{ backgroundColor: theme.palette.background.paper }}>
-        {props.type === 'select' ? (
-          <>
-            <InputLabel>{props.label}</InputLabel>
-            <Select
-              name={props.name}
-              value={props.value}
-              onChange={props.onChange}
-              label={props.label}
-            >
-              {props.options.map(option => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </>
-        ) : (
-          <TextField
-            {...props}
-            fullWidth
-            onChange={props.onChange}
+      <CardContent>
+        <Box height={height}>
+          <Chart
+            data={data}
+            options={getChartOptions(theme)}
+            type={type}
           />
-        )}
-      </FormControl>
-    </Grid>
-  );
-
-  return (
-    <Dialog 
-      open={isOpen} 
-      onClose={onClose} 
-      fullWidth 
-      maxWidth="sm"
-      PaperProps={{
-        sx: { backgroundColor: theme.palette.background.paper }
-      }}
-    >
-      <DialogTitle sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.primary.contrastText }}>
-        {isEditing ? 'Edit Transaction' : 'Add Transaction'}
-      </DialogTitle>
-      <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          {renderFormField({
-            type: 'select',
-            name: 'type',
-            label: 'Type',
-            value: currentTransaction?.type || '',
-            onChange: handleInputChange,
-            options: [
-              { value: 'income', label: 'Income' },
-              { value: 'expense', label: 'Expense' }
-            ]
-          })}
-          {renderFormField({
-            type: 'select',
-            name: 'category',
-            label: 'Category',
-            value: currentTransaction?.category || '',
-            onChange: handleInputChange,
-            options: TRANSACTION_TYPES[currentTransaction?.type || 'expense']
-              .map(cat => ({ value: cat, label: cat }))
-          })}
-          {renderFormField({
-            name: 'amount',
-            label: 'Amount',
-            type: 'number',
-            value: currentTransaction?.amount || '',
-            onChange: handleInputChange,
-            inputProps: { min: 0, step: 0.01 }
-          })}
-          {renderFormField({
-            name: 'description',
-            label: 'Description',
-            value: currentTransaction?.description || '',
-            onChange: handleInputChange
-          })}
-          {renderFormField({
-            name: 'date',
-            label: 'Date',
-            type: 'date',
-            value: currentTransaction?.date || today,
-            onChange: handleInputChange,
-            InputLabelProps: { shrink: true },
-            inputProps: { max: today }
-          })}
-        </Grid>
-      </DialogContent>
-      <DialogActions sx={{ p: 2, backgroundColor: theme.palette.background.default }}>
-        <Button onClick={onClose} variant="outlined">
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleTransactionSubmit} 
-          variant="contained" 
-          color="primary"
-        >
-          {isEditing ? 'Update' : 'Add'} Transaction
-        </Button>
-      </DialogActions>
-    </Dialog>
+        </Box>
+      </CardContent>
+    </Card>
   );
 });
-// Transactions Table Component
-const TransactionsTable = React.memo(({ 
+
+const TransactionRow = React.memo(({ 
+  transaction, 
+  onEdit, 
+  onDelete, 
+  index 
+}) => {
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  
+  const handleMenuClick = (event) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleEdit = () => {
+    handleMenuClose();
+    onEdit(transaction);
+  };
+
+  const handleDelete = () => {
+    handleMenuClose();
+    onDelete(transaction.id);
+  };
+
+  return (
+    <Fade in timeout={300} style={{ transitionDelay: `${index * 50}ms` }}>
+      <TableRow hover className="transaction-row">
+        <TableCell>
+          <Box className="transaction-date">
+            <Typography variant="body2" className="date-main">
+              {formatDate(transaction.date)}
+            </Typography>
+          </Box>
+        </TableCell>
+        <TableCell>
+          <Box className="transaction-info">
+            <Typography variant="body2" className="transaction-description">
+              {transaction.description}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              {transaction.category}
+            </Typography>
+          </Box>
+        </TableCell>
+        <TableCell align="right">
+          <Typography
+            variant="body2"
+            className={`amount-cell ${transaction.type}`}
+          >
+            {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
+          </Typography>
+        </TableCell>
+        <TableCell align="center">
+          <Chip
+            label={transaction.type}
+            color={transaction.type === 'income' ? 'success' : 'error'}
+            size="small"
+            className="status-chip"
+          />
+        </TableCell>
+        <TableCell align="right">
+          <IconButton
+            size="small"
+            onClick={handleMenuClick}
+            className="action-button"
+          >
+            <MoreVertIcon />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={handleMenuClose}
+            className="action-menu"
+          >
+            <MenuItem onClick={handleEdit}>
+              <EditIcon fontSize="small" className="menu-icon" />
+              <Typography variant="body2">Edit</Typography>
+            </MenuItem>
+            <MenuItem onClick={handleDelete} className="delete-menu-item">
+              <DeleteIcon fontSize="small" className="menu-icon" />
+              <Typography variant="body2">Delete</Typography>
+            </MenuItem>
+          </Menu>
+        </TableCell>
+      </TableRow>
+    </Fade>
+  );
+});
+
+const TransactionsTable = React.memo(({
   transactions,
   onEdit,
   onDelete,
@@ -348,357 +515,616 @@ const TransactionsTable = React.memo(({
   onPageChange,
   onRowsPerPageChange,
   searchTerm,
-  onSearchChange
+  onSearchChange,
+  sortConfig,
+  onSortChange,
+  filterConfig,
+  onFilterChange,
+  compact = false,
 }) => {
-  const theme = useTheme();
+  const [filterAnchor, setFilterAnchor] = useState(null);
+  const [sortAnchor, setSortAnchor] = useState(null);
+
+  const handleFilterClick = (event) => {
+    setFilterAnchor(event.currentTarget);
+  };
+
+  const handleSortClick = (event) => {
+    setSortAnchor(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchor(null);
+  };
+
+  const handleSortClose = () => {
+    setSortAnchor(null);
+  };
+
+  const handleFilterChange = (newFilter) => {
+    onFilterChange(newFilter);
+    handleFilterClose();
+  };
+
+  const handleSortChange = (newSort) => {
+    onSortChange(newSort);
+    handleSortClose();
+  };
 
   return (
-    <div className="table-card">
-      <Box sx={{ p: 2 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" className="chart-title">
-            Transactions
-          </Typography>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Tooltip title="Search transactions">
-              <TextField
-                size="small"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                sx={{ minWidth: { xs: 120, sm: 200 } }}
-              />
-            </Tooltip>
+    <Card className="transactions-card">
+      <CardHeader
+        title={
+          <Box className="table-header">
+            <Typography variant="h6">Transactions</Typography>
+            {!compact && (
+              <Typography variant="body2" color="textSecondary">
+                {transactions.length} total transactions
+              </Typography>
+            )}
           </Box>
-        </Box>
-      </Box>
+        }
+        action={
+          <Box className="table-actions">
+            <TextField
+              size="small"
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              InputProps={{startAdornment: <SearchIcon fontSize="small" color="action" />,
+              }}
+              className="search-field"
+            />
+            {!compact && (
+              <>
+                <Button
+                  variant="outlined"
+                  startIcon={<FilterIcon />}
+                  onClick={handleFilterClick}
+                  className="filter-button"
+                >
+                  Filter
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<SortIcon />}
+                  onClick={handleSortClick}
+                  className="sort-button"
+                >
+                  Sort
+                </Button>
+              </>
+            )}
+          </Box>
+        }
+      />
       <Box className="table-container">
         <Table stickyHeader>
           <TableHead>
             <TableRow>
               <TableCell>Date</TableCell>
               <TableCell>Description</TableCell>
-              <TableCell>Category</TableCell>
               <TableCell align="right">Amount</TableCell>
-              <TableCell align="right">Type</TableCell>
-              <TableCell align="right">
-                <Tooltip title="Actions">
-                  <span>Actions</span>
-                </Tooltip>
-              </TableCell>
+              <TableCell align="center">Type</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {transactions
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((transaction) => (
-                <TableRow key={transaction.id} hover className="transaction-row">
-                  <TableCell>
-                    {new Date(transaction.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{transaction.description}</TableCell>
-                  <TableCell>{transaction.category}</TableCell>
-                  <TableCell 
-                    align="right" 
-                    className={`amount-cell ${transaction.type}`}
-                  >
-                    {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      label={transaction.type}
-                      color={transaction.type === 'income' ? 'success' : 'error'}
-                      size="small"
-                      className="status-chip"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Edit transaction">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => onEdit(transaction)}
-                        sx={{ mr: 1 }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete transaction">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => onDelete(transaction.id)}
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
+              .map((transaction, index) => (
+                <TransactionRow
+                  key={transaction.id}
+                  transaction={transaction}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  index={index}
+                />
               ))}
           </TableBody>
         </Table>
       </Box>
-      <TablePagination
-        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-        component="div"
-        count={transactions.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={onPageChange}
-        onRowsPerPageChange={onRowsPerPageChange}
-        sx={{ 
-          borderTop: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.paper 
-        }}
-      />
-    </div>
+      {!compact && (
+        <Box className="table-pagination">
+          <Grid container justifyContent="flex-end">
+            <Grid item>
+              <Select
+                value={rowsPerPage}
+                onChange={onRowsPerPageChange}
+                size="small"
+                className="rows-per-page"
+              >
+                {ROWS_PER_PAGE_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option} rows
+                  </MenuItem>
+                ))}
+              </Select>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
+
+      <Menu
+        anchorEl={filterAnchor}
+        open={Boolean(filterAnchor)}
+        onClose={handleFilterClose}
+        className="filter-menu"
+      >
+        <MenuItem
+          selected={filterConfig === 'all'}
+          onClick={() => handleFilterChange('all')}
+        >
+          All Transactions
+        </MenuItem>
+        <MenuItem
+          selected={filterConfig === 'income'}
+          onClick={() => handleFilterChange('income')}
+        >
+          Income Only
+        </MenuItem>
+        <MenuItem
+          selected={filterConfig === 'expense'}
+          onClick={() => handleFilterChange('expense')}
+        >
+          Expenses Only
+        </MenuItem>
+      </Menu>
+
+      <Menu
+        anchorEl={sortAnchor}
+        open={Boolean(sortAnchor)}
+        onClose={handleSortClose}
+        className="sort-menu"
+      >
+        <MenuItem onClick={() => handleSortChange({ key: 'date', direction: sortConfig.key === 'date' ? (sortConfig.direction === 'asc' ? 'desc' : 'asc') : 'desc' })}>
+          <Box className="sort-menu-item">
+            <Typography>Sort by Date</Typography>
+            {sortConfig.key === 'date' && (
+              <CompareArrowsIcon className={`sort-icon ${sortConfig.direction}`} />
+            )}
+          </Box>
+        </MenuItem>
+        <MenuItem onClick={() => handleSortChange({ key: 'amount', direction: sortConfig.key === 'amount' ? (sortConfig.direction === 'asc' ? 'desc' : 'asc') : 'desc' })}>
+          <Box className="sort-menu-item">
+            <Typography>Sort by Amount</Typography>
+            {sortConfig.key === 'amount' && (
+              <CompareArrowsIcon className={`sort-icon ${sortConfig.direction}`} />
+            )}
+          </Box>
+        </MenuItem>
+      </Menu>
+    </Card>
   );
 });
 
-// Main Finances Component
+const TransactionModal = React.memo(({
+  open,
+  onClose,
+  transaction,
+  onSubmit,
+  isLoading
+}) => {
+  const [formData, setFormData] = useState({
+    type: 'expense',
+    category: '',
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+  });
+
+  useEffect(() => {
+    if (transaction) {
+      setFormData({
+        ...transaction,
+        date: new Date(transaction.date).toISOString().split('T')[0],
+      });
+    }
+  }, [transaction]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'type' ? { category: TRANSACTION_TYPES[value][0] } : {}),
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      className="transaction-modal"
+    >
+      <form onSubmit={handleSubmit}>
+        <DialogTitle className="modal-title">
+          {transaction ? 'Edit Transaction' : 'Add New Transaction'}
+        </DialogTitle>
+        <DialogContent className="modal-content">
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Type</InputLabel>
+                <Select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  label="Type"
+                  required
+                >
+                  <MenuItem value="income">Income</MenuItem>
+                  <MenuItem value="expense">Expense</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  label="Category"
+                  required
+                >
+                  {TRANSACTION_TYPES[formData.type]?.map((category) => (
+                    <MenuItem key={category} value={category}>
+                      {category}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Amount"
+                name="amount"
+                type="number"
+                value={formData.amount}
+                onChange={handleChange}
+                required
+                InputProps={{
+                  startAdornment: <Box component="span" mr={1}>$</Box>,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                required
+                multiline
+                rows={2}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Date"
+                name="date"
+                type="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions className="modal-actions">
+          <Button onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : transaction ? (
+              'Update Transaction'
+            ) : (
+              'Add Transaction'
+            )}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+});
+
 const Finances = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const queryClient = useQueryClient();
 
-  // State
+  const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
-  const [sortAnchorEl, setSortAnchorEl] = useState(null);
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [financialSummary, setFinancialSummary] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
   const [filterConfig, setFilterConfig] = useState('all');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [modalState, setModalState] = useState({
-    isOpen: false,
-    isEditing: false,
-    currentTransaction: null
+    open: false,
+    transaction: null,
   });
 
-  // Queries
-  const { 
-    data: transactions = [], 
-    isLoading: isLoadingTransactions,
-    isError: isErrorTransactions 
-  } = useQuery('transactions', getTransactions, {
-    onError: (error) => {
-      console.error('Error fetching transactions:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to fetch transactions',
-        severity: 'error'
-      });
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [transactionsData, summaryData] = await Promise.all([
+        getTransactions(filterConfig),
+        getFinancialSummary(),
+      ]);
+      setTransactions(transactionsData);
+      setFinancialSummary(summaryData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Failed to fetch data. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, [filterConfig]);
 
-  const { 
-    data: financialSummary, 
-    isLoading: isLoadingFinancialSummary,
-    isError: isErrorFinancialSummary 
-  } = useQuery('financialSummary', getFinancialSummary, {
-    onError: (error) => {
-      console.error('Error fetching financial summary:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to fetch financial summary',
-        severity: 'error'
-      });
-    }
-  });
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  // Mutations
-  const addTransactionMutation = useMutation(addTransaction, {
-    onSuccess: () => {
-      queryClient.invalidateQueries(['transactions', 'financialSummary']);
-      setSnackbar({
-        open: true,
-        message: 'Transaction added successfully',
-        severity: 'success'
-      });
-      handleModalClose();
-    },
-    onError: (error) => {
-      console.error('Error adding transaction:', error);
-      setSnackbar({
-        open: true,
-        message: `Failed to add transaction: ${error.message}`,
-        severity: 'error'
-      });
-    }
-  });
-
-  const updateTransactionMutation = useMutation(
-    ({ id, ...data }) => updateTransaction(id, data),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['transactions', 'financialSummary']);
-        setSnackbar({
-          open: true,
-          message: 'Transaction updated successfully',
-          severity: 'success'
-        });
-        handleModalClose();
-      },
-      onError: (error) => {
-        console.error('Error updating transaction:', error);
-        setSnackbar({
-          open: true,
-          message: `Failed to update transaction: ${error.message}`,
-          severity: 'error'
-        });
-      }
-    }
-  );
-
-  const deleteTransactionMutation = useMutation(deleteTransaction, {
-    onSuccess: () => {
-      queryClient.invalidateQueries(['transactions', 'financialSummary']);
-      setSnackbar({
-        open: true,
-        message: 'Transaction deleted successfully',
-        severity: 'success'
-      });
-    },
-    onError: (error) => {
-      console.error('Error deleting transaction:', error);
-      setSnackbar({
-        open: true,
-        message: `Failed to delete transaction: ${error.message}`,
-        severity: 'error'
-      });
-    }
-  });
-
-  // Memoized Values
-  const filteredAndSortedTransactions = useMemo(() => {
-    if (!transactions.length) return [];
-    
-    let filtered = transactions.filter(t => {
-      const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterConfig === 'all' || t.type === filterConfig;
-      return matchesSearch && matchesFilter;
+  const handleModalOpen = useCallback((transaction = null) => {
+    setModalState({
+      open: true,
+      transaction,
     });
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setModalState({
+      open: false,
+      transaction: null,
+    });
+  }, []);
+
+  const handleTransactionSubmit = async (formData) => {
+    setIsLoading(true);
+    try {
+      if (modalState.transaction) {
+        await updateTransaction(modalState.transaction.id, formData);
+      } else {
+        await addTransaction(formData);
+      }
+      handleModalClose();
+      await fetchData();
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      setError('Failed to save transaction. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (id) => {
+    try {
+      await deleteTransaction(id);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      setError('Failed to delete transaction. Please try again.');
+    }
+  };
+
+  const filteredAndSortedTransactions = useMemo(() => {
+    let filtered = [...transactions];
+
+    if (searchTerm) {
+      filtered = filtered.filter((t) =>
+        t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
     return filtered.sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
       const modifier = sortConfig.direction === 'asc' ? 1 : -1;
-      
-      if (typeof aValue === 'string') {
-        return aValue.localeCompare(bValue) * modifier;
+
+      if (sortConfig.key === 'date') {
+        return (new Date(aValue) - new Date(bValue)) * modifier;
       }
+      
       return (aValue - bValue) * modifier;
     });
-  }, [transactions, searchTerm, filterConfig, sortConfig]);
+  }, [transactions, searchTerm, sortConfig]);
 
-  // Handlers
-  const handleModalOpen = useCallback((transaction = null) => {
-    setModalState({
-      isOpen: true,
-      isEditing: !!transaction,
-      currentTransaction: transaction || {
-        type: 'expense',
-        category: '',
-        amount: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0]
-      }
-    });
-  }, []);
+  const renderOverviewTab = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatsCard
+              title="Total Revenue"
+              value={formatCurrency(financialSummary?.totalIncome || 0)}
+              trend="up"
+              trendValue={financialSummary?.trends?.income || 0}
+              icon={MoneyIcon}
+              color="primary"
+              delay={200}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatsCard
+              title="Total Expenses"
+              value={formatCurrency(financialSummary?.totalExpense || 0)}
+              trend="down"
+              trendValue={Math.abs(financialSummary?.trends?.expense || 0)}
+              icon={AccountBalanceIcon}
+              color="error"
+              delay={400}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatsCard
+              title="Net Profit"
+              value={formatCurrency((financialSummary?.totalIncome || 0) - (financialSummary?.totalExpense || 0))}
+              trend="up"
+              trendValue={financialSummary?.trends?.profit || 0}
+              icon={TrendingUpIcon}
+              color="success"
+              delay={600}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatsCard
+              title="ROI"
+              value={formatPercent(financialSummary?.roi || 0)}
+              trend="up"
+              trendValue={financialSummary?.trends?.roi || 0}
+              icon={WalletIcon}
+              color="info"
+              delay={800}
+            />
+          </Grid>
+        </Grid>
+      </Grid>
 
-  const handleModalClose = useCallback(() => {
-    setModalState(prev => ({ ...prev, isOpen: false }));
-  }, []);
+      <Grid item xs={12} md={8}>
+        <ChartCard
+          title="Revenue vs Expenses"
+          subtitle="Monthly comparison"
+          chart={Bar}
+          data={{
+            labels: financialSummary?.monthlyData?.map(d => d.month) || [],
+            datasets: [
+              {
+                label: 'Revenue',
+                data: financialSummary?.monthlyData?.map(d => d.income) || [],
+                backgroundColor: theme.palette.primary.main,
+                borderRadius: 4,
+              },
+              {
+                label: 'Expenses',
+                data: financialSummary?.monthlyData?.map(d => d.expense) || [],
+                backgroundColor: theme.palette.error.main,
+                borderRadius: 4,
+              },
+            ],
+          }}
+          height={400}
+        />
+      </Grid>
 
-  const handleInputChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setModalState(prev => ({
-      ...prev,
-      currentTransaction: { ...prev.currentTransaction, [name]: value }
-    }));
-  }, []);
+      <Grid item xs={12} md={4}>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <ChartCard
+              title="Income Distribution"
+              chart={Doughnut}
+              data={{
+                labels: financialSummary?.incomeBreakdown?.map(d => d.category) || [],
+                datasets: [{
+                  data: financialSummary?.incomeBreakdown?.map(d => d.value) || [],
+                  backgroundColor: CHART_COLORS,
+                  borderWidth: 0,
+                }],
+              }}
+              height={200}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <ChartCard
+              title="Expense Categories"
+              chart={Doughnut}
+              data={{
+                labels: financialSummary?.expenseBreakdown?.map(d => d.category) || [],
+                datasets: [{
+                  data: financialSummary?.expenseBreakdown?.map(d => d.value) || [],
+                  backgroundColor: CHART_COLORS,
+                  borderWidth: 0,
+                }],
+              }}
+              height={200}
+            />
+          </Grid>
+        </Grid>
+      </Grid>
 
-  const handleTransactionSubmit = useCallback(() => {
-    const { isEditing, currentTransaction } = modalState;
-    
-    if (!currentTransaction.type || !currentTransaction.amount || 
-        !currentTransaction.description || !currentTransaction.date) {
-      setSnackbar({
-        open: true,
-        message: 'Please fill in all required fields',
-        severity: 'error'
-      });
-      return;
-    }
+      <Grid item xs={12}>
+        <TransactionsTable
+          transactions={filteredAndSortedTransactions.slice(0, 5)}
+          onEdit={handleModalOpen}
+          onDelete={handleDeleteTransaction}
+          page={0}
+          rowsPerPage={5}
+          onPageChange={() => {}}
+          onRowsPerPageChange={() => {}}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          sortConfig={sortConfig}
+          onSortChange={setSortConfig}
+          filterConfig={filterConfig}
+          onFilterChange={setFilterConfig}
+          compact
+        />
+      </Grid>
+    </Grid>
+  );
 
-    const transactionDate = new Date(currentTransaction.date);
-    const currentDate = new Date();
-    if (transactionDate > currentDate) {
-      setSnackbar({
-        open: true,
-        message: 'Transaction date cannot be in the future',
-        severity: 'error'
-      });
-      return;
-    }
+  const renderTransactionsTab = () => (
+    <TransactionsTable
+      transactions={filteredAndSortedTransactions}
+      onEdit={handleModalOpen}
+      onDelete={handleDeleteTransaction}
+      page={page}
+      rowsPerPage={rowsPerPage}
+      onPageChange={(_, newPage) => setPage(newPage)}
+      onRowsPerPageChange={(e) => {
+        setRowsPerPage(parseInt(e.target.value, 10));
+        setPage(0);
+      }}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      sortConfig={sortConfig}
+      onSortChange={setSortConfig}
+      filterConfig={filterConfig}
+      onFilterChange={setFilterConfig}
+    />
+  );
 
-    if (isEditing) {
-      updateTransactionMutation.mutate(currentTransaction);
-    } else {
-      addTransactionMutation.mutate(currentTransaction);
-    }
-  }, [modalState, updateTransactionMutation, addTransactionMutation]);
+  const renderError = () => {
+    if (!error) return null;
 
-  const handleTransactionDelete = useCallback((id) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
-      deleteTransactionMutation.mutate(id);
-    }
-  }, [deleteTransactionMutation]);
-
-  const handleSort = useCallback((key) => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
-    setSortAnchorEl(null);
-  }, []);
-
-  const handleFilter = useCallback((type) => {
-    setFilterConfig(type);
-    setFilterAnchorEl(null);
-    setPage(0);
-  }, []);
-
-  const handleSearch = useCallback((value) => {
-    setSearchTerm(value);
-    setPage(0);
-  }, []);
-
-  // Chart Rendering
-  const renderChart = useCallback((title, type, data, keys = []) => (
-    <div className="chart-card">
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6" className="chart-title">{title}</Typography>
-        <Tooltip title={`This chart shows ${title.toLowerCase()}`}>
-          <IconButton size="small">
-            <InfoIcon />
-          </IconButton>
-        </Tooltip>
+    return (
+      <Box sx={{ 
+        p: 2, 
+        mb: 2, 
+        borderRadius: 1,
+        bgcolor: 'error.light',
+        color: 'error.dark'
+      }}>
+        <Typography variant="body1">{error}</Typography>
       </Box>
-      <div className="chart-container">
-        {data && data.length > 0 ? (
-          <ChartComponent type={type} data={data} keys={keys} />
-        ) : (
-          <Typography>No data available for {title}</Typography>
-        )}
-      </div>
-    </div>
-  ), []);
+    );
+  };
 
-  // Content Rendering
-  const renderContent = useCallback(() => {
-    if (isLoadingTransactions || isLoadingFinancialSummary) {
+  const renderContent = () => {
+    if (isLoading) {
       return (
         <Box className="loading-container">
           <CircularProgress />
@@ -706,270 +1132,81 @@ const Finances = () => {
       );
     }
 
-    if (isErrorTransactions || isErrorFinancialSummary) {
-      return (
-        <Typography variant="h6" className="error-container">
-          Error loading data. Please try again later.
-        </Typography>
-      );
+    if (error) {
+      return renderError();
     }
 
-    if (!transactions?.length || !financialSummary) {
-      return (
-        <Typography variant="h6" align="center">
-          No financial data available. Please add some transactions.
-        </Typography>
-      );
+    switch (tabValue) {
+      case 0:
+        return renderOverviewTab();
+      case 1:
+        return renderTransactionsTab();
+      default:
+        return null;
     }
+  };
 
-    const { 
-      monthlyData = [], 
-      incomeBreakdown = [], 
-      expenseBreakdown = [], 
-      yearlyData = [] 
-    } = financialSummary;
-
-    const formatPieChartData = (data) => 
-      data.map(item => ({ 
-        id: item.category || item.name, 
-        value: parseFloat(item.value) 
-      }));
-
-    const filteredTransactions = filteredAndSortedTransactions.filter(transaction => {
-      if (tabValue === 1) return transaction.type === 'income';
-      if (tabValue === 2) return transaction.type === 'expense';
-      return true;
-    });
-
-    const tabContent = {
-      0: ( // Overview
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <FinancialInsights financialSummary={financialSummary} />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {renderChart('Income vs Expenses', 'bar', monthlyData, ['income', 'expense'])}
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {renderChart('Monthly Net Profit', 'bar', monthlyData, ['netProfit'])}
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {renderChart('Yearly Net Profit', 'line', yearlyData, ['netProfit'])}
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {renderChart('Income Breakdown', 'pie', formatPieChartData(incomeBreakdown))}
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {renderChart('Expense Breakdown', 'pie', formatPieChartData(expenseBreakdown))}
-          </Grid>
-          <Grid item xs={12}>
-            <TransactionsTable
-              transactions={filteredTransactions}
-              onEdit={handleModalOpen}
-              onDelete={handleTransactionDelete}
-              page={page}
-              rowsPerPage={rowsPerPage}
-              onPageChange={(_, newPage) => setPage(newPage)}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-              searchTerm={searchTerm}
-              onSearchChange={handleSearch}
-            />
-          </Grid>
-        </Grid>
-      ),
-      1: ( // Income
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            {renderChart('Monthly Income', 'bar', monthlyData, ['income'])}
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {renderChart('Income Breakdown', 'pie', formatPieChartData(incomeBreakdown))}
-          </Grid>
-          <Grid item xs={12}>
-            <TransactionsTable
-              transactions={filteredTransactions}
-              onEdit={handleModalOpen}
-              onDelete={handleTransactionDelete}
-              page={page}
-              rowsPerPage={rowsPerPage}
-              onPageChange={(_, newPage) => setPage(newPage)}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-              searchTerm={searchTerm}
-              onSearchChange={handleSearch}
-            />
-          </Grid>
-        </Grid>
-      ),
-      2: ( // Expenses
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            {renderChart('Monthly Expenses', 'bar', monthlyData, ['expense'])}
-          </Grid>
-          <Grid item xs={12} md={6}>
-            {renderChart('Expense Breakdown', 'pie', formatPieChartData(expenseBreakdown))}
-          </Grid>
-          <Grid item xs={12}>
-            <TransactionsTable
-              transactions={filteredTransactions}
-              onEdit={handleModalOpen}
-              onDelete={handleTransactionDelete}
-              page={page}
-              rowsPerPage={rowsPerPage}
-              onPageChange={(_, newPage) => setPage(newPage)}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-              searchTerm={searchTerm}
-              onSearchChange={handleSearch}
-            />
-          </Grid>
-        </Grid>
-      ),
-      3: ( // Transactions
-        <TransactionsTable
-          transactions={filteredTransactions}
-          onEdit={handleModalOpen}
-          onDelete={handleTransactionDelete}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          onPageChange={(_, newPage) => setPage(newPage)}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-          searchTerm={searchTerm}
-          onSearchChange={handleSearch}
-        />
-      )
-    };
-
-    return tabContent[tabValue] || <Typography>Invalid tab selected</Typography>;
-  }, [
-    tabValue,
-    transactions,
-    financialSummary,
-    filteredAndSortedTransactions,
-    isLoadingTransactions,
-    isLoadingFinancialSummary,
-    isErrorTransactions,
-    isErrorFinancialSummary,
-    handleModalOpen,
-    handleTransactionDelete,
-    renderChart,
-    page,
-    rowsPerPage,
-    searchTerm,
-    handleSearch
-  ]);
-
-  // Main Render
   return (
-    <div className="page-wrapper">
-      <Typography variant="h4" gutterBottom className="page-title">
-        Property Financial Dashboard
-      </Typography>
-      
-      <div className="button-group">
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => handleModalOpen()}
-          className="action-button"
+    <div className="finances-wrapper">
+      <Box className="finances-header">
+        <Box className="header-content">
+          <Box>
+            <Typography variant="h4" className="page-title">
+              Financial Management
+            </Typography>
+            <Typography variant="body1" color="textSecondary" className="subtitle">
+              Track, analyze, and manage your property finances
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleModalOpen()}
+            className="add-transaction-button"
+          >
+            Add Transaction
+          </Button>
+        </Box>
+      </Box>
+
+      {error && renderError()}
+
+      <Paper className="tabs-container">
+        <Tabs
+          value={tabValue}
+          onChange={(_, newValue) => setTabValue(newValue)}
+          variant={isMobile ? "scrollable" : "fullWidth"}
+          scrollButtons="auto"
+          className="finance-tabs"
         >
-          Add Transaction
-        </Button>
-      </div>
+          <Tab
+            icon={<BarChartIcon />}
+            label="Overview"
+            className="finance-tab"
+          />
+          <Tab
+            icon={<TimelineIcon />}
+            label="Transactions"
+            className="finance-tab"
+          />
+        </Tabs>
+      </Paper>
 
-      <Tabs
-        value={tabValue}
-        onChange={(_, newValue) => setTabValue(newValue)}
-        variant={isMobile ? "scrollable" : "fullWidth"}
-        scrollButtons="auto"
-        className="finance-tabs"
-      >
-        <Tab icon={<BarChartIcon />} label="Overview" />
-        <Tab icon={<MoneyIcon />} label="Income" />
-        <Tab icon={<PieChartIcon />} label="Expenses" />
-        <Tab icon={<TimelineIcon />} label="Transactions" />
-      </Tabs>
-
-      <Fade in={true}>
-        <Box>{renderContent()}</Box>
-      </Fade>
+      <Box className="content-container">
+        <Fade in timeout={500}>
+          <Box>
+            {renderContent()}
+          </Box>
+        </Fade>
+      </Box>
 
       <TransactionModal
-        isOpen={modalState.isOpen}
+        open={modalState.open}
         onClose={handleModalClose}
-        currentTransaction={modalState.currentTransaction}
-        handleInputChange={handleInputChange}
-        handleTransactionSubmit={handleTransactionSubmit}
-        isEditing={modalState.isEditing}
+        transaction={modalState.transaction}
+        onSubmit={handleTransactionSubmit}
+        isLoading={isLoading}
       />
-
-      <Menu
-        anchorEl={sortAnchorEl}
-        open={Boolean(sortAnchorEl)}
-        onClose={() => setSortAnchorEl(null)}
-        className="filter-sort-menu"
-      >
-        <MenuItem onClick={() => handleSort('date')}>
-          <Tooltip title="Sort by transaction date">
-            <Box>Sort by Date {sortConfig.key === 'date' && `(${sortConfig.direction})`}</Box>
-          </Tooltip>
-        </MenuItem>
-        <MenuItem onClick={() => handleSort('amount')}>
-          <Tooltip title="Sort by transaction amount">
-            <Box>Sort by Amount {sortConfig.key === 'amount' && `(${sortConfig.direction})`}</Box>
-          </Tooltip>
-        </MenuItem>
-      </Menu>
-
-      <Menu
-        anchorEl={filterAnchorEl}
-        open={Boolean(filterAnchorEl)}
-        onClose={() => setFilterAnchorEl(null)}
-        className="filter-sort-menu"
-      >
-        <MenuItem onClick={() => handleFilter('all')}>
-          <Tooltip title="Show all transactions">
-            <Box>Show All</Box>
-          </Tooltip>
-        </MenuItem>
-        <MenuItem onClick={() => handleFilter('income')}>
-          <Tooltip title="Show only income transactions">
-            <Box>Show Income</Box>
-          </Tooltip>
-        </MenuItem>
-        <MenuItem onClick={() => handleFilter('expense')}>
-          <Tooltip title="Show only expense transactions">
-            <Box>Show Expenses</Box>
-          </Tooltip>
-        </MenuItem>
-      </Menu>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-          severity={snackbar.severity}
-          elevation={6}
-          variant="filled"
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };
