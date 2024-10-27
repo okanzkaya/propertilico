@@ -531,6 +531,10 @@ const PropertyFormModal = ({
 }) => {
   const handleImageDelete = (index) => {
     const newImages = [...uploadedImages];
+    // Clean up preview URL if it exists
+    if (newImages[index].preview) {
+      URL.revokeObjectURL(newImages[index].preview);
+    }
     newImages.splice(index, 1);
     setUploadedImages(newImages);
     
@@ -797,41 +801,40 @@ const PropertyFormModal = ({
                 Max 16 images, total size up to 200 MB
               </Typography>
               <ImageList sx={{ width: '100%', height: 200, mt: 2 }} cols={4} rowHeight={100}>
-                {uploadedImages.map((image, index) => (
-                  <ImageListItem key={index}>
-                    <img
-                      src={image instanceof File ? URL.createObjectURL(image) : 
-                        `${process.env.REACT_APP_API_URL}/uploads/properties/${image.path}`}
-                      alt={`Property ${index + 1}`}
-                      loading="lazy"
-                      style={{ height: '100px', objectFit: 'cover' }}
-                    />
-                    <ImageListItemBar
-                      position="top"
-                      actionIcon={
-                        <IconButton
-                          sx={{ color: 'white' }}
-                          onClick={() => handleImageDelete(index)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      }
-                    />
-                    <ImageListItemBar
-                      position="bottom"
-                      actionIcon={
-                        <Checkbox
-                          checked={index === mainImageIndex}
-                          onChange={() => handleMainImageChange(index)}
-                          icon={<RadioButtonUncheckedIcon />}
-                          checkedIcon={<RadioButtonCheckedIcon />}
-                        />
-                      }
-                      title="Set as main"
-                    />
-                  </ImageListItem>
-                ))}
-              </ImageList>
+  {uploadedImages.map((image, index) => (
+    <ImageListItem key={index}>
+      <img
+        src={image.preview || `${process.env.REACT_APP_API_URL}/uploads/properties/${image.path}`}
+        alt={`Property ${index + 1}`}
+        loading="lazy"
+        style={{ height: '100px', objectFit: 'cover' }}
+      />
+      <ImageListItemBar
+        position="top"
+        actionIcon={
+          <IconButton
+            sx={{ color: 'white' }}
+            onClick={() => handleImageDelete(index)}
+          >
+            <DeleteIcon />
+          </IconButton>
+        }
+      />
+      <ImageListItemBar
+        position="bottom"
+        actionIcon={
+          <Checkbox
+            checked={index === mainImageIndex}
+            onChange={() => handleMainImageChange(index)}
+            icon={<RadioButtonUncheckedIcon />}
+            checkedIcon={<RadioButtonCheckedIcon />}
+          />
+        }
+        title="Set as main"
+      />
+    </ImageListItem>
+  ))}
+</ImageList>
             </Grid>
           </Grid>
         </DialogContent>
@@ -1140,17 +1143,15 @@ const Properties = () => {
       return;
     }
   
-    const newImages = files.map(file => ({
-      file,
-      isMain: false,
-      path: URL.createObjectURL(file)
-    }));
-  
     setUploadedImages(prev => {
-      const updatedImages = [...prev, ...newImages];
-      if (prev.length === 0 && newImages.length > 0) {
-        setMainImageIndex(prev.length);  // Set the new image as main if it's the first one
-      }
+      const updatedImages = [
+        ...prev,
+        ...files.map(file => ({
+          file,
+          preview: URL.createObjectURL(file), // For preview only
+          isMain: prev.length === 0 && files.length > 0 // Set first image as main if it's the first upload
+        }))
+      ];
       return updatedImages;
     });
   }, [uploadedImages]);
@@ -1163,10 +1164,11 @@ const Properties = () => {
           formData.append(key, value);
         }
       });
-
+  
+      // Add files to formData
       uploadedImages.forEach((image, index) => {
-        if (image instanceof File) {
-          formData.append('images', image);
+        if (image.file) {
+          formData.append('images', image.file);
         }
       });
       
@@ -1176,11 +1178,18 @@ const Properties = () => {
         formData.append('latitude', selectedLocation.lat.toFixed(6));
         formData.append('longitude', selectedLocation.lng.toFixed(6));
       }
-
+  
       const response = await axiosInstance.post('/api/properties', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-
+  
+      // Clean up preview URLs
+      uploadedImages.forEach(image => {
+        if (image.preview) {
+          URL.revokeObjectURL(image.preview);
+        }
+      });
+  
       setProperties(prev => [response.data, ...prev]);
       setSnackbar({
         open: true,

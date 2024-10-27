@@ -49,15 +49,13 @@ exports.createProperty = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log('User found:', user.toJSON());
-
     // Check subscription limit
     if (user.properties >= user.maxProperties) {
       await t.rollback();
       return res.status(403).json({ message: 'You have reached the maximum number of properties for your subscription' });
     }
 
-    // Validate and sanitize coordinates
+    // Handle coordinates
     let latitude = parseFloat(req.body.latitude);
     let longitude = parseFloat(req.body.longitude);
 
@@ -67,6 +65,16 @@ exports.createProperty = async (req, res) => {
     } else {
       latitude = Math.max(-90, Math.min(90, latitude));
       longitude = (((longitude + 180) % 360) + 360) % 360 - 180;
+    }
+
+    // Handle images and main image
+    let images = [];
+    if (req.files && req.files.length > 0) {
+      const mainImageIndex = parseInt(req.body.mainImageIndex) || 0;
+      images = req.files.map((file, index) => ({
+        path: file.filename,
+        isMain: index === mainImageIndex
+      }));
     }
 
     const newProperty = await models.Property.create({
@@ -81,13 +89,8 @@ exports.createProperty = async (req, res) => {
       location: latitude && longitude
         ? sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', longitude, latitude), 4326)
         : null,
-      images: req.files ? req.files.map((file, index) => ({
-        path: file.filename,
-        isMain: index.toString() === req.body.mainImageIndex
-      })) : []
+      images
     }, { transaction: t });
-
-    console.log('New property created:', newProperty.toJSON());
 
     // Update user's properties count
     await user.increment('properties', { transaction: t });
@@ -147,11 +150,60 @@ exports.updateProperty = async (req, res) => {
       updateData.location = sequelize.fn('ST_SetSRID', sequelize.fn('ST_MakePoint', req.body.longitude, req.body.latitude), 4326);
     }
 
+    // Handle existing images and main image
+    let currentImages = [];
+    if (req.body.existingImages) {
+      const existingImages = Array.isArray(req.body.existingImages) 
+        ? req.body.existingImages 
+        : [req.body.existingImages];
+      
+      currentImages = existingImages.map(img => {
+        const image = typeof img === 'string' ? JSON.parse(img) : img;
+        return {
+          path: image.path,
+          isMain: false
+        };
+      });
+    }
+
+    // Handle new uploaded images
     if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map((file, index) => ({
+      const newImages = req.files.map(file => ({
         path: file.filename,
-        isMain: index.toString() === req.body.mainImageIndex
+        isMain: false
       }));
+      currentImages = [...currentImages, ...newImages];
+    }
+
+    // Set main image
+    const mainImageIndex = parseInt(req.body.mainImageIndex);
+    if (!isNaN(mainImageIndex) && mainImageIndex >= 0 && mainImageIndex < currentImages.length) {
+      currentImages[mainImageIndex].isMain = true;
+    } else if (currentImages.length > 0) {
+      currentImages[0].isMain = true;
+    }
+
+    updateData.images = currentImages;
+
+    const property = await models.Property.findOne({
+      where: { id: req.params.id, ownerId: req.user.id },
+      transaction: t
+    });
+
+    if (!property) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Property not found' });
+    }
+
+    // Delete removed images from storage
+    const oldImages = property.images || [];
+    const remainingImagePaths = currentImages.map(img => img.path);
+    
+    for (const oldImage of oldImages) {
+      if (!remainingImagePaths.includes(oldImage.path)) {
+        const imagePath = path.join(__dirname, '..', 'uploads', 'properties', oldImage.path);
+        await fs.unlink(imagePath).catch(console.error);
+      }
     }
 
     const [updatedRowsCount, updatedProperties] = await models.Property.update(
@@ -162,11 +214,6 @@ exports.updateProperty = async (req, res) => {
         transaction: t
       }
     );
-
-    if (updatedRowsCount === 0) {
-      await t.rollback();
-      return res.status(404).json({ message: 'Property not found' });
-    }
 
     await t.commit();
     res.json(updatedProperties[0]);
