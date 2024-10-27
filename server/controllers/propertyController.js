@@ -224,13 +224,17 @@ exports.deleteProperty = async (req, res) => {
 
 exports.toggleFavorite = async (req, res) => {
   try {
-    const user = await models.User.findByPk(req.user.id);
-    const property = await models.Property.findByPk(req.params.propertyId);
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({ message: 'Property ID is required' });
+    }
 
+    const property = await models.Property.findByPk(propertyId);
     if (!property) {
       return res.status(404).json({ message: 'Property not found' });
     }
 
+    const user = await models.User.findByPk(req.user.id);
     const isFavorite = await user.hasFavoriteProperty(property);
 
     if (isFavorite) {
@@ -242,6 +246,6 @@ exports.toggleFavorite = async (req, res) => {
     res.json({ isFavorite: !isFavorite });
   } catch (error) {
     console.error('Error toggling favorite:', error);
-    res.status(500).json({ message: 'Error updating favorite status', error: error.message });
+    res.status(500).json({ message: 'Error updating favorite status' });
   }
-};
+};;

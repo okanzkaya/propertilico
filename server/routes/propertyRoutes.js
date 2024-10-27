@@ -5,6 +5,9 @@ const propertyController = require('../controllers/propertyController');
 
 router.use(protect);
 
+// Add the favorites route
+router.post('/favorites/:id', propertyController.toggleFavorite);
+
 router.route('/')
   .get(propertyController.getUserProperties)
   .post(propertyController.createProperty);

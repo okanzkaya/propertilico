@@ -5,8 +5,8 @@ import {
   FormControlLabel, Checkbox, Slider, Dialog, DialogTitle, DialogContent,
   DialogActions, Pagination, Chip, useMediaQuery, Snackbar, Alert, 
   CircularProgress, Tabs, Tab, Paper, List, ListItem, ListItemText,
-  ListItemIcon, InputLabel, CardActions, Drawer,
-  ImageList, ImageListItem, ImageListItemBar, FormHelperText
+  ListItemIcon, InputLabel, CardActions, Drawer, ImageList, ImageListItem, 
+  ImageListItemBar, FormHelperText, DialogContentText
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -17,7 +17,13 @@ import {
   ViewList as ViewListIcon, Map as MapIcon, Home as HomeIcon, 
   Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, 
   CloudUpload as CloudUploadIcon, RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  RadioButtonChecked as RadioButtonCheckedIcon
+  RadioButtonChecked as RadioButtonCheckedIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Pets as PetsIcon,
+  Close as CloseIcon
 } from "@mui/icons-material";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { useForm, Controller } from 'react-hook-form';
@@ -30,6 +36,8 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import './Properties.css';
+
+const DEFAULT_PROPERTY_IMAGE = `${process.env.REACT_APP_API_URL}/default-property.jpg`;
 
 // Validation schema
 const propertySchema = yup.object().shape({
@@ -69,6 +77,442 @@ const initialFilters = {
   availableNow: false,
 };
 
+// Image Modal Component
+const ImageModal = ({ open, onClose, imageUrl, alt }) => (
+  <Dialog
+    open={open}
+    onClose={onClose}
+    maxWidth="xl"
+    fullScreen
+  >
+    <IconButton
+      onClick={onClose}
+      sx={{
+        position: 'absolute',
+        right: 8,
+        top: 8,
+        color: 'white',
+        bgcolor: 'rgba(0, 0, 0, 0.5)',
+        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' }
+      }}
+    >
+      <CloseIcon />
+    </IconButton>
+    <DialogContent sx={{ p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'black' }}>
+      <img
+        src={imageUrl}
+        alt={alt}
+        style={{
+          maxWidth: '100%',
+          maxHeight: '100vh',
+          objectFit: 'contain'
+        }}
+      />
+    </DialogContent>
+  </Dialog>
+);
+
+// PropertyImageCarousel Component
+const PropertyImageCarousel = ({ images, propertyName, onImageClick, enableZoom = false }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  // Add cleanup for image URLs
+  useEffect(() => {
+    const urls = [];
+    if (images) {
+      images.forEach(image => {
+        if (image instanceof File) {
+          const url = URL.createObjectURL(image);
+          urls.push(url);
+        }
+      });
+    }
+    return () => {
+      urls.forEach(URL.revokeObjectURL);
+    };
+  }, [images]);
+  const handlePrevImage = (e) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images?.length - 1));
+  };
+
+  const handleNextImage = (e) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev < (images?.length || 0) - 1 ? prev + 1 : 0));
+  };
+
+  const getImageUrl = useCallback((image) => {
+    if (!image) return DEFAULT_PROPERTY_IMAGE;
+    return `${process.env.REACT_APP_API_URL}/uploads/properties/${image.path}`;
+  }, []);
+
+  const mainImageIndex = images?.findIndex(img => img.isMain) || 0;
+  const currentImage = images?.[enableZoom ? currentImageIndex : mainImageIndex];
+  const imageUrl = getImageUrl(currentImage);
+
+  return (
+    <>
+      <div className="property-image-container" style={{ position: 'relative', width: '100%', height: '250px' }}>
+      <img
+        className="property-image"
+        src={imageUrl}
+        alt={propertyName}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onImageClick) {
+            onImageClick();
+          }
+        }}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        onError={(e) => {
+          e.target.src = DEFAULT_PROPERTY_IMAGE;
+        }}
+      />
+        {enableZoom && images?.length > 1 && (
+          <>
+            <IconButton
+              onClick={handlePrevImage}
+              sx={{
+                position: 'absolute',
+                left: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' }
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            <IconButton
+              onClick={handleNextImage}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' }
+              }}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+            <Box 
+              sx={{ 
+                position: 'absolute', 
+                bottom: 8, 
+                left: '50%', 
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                gap: 1
+              }}
+            >
+              {images.map((_, idx) => (
+                <Box
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(idx);
+                  }}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: idx === currentImageIndex ? 'primary.main' : 'rgba(255, 255, 255, 0.8)',
+                    cursor: 'pointer'
+                  }}
+                />
+              ))}
+            </Box>
+          </>
+        )}
+      </div>
+
+      {enableZoom && (
+        <ImageModal
+          open={isZoomed}
+          onClose={() => setIsZoomed(false)}
+          imageUrl={imageUrl}
+          alt={propertyName}
+        />
+      )}
+    </>
+  );
+};
+
+// PropertyQuickViewModal Component
+const PropertyQuickViewModal = ({ property, onClose, onEdit }) => {
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  if (!property) return null;
+
+  return (
+    <Dialog 
+      open={!!property} 
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+    >
+      <DialogContent sx={{ p: 0 }}>
+        <Paper sx={{ p: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs>
+              <Typography variant="h5">{property.name}</Typography>
+            </Grid>
+            <Grid item>
+              <Typography variant="h5" color="primary">
+                ${property.rentAmount?.toLocaleString()} / month
+              </Typography>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <Tabs
+          value={selectedTab}
+          onChange={(_, newValue) => setSelectedTab(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Details" />
+          <Tab label="Photos" />
+          <Tab label="Location" />
+        </Tabs>
+
+        <Box sx={{ p: 3 }}>
+          {selectedTab === 0 && (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <PropertyImageCarousel 
+                  images={property.images}
+                  propertyName={property.name}
+                  onImageClick={(url) => setSelectedImage(url)}
+                  enableZoom={true}
+                />
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body1" paragraph>
+                    {property.description}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="h6" gutterBottom>Property Features</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <List dense>
+                        <ListItem>
+                          <ListItemIcon><BedroomParentIcon /></ListItemIcon>
+                          <ListItemText 
+                            primary="Bedrooms"
+                            secondary={property.bedrooms}
+                          />
+                        </ListItem>
+                        <ListItem>
+                          <ListItemIcon><BathtubIcon /></ListItemIcon>
+                          <ListItemText 
+                            primary="Bathrooms"
+                            secondary={property.bathrooms}
+                          />
+                        </ListItem>
+                        <ListItem>
+                          <ListItemIcon><SquareFootIcon /></ListItemIcon>
+                          <ListItemText 
+                            primary="Area"
+                            secondary={`${property.area} sqft`}
+                          />
+                        </ListItem>
+                      </List>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <List dense>
+                        <ListItem>
+                          <ListItemIcon><HomeIcon /></ListItemIcon>
+                          <ListItemText 
+                            primary="Type"
+                            secondary={property.propertyType}
+                          />
+                        </ListItem>
+                        <ListItem>
+                          <ListItemIcon>
+                            {property.furnished ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}
+                          </ListItemIcon>
+                          <ListItemText primary="Furnished" />
+                        </ListItem>
+                        <ListItem>
+                          <ListItemIcon>
+                            {property.parking ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}
+                          </ListItemIcon>
+                          <ListItemText primary="Parking" />
+                        </ListItem>
+                      </List>
+                    </Grid>
+                  </Grid>
+                </Paper>
+
+                <Paper sx={{ p: 2 }}>
+                  <Typography variant="h6" gutterBottom>Additional Features</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {property.petFriendly && (
+                      <Chip icon={<PetsIcon />} label="Pet Friendly" color="primary" variant="outlined" />
+                    )}
+                    {property.availableNow && (
+                      <Chip icon={<CheckCircleIcon />} label="Available Now" color="success" variant="outlined" />
+                    )}
+                  </Box>
+                </Paper>
+              </Grid>
+            </Grid>
+          )}
+
+          {selectedTab === 1 && (
+            <ImageList cols={3} gap={8} sx={{ maxHeight: 500, overflow: 'auto' }}>
+              {(property.images || []).map((image, index) => (
+                <ImageListItem 
+                  key={index}
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedImage(`${process.env.REACT_APP_API_URL}/uploads/properties/${image.path}`)}
+                >
+                  <img
+                    src={`${process.env.REACT_APP_API_URL}/uploads/properties/${image.path}`}
+                    alt={`${property.name} - View ${index + 1}`}
+                    loading="lazy"
+                    style={{ height: '200px', objectFit: 'cover' }}
+                  />
+                  {image.isMain && (
+                    <ImageListItemBar
+                      title="Main Image"
+                      position="top"
+                      sx={{
+                        background: 'rgba(0,0,0,0.5)',
+                        textAlign: 'center'
+                      }}
+                    />
+                  )}
+                </ImageListItem>
+              ))}
+            </ImageList>
+          )}
+
+          {selectedTab === 2 && property.latitude && property.longitude && (
+            <Box sx={{ height: 400, width: '100%' }}>
+              <MapContainer
+                center={[property.latitude, property.longitude]}
+                zoom={15}
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <Marker position={[property.latitude, property.longitude]} icon={customMarkerIcon}>
+                  <Popup>{property.name}</Popup>
+                </Marker>
+              </MapContainer>
+            </Box>
+          )}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={() => {
+          onEdit(property);
+          onClose();
+        }} color="primary">
+        Edit Property
+      </Button>
+    </DialogActions>
+    <ImageModal
+      open={!!selectedImage}
+      onClose={() => setSelectedImage(null)}
+      imageUrl={selectedImage}
+      alt={property.name}
+    />
+  </Dialog>
+);
+};
+
+// PropertyCard Component
+const PropertyCard = ({ 
+  property, 
+  onEdit, 
+  onDelete, 
+  onToggleFavorite, 
+  favoriteProperties,
+  onViewDetails 
+}) => {
+  if (!property || !property.id) return null;
+
+  const handleCardClick = (e) => {
+    onViewDetails(property);
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this property?')) {
+      onDelete(property.id);
+    }
+  };
+
+  const handleToggleFavorite = (e) => {
+    e.stopPropagation();
+    onToggleFavorite(property.id);
+  };
+
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    onEdit(property);
+  };
+
+  return (
+    <Card 
+      className="property-card" 
+      onClick={handleCardClick}
+      sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        cursor: 'pointer',
+        '&:hover': {
+          boxShadow: (theme) => theme.shadows[4]
+        }
+      }}
+    >
+      <PropertyImageCarousel 
+        images={property.images} 
+        propertyName={property.name}
+        onImageClick={() => onViewDetails(property)}
+        enableZoom={false}
+      />
+    <CardContent className="property-content" sx={{ flexGrow: 1 }}>
+      <Typography variant="h6" className="property-title">
+        {property.name}
+      </Typography>
+      <Typography variant="h5" className="property-price" color="primary">
+        ${property.rentAmount?.toLocaleString()} / month
+      </Typography>
+      <Box className="property-features" sx={{ my: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
+        <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
+        <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
+      </Box>
+      <Typography variant="body2" color="text.secondary">
+        {property.description?.substring(0, 100)}...
+      </Typography>
+    </CardContent>
+    <CardActions>
+      <IconButton onClick={handleToggleFavorite}>
+        {favoriteProperties.includes(property.id) ? 
+          <FavoriteIcon color="error" /> : 
+          <FavoriteBorderIcon />
+        }
+      </IconButton>
+      <IconButton onClick={handleEdit}>
+        <EditIcon />
+      </IconButton>
+      <IconButton onClick={handleDelete}>
+        <DeleteIcon />
+      </IconButton>
+    </CardActions>
+  </Card>
+);
+};
+
 // PropertyFormModal Component
 const PropertyFormModal = ({
   open,
@@ -78,17 +522,44 @@ const PropertyFormModal = ({
   control,
   errors,
   uploadedImages,
+  setUploadedImages,
   onImageUpload,
   mainImageIndex,
   setMainImageIndex,
   selectedLocation,
   setSelectedLocation
 }) => {
+  const handleImageDelete = (index) => {
+    const newImages = [...uploadedImages];
+    newImages.splice(index, 1);
+    setUploadedImages(newImages);
+    
+    // Adjust mainImageIndex after deletion
+    if (index === mainImageIndex) {
+      setMainImageIndex(newImages.length > 0 ? 0 : -1);
+    } else if (index < mainImageIndex) {
+      setMainImageIndex(mainImageIndex - 1);
+    }
+  };
+
+  const handleMainImageChange = (index) => {
+    setMainImageIndex(index);
+    
+    // Update the isMain property for all images
+    const updatedImages = uploadedImages.map((img, idx) => ({
+      ...img,
+      isMain: idx === index
+    }));
+    setUploadedImages(updatedImages);
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <form onSubmit={onSubmit}>
         <DialogTitle>
-          {property ? `Edit Property: ${property.name}` : 'Add New Property'}
+          <DialogContentText>
+            {property ? `Edit Property: ${property.name}` : 'Add New Property'}
+          </DialogContentText>
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
@@ -331,21 +802,16 @@ const PropertyFormModal = ({
                     <img
                       src={image instanceof File ? URL.createObjectURL(image) : 
                         `${process.env.REACT_APP_API_URL}/uploads/properties/${image.path}`}
-                      alt={`Upload ${index + 1}`}
+                      alt={`Property ${index + 1}`}
                       loading="lazy"
+                      style={{ height: '100px', objectFit: 'cover' }}
                     />
                     <ImageListItemBar
                       position="top"
                       actionIcon={
                         <IconButton
                           sx={{ color: 'white' }}
-                          onClick={() => {
-                            const newImages = [...uploadedImages];
-                            newImages.splice(index, 1);
-                            if (index === mainImageIndex) {
-                              setMainImageIndex(0);
-                            }
-                          }}
+                          onClick={() => handleImageDelete(index)}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -356,7 +822,7 @@ const PropertyFormModal = ({
                       actionIcon={
                         <Checkbox
                           checked={index === mainImageIndex}
-                          onChange={() => setMainImageIndex(index)}
+                          onChange={() => handleMainImageChange(index)}
                           icon={<RadioButtonUncheckedIcon />}
                           checkedIcon={<RadioButtonCheckedIcon />}
                         />
@@ -380,64 +846,29 @@ const PropertyFormModal = ({
   );
 };
 
-// PropertyQuickViewModal Component
-const PropertyQuickViewModal = ({ property, onClose, onEdit }) => {
-  if (!property) return null;
+// LocationPicker Component
+const LocationPicker = ({ onLocationSelect }) => {
+const map = useMap();
+const [localSelectedLocation, setLocalSelectedLocation] = useState(null);
 
-  return (
-    <Dialog open={!!property} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{property.name}</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box className="quick-view-image">
-              <img
-                src={property.images && property.images.length > 0
-                  ? `${process.env.REACT_APP_API_URL}/uploads/properties/${property.images[0].path}`
-                  : "/placeholder-property.jpg"}
-                alt={property.name}
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" color="primary">
-              ${property.rentAmount?.toLocaleString()} / month
-            </Typography>
-            <Typography variant="body1" paragraph>
-              {property.description}
-            </Typography>
-            <List>
-              <ListItem>
-                <ListItemIcon><BedroomParentIcon /></ListItemIcon>
-                <ListItemText primary={`${property.bedrooms || 0} Bedrooms`} />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon><BathtubIcon /></ListItemIcon>
-                <ListItemText primary={`${property.bathrooms || 0} Bathrooms`} />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon><SquareFootIcon /></ListItemIcon>
-                <ListItemText primary={`${property.area || 0} sqft`} />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon><HomeIcon /></ListItemIcon>
-                <ListItemText primary={`Type: ${property.propertyType}`} />
-              </ListItem>
-            </List>
-          </Grid>
-        </Grid>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-        <Button onClick={() => {
-          onEdit(property);
-          onClose();
-        }} color="primary">
-        Edit Property
-      </Button>
-    </DialogActions>
-  </Dialog>
-);
+useEffect(() => {
+  if (localSelectedLocation) {
+    map.flyTo([localSelectedLocation.lat, localSelectedLocation.lng], 15);
+    onLocationSelect(localSelectedLocation);
+  }
+}, [map, localSelectedLocation, onLocationSelect]);
+
+useMapEvents({
+  click(e) {
+    setLocalSelectedLocation(e.latlng);
+  },
+});
+
+return localSelectedLocation ? (
+  <Marker position={localSelectedLocation} icon={customMarkerIcon}>
+    <Popup>Selected location</Popup>
+  </Marker>
+) : null;
 };
 
 // AdvancedFilterDrawer Component
@@ -494,363 +925,313 @@ return (
     />
 
     <Typography gutterBottom>Bathrooms</Typography>
-    <Slider
-      value={filters.bathrooms}
-      onChange={(_, newValue) => setFilters(prev => ({ ...prev, bathrooms: newValue }))}
-      valueLabelDisplay="auto"
-      min={1}
-      max={5}
-      step={0.5}
-    />
+    <Slider value={filters.bathrooms}
+        onChange={(_, newValue) => setFilters(prev => ({ ...prev, bathrooms: newValue }))}
+        valueLabelDisplay="auto"
+        min={1}
+        max={5}
+        step={0.5}
+      />
 
-    <Typography gutterBottom>Area (sqft)</Typography>
-    <Slider
-      value={filters.area}
-      onChange={(_, newValue) => setFilters(prev => ({ ...prev, area: newValue }))}
-      valueLabelDisplay="auto"
-      min={500}
-      max={10000}
-      step={100}
-    />
+      <Typography gutterBottom>Area (sqft)</Typography>
+      <Slider
+        value={filters.area}
+        onChange={(_, newValue) => setFilters(prev => ({ ...prev, area: newValue }))}
+        valueLabelDisplay="auto"
+        min={500}
+        max={10000}
+        step={100}
+      />
 
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={filters.furnished}
-          onChange={(e) => setFilters(prev => ({ ...prev, furnished: e.target.checked }))}
-        />
-      }
-      label="Furnished"
-    />
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={filters.furnished}
+            onChange={(e) => setFilters(prev => ({ ...prev, furnished: e.target.checked }))}
+          />
+        }
+        label="Furnished"
+      />
 
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={filters.parking}
-          onChange={(e) => setFilters(prev => ({ ...prev, parking: e.target.checked }))}
-        />
-      }
-      label="Parking Available"
-    />
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={filters.parking}
+            onChange={(e) => setFilters(prev => ({ ...prev, parking: e.target.checked }))}
+          />
+        }
+        label="Parking Available"
+      />
 
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={filters.petFriendly}
-          onChange={(e) => setFilters(prev => ({ ...prev, petFriendly: e.target.checked }))}
-        />
-      }
-      label="Pet Friendly"
-    />
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={filters.petFriendly}
+            onChange={(e) => setFilters(prev => ({ ...prev, petFriendly: e.target.checked }))}
+          />
+        }
+        label="Pet Friendly"
+      />
 
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={filters.availableNow}
-          onChange={(e) => setFilters(prev => ({ ...prev, availableNow: e.target.checked }))}
-        />
-      }
-      label="Available Now"
-    />
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={filters.availableNow}
+            onChange={(e) => setFilters(prev => ({ ...prev, availableNow: e.target.checked }))}
+          />
+        }
+        label="Available Now"
+      />
 
-    <Button
-      fullWidth
-      variant="contained"
-      color="primary"
-      onClick={() => {
-        onApply();
-        onClose();
-      }}
-      sx={{ mt: 2 }}
-    >
-      Apply Filters
-    </Button>
-  </Drawer>
-);
-};
-
-// LocationPicker Component
-const LocationPicker = ({ onLocationSelect }) => {
-const map = useMap();
-const [localSelectedLocation, setLocalSelectedLocation] = useState(null);
-
-useEffect(() => {
-  if (localSelectedLocation) {
-    map.flyTo([localSelectedLocation.lat, localSelectedLocation.lng], 15);
-    onLocationSelect(localSelectedLocation);
-  }
-}, [map, localSelectedLocation, onLocationSelect]);
-
-useMapEvents({
-  click(e) {
-    setLocalSelectedLocation(e.latlng);
-  },
-});
-
-return localSelectedLocation ? (
-  <Marker position={localSelectedLocation} icon={customMarkerIcon}>
-    <Popup>Selected location</Popup>
-  </Marker>
-) : null;
+      <Button
+        fullWidth
+        variant="contained"
+        color="primary"
+        onClick={() => {
+          onApply();
+          onClose();
+        }}
+        sx={{ mt: 2 }}
+      >
+        Apply Filters
+      </Button>
+    </Drawer>
+  );
 };
 
 // Main Properties Component
 const Properties = () => {
-const theme = useTheme();
-const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-// State management
-const [searchTerm, setSearchTerm] = useState("");
-const [selectedFilter, setSelectedFilter] = useState("");
-const [sortOrder, setSortOrder] = useState("nameAsc");
-const [currentPage, setCurrentPage] = useState(1);
-const [filters, setFilters] = useState(initialFilters);
-const [favoriteProperties, setFavoriteProperties] = useState([]);
-const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
-const [viewMode, setViewMode] = useState("grid");
-const [loading, setLoading] = useState(true);
-const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
-const [editingProperty, setEditingProperty] = useState(null);
-const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] = useState(false);
-const [properties, setProperties] = useState([]);
-const [totalPages, setTotalPages] = useState(1);
-const [selectedLocation, setSelectedLocation] = useState(null);
-const [uploadedImages, setUploadedImages] = useState([]);
-const [mainImageIndex, setMainImageIndex] = useState(0);
-const [quickViewProperty, setQuickViewProperty] = useState(null);
+  // State management
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState("nameAsc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filters, setFilters] = useState(initialFilters);
+  const [favoriteProperties, setFavoriteProperties] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [viewMode, setViewMode] = useState("grid");
+  const [loading, setLoading] = useState(true);
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState(null);
+  const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [mainImageIndex, setMainImageIndex] = useState(0);
+  const [quickViewProperty, setQuickViewProperty] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
 
-// Form handling
-const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
-  resolver: yupResolver(propertySchema),
-  defaultValues: {
-    name: '',
-    description: '',
-    rentAmount: '',
-    propertyType: '',
-    bedrooms: '',
-    bathrooms: '',
-    area: '',
-    furnished: false,
-    parking: false,
-    petFriendly: false,
-    availableNow: true,
-  }
-});
-
-// Data fetching
-const fetchProperties = useCallback(async () => {
-  setLoading(true);
-  try {
-    const response = await axiosInstance.get('/api/properties', {
-      params: {
-        page: currentPage,
-        limit: 12,
-        search: searchTerm,
-        sort: sortOrder,
-        ...filters,
-      }
-    });
-
-    if (Array.isArray(response.data)) {
-      setProperties(response.data);
-      setTotalPages(1);
-    } else if (response.data?.properties) {
-      setProperties(response.data.properties);
-      setTotalPages(response.data.totalPages || 1);
-    }
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    setSnackbar({
-      open: true,
-      message: "Failed to fetch properties. Please try again.",
-      severity: "error"
-    });
-    setProperties([]);
-    setTotalPages(1);
-  } finally {
-    setLoading(false);
-  }
-}, [currentPage, searchTerm, sortOrder, filters]);
-
-// Effects
-useEffect(() => {
-  fetchProperties();
-}, [fetchProperties]);
-
-useEffect(() => {
-  const savedFavorites = localStorage.getItem('favoriteProperties');
-  if (savedFavorites) {
-    setFavoriteProperties(JSON.parse(savedFavorites));
-  }
-}, []);
-
-useEffect(() => {
-  localStorage.setItem('favoriteProperties', JSON.stringify(favoriteProperties));
-}, [favoriteProperties]);
-
-// Event handlers
-const handleViewModeChange = useCallback((_, newMode) => setViewMode(newMode), []);
-
-const toggleFavorite = useCallback(async (propertyId) => {
-  try {
-    const response = await axiosInstance.post(`/api/user/favorites/${propertyId}`);
-    setFavoriteProperties(prev => {
-      const newFavorites = response.data.isFavorite
-        ? [...prev, propertyId]
-        : prev.filter(id => id !== propertyId);
-      return newFavorites;
-    });
-    setSnackbar({
-      open: true,
-      message: response.data.isFavorite
-        ? "Property added to favorites"
-        : "Property removed from favorites",
-      severity: "success",
-    });
-  } catch (error) {
-    console.error('Error toggling favorite:', error);
-    setSnackbar({
-      open: true,
-      message: "Failed to update favorites. Please try again.",
-      severity: "error",
-    });
-  }
-}, []);
-
-const handleImageUpload = useCallback((event) => {
-  const files = Array.from(event.target.files);
-  const totalSize = files.reduce((acc, file) => acc + file.size, 0);
-  const totalImages = uploadedImages.length + files.length;
-
-  if (totalImages > 16) {
-    setSnackbar({
-      open: true,
-      message: "Maximum 16 images allowed",
-      severity: "warning"
-    });
-    return;
-  }
-
-  if (totalSize > 200 * 1024 * 1024) {
-    setSnackbar({
-      open: true,
-      message: "Total size exceeds 200MB limit",
-      severity: "warning"
-    });
-    return;
-  }
-
-  setUploadedImages(prev => [...prev, ...files]);
-}, [uploadedImages]);
-
-const handlePropertyDetails = useCallback((property) => {
-  setQuickViewProperty(property);
-}, []);
-
-const handleEditProperty = useCallback((property) => {
-  setEditingProperty(property);
-  Object.entries(property).forEach(([key, value]) => {
-    if (key in propertySchema.fields) {
-      setValue(key, value, { shouldValidate: true });
+  // Form handling
+  const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
+    resolver: yupResolver(propertySchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      rentAmount: '',
+      propertyType: '',
+      bedrooms: '',
+      bathrooms: '',
+      area: '',
+      furnished: false,
+      parking: false,
+      petFriendly: false,
+      availableNow: true,
     }
   });
 
-  if (property.latitude && property.longitude) {
-    setSelectedLocation({
-      lat: parseFloat(property.latitude),
-      lng: parseFloat(property.longitude)
-    });
-  }
+  // Data fetching
+  const fetchProperties = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get('/api/properties', {
+        params: {
+          page: currentPage,
+          limit: 12,
+          search: searchTerm,
+          sort: sortOrder,
+          ...filters,
+          propertyType: selectedFilter || undefined
+        }
+      });
 
-  setUploadedImages(property.images || []);
-  setMainImageIndex(property.images?.findIndex(img => img.isMain) || 0);
-  setIsAddPropertyModalOpen(true);
-}, [setValue]);
-
-const handleDeleteProperty = useCallback(async (propertyId) => {
-  if (!propertyId || !window.confirm('Are you sure you want to delete this property?')) return;
-
-  try {
-    await axiosInstance.delete(`/api/properties/${propertyId}`);
-    setProperties(prev => prev.filter(p => p._id !== propertyId));
-    setSnackbar({
-      open: true,
-      message: "Property deleted successfully",
-      severity: "success"
-    });
-  } catch (error) {
-    console.error('Error deleting property:', error);
-    setSnackbar({
-      open: true,
-      message: "Failed to delete property",
-      severity: "error"
-    });
-  }
-}, []);
-
-const handleAddProperty = async (data) => {
-  try {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => formData.append(key, value));
-    uploadedImages.forEach(image => formData.append('images', image));
-    formData.append('mainImageIndex', mainImageIndex.toString());
-    
-    if (selectedLocation) {
-      formData.append('latitude', selectedLocation.lat.toFixed(6));
-      formData.append('longitude', selectedLocation.lng.toFixed(6));
+      if (Array.isArray(response.data)) {
+        setProperties(response.data);
+        setTotalPages(1);
+      } else if (response.data?.properties) {
+        setProperties(response.data.properties);
+        setTotalPages(response.data.totalPages || 1);
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      setSnackbar({
+        open: true,
+        message: "Failed to fetch properties. Please try again.",
+        severity: "error"
+      });
+      setProperties([]);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
     }
+  }, [currentPage, searchTerm, sortOrder, filters, selectedFilter]);
 
-    const response = await axiosInstance.post('/api/properties', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  useEffect(() => {
+    fetchProperties();
+  }, [fetchProperties]);
 
-    setProperties(prev => [response.data, ...prev]);
-    setSnackbar({
-      open: true,
-      message: "Property added successfully",
-      severity: "success"
-    });
-    handleModalClose();
-  } catch (error) {
-    console.error('Error adding property:', error);
-    setSnackbar({
-      open: true,
-      message: "Failed to add property",
-      severity: "error"
-    });
-  }
-};
+  // Event handlers
+  const handleViewModeChange = useCallback((_, newMode) => setViewMode(newMode), []);
 
-const handleUpdateProperty = async (data) => {
-  try {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
+  const toggleFavorite = useCallback(async (propertyId) => {
+    if (!propertyId) {
+      console.error('Property ID is undefined');
+      return;
+    }
+    
+    try {
+      const response = await axiosInstance.post(`/api/properties/favorites/${propertyId}`);
+      setFavoriteProperties(prev => {
+        const newFavorites = response.data.isFavorite
+          ? [...prev, propertyId]
+          : prev.filter(id => id !== propertyId);
+        return newFavorites;
+      });
+      setSnackbar({
+        open: true,
+        message: response.data.isFavorite
+          ? "Property added to favorites"
+          : "Property removed from favorites",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      setSnackbar({
+        open: true,
+        message: "Failed to update favorites. Please try again.",
+        severity: "error",
+      });
+    }
+  }, []);
+
+  const handleImageUpload = useCallback((event) => {
+    const files = Array.from(event.target.files);
+    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+    const totalImages = uploadedImages.length + files.length;
+  
+    if (totalImages > 16) {
+      setSnackbar({
+        open: true,
+        message: "Maximum 16 images allowed",
+        severity: "warning"
+      });
+      return;
+    }
+  
+    if (totalSize > 200 * 1024 * 1024) {
+      setSnackbar({
+        open: true,
+        message: "Total size exceeds 200MB limit",
+        severity: "warning"
+      });
+      return;
+    }
+  
+    const newImages = files.map(file => ({
+      file,
+      isMain: false,
+      path: URL.createObjectURL(file)
+    }));
+  
+    setUploadedImages(prev => {
+      const updatedImages = [...prev, ...newImages];
+      if (prev.length === 0 && newImages.length > 0) {
+        setMainImageIndex(prev.length);  // Set the new image as main if it's the first one
+      }
+      return updatedImages;
+    });
+  }, [uploadedImages]);
+
+  const handleAddProperty = async (data) => {
+    try {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value);
+        }
+      });
+
+      uploadedImages.forEach((image, index) => {
+        if (image instanceof File) {
+          formData.append('images', image);
+        }
+      });
+      
+      formData.append('mainImageIndex', mainImageIndex.toString());
+      
+      if (selectedLocation) {
+        formData.append('latitude', selectedLocation.lat.toFixed(6));
+        formData.append('longitude', selectedLocation.lng.toFixed(6));
+      }
+
+      const response = await axiosInstance.post('/api/properties', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setProperties(prev => [response.data, ...prev]);
+      setSnackbar({
+        open: true,
+        message: "Property added successfully",
+        severity: "success"
+      });
+      handleModalClose();
+    } catch (error) {
+      console.error('Error adding property:', error);
+      setSnackbar({
+        open: true,
+        message: "Failed to add property",
+        severity: "error"
+      });
+    }
+  };
+
+  const handleUpdateProperty = async (data) => {
+    try {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         formData.append(key, value);
+        }
+      });
+
+      uploadedImages.forEach((image, index) => {
+        if (image.file instanceof File) {
+          formData.append('images', image.file);
+        } else {
+          formData.append('existingImages', JSON.stringify({
+            ...image,
+            isMain: index === mainImageIndex
+          }));
+        }
+      });
+      
+      formData.append('mainImageIndex', mainImageIndex.toString());
+
+      if (selectedLocation) {
+        formData.append('latitude', selectedLocation.lat.toString());
+        formData.append('longitude', selectedLocation.lng.toString());
       }
-    });
 
-    uploadedImages.forEach((image, index) => {
-      if (image instanceof File) {
-        formData.append('images', image);
-      } else {
-        formData.append('existingImages', JSON.stringify(image));
-      }
-    });
-    formData.append('mainImageIndex', mainImageIndex.toString());
-
-    if (selectedLocation) {
-      formData.append('latitude', selectedLocation.lat.toString());
-      formData.append('longitude', selectedLocation.lng.toString());
-    }
-
-    const propertyId = editingProperty._id;
+      const propertyId = editingProperty.id;
     const response = await axiosInstance.put(`/api/properties/${propertyId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
 
     setProperties(prev => prev.map(p => 
-      p._id === propertyId ? response.data : p
+      p.id === propertyId ? response.data : p
     ));
 
     setSnackbar({
@@ -869,67 +1250,65 @@ const handleUpdateProperty = async (data) => {
   }
 };
 
-const handleModalClose = useCallback(() => {
-  setIsAddPropertyModalOpen(false);
-  setEditingProperty(null);
-  reset();
-  setUploadedImages([]);
-  setMainImageIndex(0);
-  setSelectedLocation(null);
-}, [reset]);
+  const handleDeleteProperty = useCallback(async (propertyId) => {
+    if (!propertyId) {
+      console.error('Invalid property ID:', propertyId);
+      return;
+    }
 
-// Rendering methods
-const renderPropertyCard = useCallback((property) => {
-  if (!property) return null;
-  
-  const propertyId = property._id;
-  const mainImage = property.images?.find(img => img.isMain) || property.images?.[0];
-  const imageUrl = mainImage
-    ? `${process.env.REACT_APP_API_URL}/uploads/properties/${mainImage.path}`
-    : "/placeholder-property.jpg";
+    try {
+      await axiosInstance.delete(`/api/properties/${propertyId}`);
+      setProperties(prev => prev.filter(p => p.id !== propertyId));
+      setSnackbar({
+        open: true,
+        message: "Property deleted successfully",
+        severity: "success"
+      });
+    } catch (error) {
+      console.error('Error deleting property:', error);
+      setSnackbar({
+        open: true,
+        message: "Failed to delete property",
+        severity: "error"
+      });
+    }
+  }, []);
 
-  return (
-    <Card className="property-card">
-      <img
-        className="property-image"
-        src={imageUrl}
-        alt={property.name}
-        onClick={() => handlePropertyDetails(property)}
-      />
-      <CardContent className="property-content">
-        <Typography variant="h6" className="property-title">
-          {property.name}
-        </Typography>
-        <Typography variant="h5" className="property-price">
-          ${property.rentAmount?.toLocaleString()} / month
-        </Typography>
-        <Box className="property-features">
-          <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
-          <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
-          <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            {property.description.substring(0, 100)}...
-          </Typography>
-        </CardContent>
-        <CardActions>
-          <IconButton onClick={() => toggleFavorite(propertyId)}>
-            {favoriteProperties.includes(propertyId) ? 
-              <FavoriteIcon color="error" /> : 
-              <FavoriteBorderIcon />
-            }
-          </IconButton>
-          <IconButton onClick={() => handleEditProperty(property)}>
-            <EditIcon />
-          </IconButton>
-          <IconButton onClick={() => handleDeleteProperty(propertyId)}>
-            <DeleteIcon />
-          </IconButton>
-        </CardActions>
-      </Card>
-    );
-  }, [favoriteProperties, toggleFavorite, handleDeleteProperty, handlePropertyDetails, handleEditProperty]);
+  const handleEditProperty = useCallback((property) => {
+    setEditingProperty(property);
+    Object.entries(property).forEach(([key, value]) => {
+      if (key in propertySchema.fields) {
+        setValue(key, value, { shouldValidate: true });
+      }
+    });
 
+    if (property.latitude && property.longitude) {
+      setSelectedLocation({
+        lat: parseFloat(property.latitude),
+        lng: parseFloat(property.longitude)
+      });
+    }
+
+    setUploadedImages(property.images || []);
+    const mainImageIndex = property.images?.findIndex(img => img.isMain) || 0;
+    setMainImageIndex(mainImageIndex);
+    setIsAddPropertyModalOpen(true);
+  }, [setValue]);
+
+  const handleModalClose = useCallback(() => {
+    setIsAddPropertyModalOpen(false);
+    setEditingProperty(null);
+    reset();
+    setUploadedImages([]);
+    setMainImageIndex(0);
+    setSelectedLocation(null);
+  }, [reset]);
+
+  const handlePropertyDetails = useCallback((property) => {
+    setQuickViewProperty(property);
+  }, []);
+
+  // Render methods
   const renderProperties = () => {
     if (loading) {
       return (
@@ -952,8 +1331,15 @@ const renderPropertyCard = useCallback((property) => {
         return (
           <Grid container spacing={3}>
             {properties.map((property) => (
-              <Grid item key={property._id} xs={12} sm={6} md={4} lg={3}>
-                {renderPropertyCard(property)}
+              <Grid item key={property.id} xs={12} sm={6} md={4} lg={3}>
+                <PropertyCard
+                  property={property}
+                  onEdit={handleEditProperty}
+                  onDelete={handleDeleteProperty}
+                  onToggleFavorite={toggleFavorite}
+                  favoriteProperties={favoriteProperties}
+                  onViewDetails={handlePropertyDetails}
+                />
               </Grid>
             ))}
           </Grid>
@@ -963,7 +1349,7 @@ const renderPropertyCard = useCallback((property) => {
           <List>
             {properties.map((property) => (
               <ListItem
-                key={property._id}
+                key={property.id}
                 className="list-item"
                 onClick={() => handlePropertyDetails(property)}
               >
@@ -972,12 +1358,12 @@ const renderPropertyCard = useCallback((property) => {
                     <img
                       src={property.images?.[0] ? 
                         `${process.env.REACT_APP_API_URL}/uploads/properties/${property.images[0].path}` :
-                        "/placeholder-property.jpg"
+                        DEFAULT_PROPERTY_IMAGE
                       }
                       alt={property.name}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "/placeholder-property.jpg";
+                        e.target.src = DEFAULT_PROPERTY_IMAGE;
                       }}
                     />
                   </Box>
@@ -999,22 +1385,21 @@ const renderPropertyCard = useCallback((property) => {
                     <Box>
                       <IconButton onClick={(e) => {
                         e.stopPropagation();
-                        toggleFavorite(property._id);
+                        toggleFavorite(property.id);
                       }}>
-                        {favoriteProperties.includes(property._id) ? 
+                        {favoriteProperties.includes(property.id) ? 
                           <FavoriteIcon color="error" /> : 
                           <FavoriteBorderIcon />
                         }
                       </IconButton>
                       <IconButton onClick={(e) => {
                         e.stopPropagation();
-                        handleEditProperty(property);
-                      }}>
+                        handleEditProperty(property);}}>
                         <EditIcon />
                       </IconButton>
                       <IconButton onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteProperty(property._id);
+                        handleDeleteProperty(property.id);
                       }}>
                         <DeleteIcon />
                       </IconButton>
@@ -1038,7 +1423,7 @@ const renderPropertyCard = useCallback((property) => {
                 if (property.latitude && property.longitude) {
                   return (
                     <Marker
-                      key={property._id}
+                      key={property.id}
                       position={[property.latitude, property.longitude]}
                       icon={customMarkerIcon}
                     >
@@ -1067,7 +1452,6 @@ const renderPropertyCard = useCallback((property) => {
     }
   };
 
-  // Main render
   return (
     <div className="page-wrapper">
       <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, textAlign: "center" }}>
@@ -1165,19 +1549,20 @@ const renderPropertyCard = useCallback((property) => {
       </Button>
 
       <PropertyFormModal
-        open={isAddPropertyModalOpen}
-        onClose={handleModalClose}
-        property={editingProperty}
-        onSubmit={handleSubmit(editingProperty ? handleUpdateProperty : handleAddProperty)}
-        control={control}
-        errors={errors}
-        uploadedImages={uploadedImages}
-        onImageUpload={handleImageUpload}
-        mainImageIndex={mainImageIndex}
-        setMainImageIndex={setMainImageIndex}
-        selectedLocation={selectedLocation}
-        setSelectedLocation={setSelectedLocation}
-      />
+  open={isAddPropertyModalOpen}
+  onClose={handleModalClose}
+  property={editingProperty}
+  onSubmit={handleSubmit(editingProperty ? handleUpdateProperty : handleAddProperty)}
+  control={control}
+  errors={errors}
+  uploadedImages={uploadedImages}
+  setUploadedImages={setUploadedImages}
+  onImageUpload={handleImageUpload}  // Add this line
+  mainImageIndex={mainImageIndex}
+  setMainImageIndex={setMainImageIndex}
+  selectedLocation={selectedLocation}
+  setSelectedLocation={setSelectedLocation}
+/>
 
       <PropertyQuickViewModal
         property={quickViewProperty}
@@ -1193,6 +1578,13 @@ const renderPropertyCard = useCallback((property) => {
         selectedFilter={selectedFilter}
         setSelectedFilter={setSelectedFilter}
         onApply={fetchProperties}
+      />
+
+      <ImageModal
+        open={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        imageUrl={selectedImage}
+        alt="Property full view"
       />
 
       <Snackbar
@@ -1213,4 +1605,4 @@ const renderPropertyCard = useCallback((property) => {
   );
 };
 
-export default React.memo(Properties);
+export default Properties;

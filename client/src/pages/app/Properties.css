@@ -1,157 +1,157 @@
 /* Base styles */
 .page-wrapper {
-    padding: 24px;
-    min-height: 100vh;
-    background-color: var(--background-default);
-  }
-  
-  /* Property card styles */
-  .property-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: all 0.3s ease-in-out;
-    border-radius: 16px;
-    overflow: hidden;
-  }
-  
-  .property-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(var(--primary-main-rgb), 0.2);
-  }
-  
-  .property-image {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-  }
-  
-  .property-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-  }
-  
-  .property-title {
-    font-weight: bold;
-    margin-bottom: 8px;
-  }
-  
-  .property-price {
-    color: var(--primary-main);
-    font-weight: bold;
-    margin-bottom: 8px;
-  }
-  
-  .property-features {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  
-  /* List view styles */
-  .list-item {
-    margin-bottom: 16px;
-    border: 1px solid var(--divider);
-    border-radius: 8px;
-    transition: all 0.3s;
-  }
-  
-  .list-item:hover {
-    background-color: var(--action-hover);
-  }
-  
-  .list-item-image {
-    margin-right: 16px;
-    width: 150px;
-    height: 150px;
-    flex-shrink: 0;
-  }
-  
-  .list-item-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 4px;
-  }
-  
-  /* Map styles */
-  .map-container {
-    height: 600px;
-    width: 100%;
-    border-radius: 16px;
-    overflow: hidden;
-    position: relative;
-  }
-  
-  /* Filter drawer styles */
+  padding: 24px;
+  min-height: 100vh;
+  background-color: var(--background-default);
+}
+
+/* Property card styles */
+.property-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease-in-out;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.property-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(var(--primary-main-rgb), 0.2);
+}
+
+.property-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.property-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.property-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.property-price {
+  color: var(--primary-main);
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.property-features {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* List view styles */
+.list-item {
+  margin-bottom: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.list-item:hover {
+  background-color: var(--action-hover);
+}
+
+.list-item-image {
+  margin-right: 16px;
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+}
+
+.list-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* Map styles */
+.map-container {
+  height: 600px;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Filter drawer styles */
+.filter-drawer {
+  padding: 16px;
+}
+
+@media (min-width: 600px) {
   .filter-drawer {
-    padding: 16px;
+    width: 300px;
   }
-  
-  @media (min-width: 600px) {
-    .filter-drawer {
-      width: 300px;
-    }
-  }
-  
-  /* Rating styles */
-  .styled-rating .MuiRating-iconFilled {
-    color: var(--secondary-main);
-  }
-  
-  /* Add property button styles */
-  .add-property-button {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    z-index: 1000;
-  }
-  
-  /* Loading spinner styles */
-  .loading-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 50vh;
-  }
-  
-  /* Image upload preview styles */
-  .image-list {
-    width: 100%;
-    height: 200px;
-    margin-top: 16px;
-  }
-  
-  .image-list-item {
-    position: relative;
-  }
-  
-  .image-list-item img {
-    object-fit: cover;
-    height: 100%;
-  }
-  
-  /* Quick view modal styles */
-  .quick-view-image {
-    position: relative;
-    width: 100%;
-    padding-top: 75%;
-  }
-  
-  .quick-view-image img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  /* Responsive pagination styles */
-  .pagination-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 24px;
-  }
+}
+
+/* Rating styles */
+.styled-rating .MuiRating-iconFilled {
+  color: var(--secondary-main);
+}
+
+/* Add property button styles */
+.add-property-button {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 1000;
+}
+
+/* Loading spinner styles */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+/* Image upload preview styles */
+.image-list {
+  width: 100%;
+  height: 200px;
+  margin-top: 16px;
+}
+
+.image-list-item {
+  position: relative;
+}
+
+.image-list-item img {
+  object-fit: cover;
+  height: 100%;
+}
+
+/* Quick view modal styles */
+.quick-view-image {
+  position: relative;
+  width: 100%;
+  padding-top: 75%;
+}
+
+.quick-view-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Responsive pagination styles */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}

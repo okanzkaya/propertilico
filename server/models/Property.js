@@ -33,10 +33,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: false,
-      validate: {
-        notEmpty: { msg: 'Property description cannot be empty' }
-      }
+      allowNull: false
     },
     rentAmount: {
       type: DataTypes.DECIMAL(10, 2),
