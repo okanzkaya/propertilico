@@ -3,49 +3,90 @@ const { Op } = require('sequelize');
 const AppError = require('../utils/appError');
 const slugify = require('slugify');
 const sanitizeHtml = require('sanitize-html');
-const { validationResult } = require('express-validator');
+const path = require('path');
+const fs = require('fs').promises;
 
-// Utility functions
-const sanitizeContent = (content) => {
-  return sanitizeHtml(content, {
-    allowedTags: [
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'p', 'a', 'ul', 'ol',
-      'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
-      'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'img'
-    ],
-    allowedAttributes: {
-      'a': ['href', 'name', 'target'],
-      'img': ['src', 'alt', 'title'],
-      '*': ['style', 'class']
-    },
-    allowedStyles: {
-      '*': {
-        'color': [/^#(0x)?[0-9a-f]+$/i, /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/],
-        'text-align': [/^left$/, /^right$/, /^center$/],
-        'font-size': [/^\d+(?:px|em|%)$/]
-      }
-    }
-  });
+// Performance optimization - Memoize common operations
+const memoize = (fn) => {
+  const cache = new Map();
+  return (...args) => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  };
 };
 
-const createSlug = (title) => {
-  return slugify(title, {
+// Security Configuration
+const SANITIZE_OPTIONS = {
+  allowedTags: [
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'p', 'a', 'ul', 'ol',
+    'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
+    'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'img'
+  ],
+  allowedAttributes: {
+    'a': ['href', 'name', 'target'],
+    'img': ['src', 'alt', 'title'],
+    '*': ['style', 'class']
+  },
+  allowedSchemes: ['http', 'https', 'ftp', 'mailto'],
+  allowedSchemesByTag: {
+    img: ['http', 'https', 'data']
+  }
+};
+
+// Image processing utility
+const processImageUrl = (imageUrl) => {
+  if (!imageUrl) {
+    return null;
+  }
+
+  // If it's already a complete URL, return it
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+
+  // Ensure the path starts with /uploads/blog-images/
+  if (!imageUrl.startsWith('/uploads/blog-images/')) {
+    return `/uploads/blog-images/${imageUrl.replace(/^\/+/, '')}`;
+  }
+
+  return imageUrl;
+};
+
+// Delete image utility
+const deleteImageFile = async (imageUrl) => {
+  if (!imageUrl) return;
+
+  try {
+    const imagePath = path.join(__dirname, '..', imageUrl);
+    await fs.access(imagePath); // Check if file exists
+    await fs.unlink(imagePath);
+    console.log('Successfully deleted image:', imagePath);
+  } catch (error) {
+    console.error('Error deleting image file:', error);
+    // Don't throw error - just log it
+  }
+};
+
+// Utility functions
+const sanitizeContent = memoize((content) => sanitizeHtml(content, SANITIZE_OPTIONS));
+
+const createSlug = memoize((title) => 
+  slugify(title, {
     lower: true,
     strict: true,
     remove: /[*+~.()'"!:@]/g
-  });
-};
+  })
+);
 
-const validateBlogData = (data) => {
+const validateBlogData = ({ title, content, excerpt }) => {
   const errors = [];
-  if (!data.title || data.title.length < 3) {
-    errors.push('Title must be at least 3 characters long');
-  }
-  if (!data.content || data.content.length < 100) {
-    errors.push('Content must be at least 100 characters long');
-  }
-  if (!data.excerpt || data.excerpt.length < 10) {
-    errors.push('Excerpt must be at least 10 characters long');
+  if (!title?.trim() || title.length < 3) errors.push('Title must be at least 3 characters');
+  if (!content?.trim() || content.length < 100) errors.push('Content must be at least 100 characters');
+  if (!excerpt?.trim() || excerpt.length < 10 || excerpt.length > 300) {
+    errors.push('Excerpt must be between 10 and 300 characters');
   }
   return errors;
 };
@@ -53,12 +94,11 @@ const validateBlogData = (data) => {
 // Controller Methods
 exports.getAllBlogs = async (req, res, next) => {
   try {
-    console.log('Fetching blogs with params:', req.query);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const search = req.query.search || '';
-    const sort = req.query.sort || 'desc';
+    const search = req.query.search?.trim() || '';
+    const sort = req.query.sort || 'newest';
 
     const whereClause = {
       status: 'published',
@@ -71,9 +111,11 @@ exports.getAllBlogs = async (req, res, next) => {
       })
     };
 
+    console.log('Fetching blogs with query:', whereClause);
+
     const { count, rows: blogs } = await models.Blog.findAndCountAll({
       where: whereClause,
-      order: [['createdAt', sort.toUpperCase()]],
+      order: [['created_at', sort === 'newest' ? 'DESC' : 'ASC']],
       limit,
       offset,
       include: [{
@@ -84,13 +126,18 @@ exports.getAllBlogs = async (req, res, next) => {
       distinct: true
     });
 
-    // Process image URLs
+    console.log('Blogs with images:', blogs.map(blog => ({
+      id: blog.id,
+      title: blog.title,
+      imageUrl: blog.imageUrl
+    })));
+
     const processedBlogs = blogs.map(blog => {
       const plainBlog = blog.get({ plain: true });
-      if (plainBlog.imageUrl && !plainBlog.imageUrl.startsWith('http')) {
-        plainBlog.imageUrl = `/uploads/blog-images/${path.basename(plainBlog.imageUrl)}`;
-      }
-      return plainBlog;
+      return {
+        ...plainBlog,
+        imageUrl: processImageUrl(plainBlog.imageUrl)
+      };
     });
 
     res.status(200).json({
@@ -113,26 +160,24 @@ exports.getAllBlogs = async (req, res, next) => {
 
 exports.getBlogById = async (req, res, next) => {
   try {
-    console.log(`Getting blog with ID: ${req.params.id}`);
-
     const blog = await models.Blog.findByPk(req.params.id, {
       include: [{
         model: models.User,
         as: 'author',
-        attributes: ['id', 'name', 'email', 'bloggerDescription', 'avatar']
+        attributes: ['id', 'name', 'bloggerDescription', 'avatar']
       }]
     });
 
-    if (!blog) {
-      return next(new AppError('Blog post not found', 404));
-    }
+    if (!blog) return next(new AppError('Blog post not found', 404));
 
-    // Increment view count
     await blog.increment('viewCount', { by: 1 });
+    
+    const processedBlog = blog.get({ plain: true });
+    processedBlog.imageUrl = processImageUrl(processedBlog.imageUrl);
 
     res.status(200).json({
       status: 'success',
-      data: { blog }
+      data: { blog: processedBlog }
     });
   } catch (error) {
     console.error('Error in getBlogById:', error);
@@ -142,43 +187,50 @@ exports.getBlogById = async (req, res, next) => {
 
 exports.createBlog = async (req, res, next) => {
   try {
-    console.log('Creating new blog with data:', req.body);
-
-    // Validate request data
-    const errors = validateBlogData(req.body);
-    if (errors.length > 0) {
-      return next(new AppError(errors.join('. '), 400));
-    }
-
+    console.log('Creating blog with file:', req.file);
     const { title, content, excerpt, tags, status = 'published' } = req.body;
 
-    // Process tags
-    const processedTags = typeof tags === 'string' 
-      ? tags.split(',').map(tag => tag.trim())
-      : Array.isArray(tags) ? tags : [];
+    const validationErrors = validateBlogData({ title, content, excerpt });
+    if (validationErrors.length) {
+      if (req.file) {
+        await deleteImageFile(`/uploads/blog-images/${req.file.filename}`);
+      }
+      return next(new AppError(validationErrors.join('. '), 400));
+    }
 
-    // Create slug
-    const slug = createSlug(title);
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = `/uploads/blog-images/${req.file.filename}`;
+      console.log('Image saved:', imageUrl);
+    }
 
-    // Sanitize content
-    const sanitizedContent = sanitizeContent(content);
+    const processedTags = Array.isArray(tags) 
+      ? tags
+      : typeof tags === 'string' 
+        ? tags.split(',').map(tag => tag.trim()).filter(Boolean)
+        : [];
 
-    const blog = await models.Blog.create({
+    const blogData = {
       title,
-      content: sanitizedContent,
+      content: sanitizeContent(content),
       excerpt,
       tags: processedTags,
       authorId: req.user.id,
       status,
-      slug,
+      imageUrl,
       publishedAt: status === 'published' ? new Date() : null
-    });
+    };
+
+    console.log('Creating blog with data:', blogData);
+
+    const blog = await models.Blog.create(blogData);
+    console.log('Blog created:', blog.id);
 
     const blogWithAuthor = await models.Blog.findByPk(blog.id, {
       include: [{
         model: models.User,
         as: 'author',
-        attributes: ['id', 'name', 'email', 'bloggerDescription', 'avatar']
+        attributes: ['id', 'name', 'bloggerDescription']
       }]
     });
 
@@ -188,84 +240,113 @@ exports.createBlog = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error in createBlog:', error);
+    if (req.file) {
+      await deleteImageFile(`/uploads/blog-images/${req.file.filename}`);
+    }
     next(new AppError('Failed to create blog post', 500));
   }
 };
 
 exports.updateBlog = async (req, res, next) => {
   try {
-    console.log(`Updating blog ${req.params.id} with data:`, req.body);
-
     const blog = await models.Blog.findByPk(req.params.id);
+    if (!blog) return next(new AppError('Blog post not found', 404));
     
-    if (!blog) {
-      return next(new AppError('Blog post not found', 404));
-    }
-
-    // Check authorization
     if (blog.authorId !== req.user.id && !req.user.isAdmin) {
+      if (req.file) {
+        await deleteImageFile(`/uploads/blog-images/${req.file.filename}`);
+      }
       return next(new AppError('Not authorized to update this blog', 403));
     }
 
     const { title, content, excerpt, tags, status } = req.body;
 
-    // Process tags
-    const processedTags = typeof tags === 'string' 
-      ? tags.split(',').map(tag => tag.trim())
-      : Array.isArray(tags) ? tags : blog.tags;
-
-    // Update data
-    const updateData = {
-      title: title || blog.title,
-      content: content ? sanitizeContent(content) : blog.content,
-      excerpt: excerpt || blog.excerpt,
-      tags: processedTags,
-      status: status || blog.status,
-      slug: title ? createSlug(title) : blog.slug
-    };
-
-    // If status changes to published, update publishedAt
-    if (status === 'published' && blog.status !== 'published') {
-      updateData.publishedAt = new Date();
+    let imageUrl = blog.imageUrl;
+    if (req.file) {
+      // Delete old image if it exists
+      if (blog.imageUrl) {
+        await deleteImageFile(blog.imageUrl);
+      }
+      imageUrl = `/uploads/blog-images/${req.file.filename}`;
+      console.log('New image saved:', imageUrl);
     }
 
-    const updatedBlog = await blog.update(updateData);
+    const fieldsToValidate = {
+      title: title || blog.title,
+      content: content || blog.content,
+      excerpt: excerpt || blog.excerpt
+    };
+    
+    const validationErrors = validateBlogData(fieldsToValidate);
+    if (validationErrors.length) {
+      if (req.file) {
+        await deleteImageFile(imageUrl);
+      }
+      return next(new AppError(validationErrors.join('. '), 400));
+    }
 
-    const blogWithAuthor = await models.Blog.findByPk(updatedBlog.id, {
+    const updateData = {
+      ...(title && { title, slug: createSlug(title) }),
+      ...(content && { content: sanitizeContent(content) }),
+      ...(excerpt && { excerpt }),
+      ...(tags && { 
+        tags: Array.isArray(tags) 
+          ? tags 
+          : tags.split(',').map(tag => tag.trim()).filter(Boolean)
+      }),
+      ...(status && { 
+        status,
+        publishedAt: status === 'published' && blog.status !== 'published' 
+          ? new Date() 
+          : blog.publishedAt
+      }),
+      imageUrl
+    };
+
+    await blog.update(updateData);
+    
+    const updatedBlog = await models.Blog.findByPk(blog.id, {
       include: [{
         model: models.User,
         as: 'author',
-        attributes: ['id', 'name', 'email', 'bloggerDescription', 'avatar']
+        attributes: ['id', 'name', 'bloggerDescription']
       }]
+    });
+
+    console.log('Updated blog:', {
+      id: blog.id,
+      title: blog.title,
+      imageUrl: blog.imageUrl
     });
 
     res.status(200).json({
       status: 'success',
-      data: { blog: blogWithAuthor }
+      data: { blog: updatedBlog }
     });
   } catch (error) {
     console.error('Error in updateBlog:', error);
+    if (req.file) {
+      await deleteImageFile(`/uploads/blog-images/${req.file.filename}`);
+    }
     next(new AppError('Failed to update blog post', 500));
   }
 };
 
 exports.deleteBlog = async (req, res, next) => {
   try {
-    console.log(`Deleting blog with ID: ${req.params.id}`);
-
     const blog = await models.Blog.findByPk(req.params.id);
-    
-    if (!blog) {
-      return next(new AppError('Blog post not found', 404));
-    }
+    if (!blog) return next(new AppError('Blog post not found', 404));
 
-    // Check authorization
     if (blog.authorId !== req.user.id && !req.user.isAdmin) {
       return next(new AppError('Not authorized to delete this blog', 403));
     }
 
-    await blog.destroy();
+    if (blog.imageUrl) {
+      await deleteImageFile(blog.imageUrl);
+    }
 
+    await blog.destroy();
+    
     res.status(200).json({
       status: 'success',
       message: 'Blog post deleted successfully'
@@ -276,80 +357,83 @@ exports.deleteBlog = async (req, res, next) => {
   }
 };
 
-exports.getUserBlogs = async (req, res, next) => {
+exports.getRelatedBlogs = async (req, res, next) => {
   try {
-    console.log(`Getting blogs for user: ${req.params.userId || req.user.id}`);
+    const blog = await models.Blog.findByPk(req.params.id);
+    if (!blog) return next(new AppError('Blog post not found', 404));
 
-    const userId = req.params.userId || req.user.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-
-    const { count, rows: blogs } = await models.Blog.findAndCountAll({
-      where: { authorId: userId },
-      order: [['createdAt', 'DESC']],
-      limit,
-      offset,
+    const relatedBlogs = await models.Blog.findAll({
+      where: {
+        id: { [Op.ne]: blog.id },
+        status: 'published',
+        tags: { [Op.overlap]: blog.tags }
+      },
+      limit: 3,
+      order: [['publishedAt', 'DESC']],
       include: [{
         model: models.User,
         as: 'author',
-        attributes: ['id', 'name', 'email', 'bloggerDescription', 'avatar']
-      }]
+        attributes: ['id', 'name', 'bloggerDescription']
+      }],
+      attributes: {
+        exclude: ['content']
+      }
     });
+
+    const processedBlogs = relatedBlogs.map(blog => ({
+      ...blog.get({ plain: true }),
+      imageUrl: processImageUrl(blog.imageUrl)
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: { relatedBlogs: processedBlogs }
+    });
+  } catch (error) {
+    console.error('Error in getRelatedBlogs:', error);
+    next(new AppError('Failed to fetch related blogs', 500));
+  }
+};
+
+exports.getBlogsByTag = async (req, res, next) => {
+  try {
+    const { tag } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const { count, rows: blogs } = await models.Blog.findAndCountAll({
+      where: {
+        status: 'published',
+        tags: { [Op.contains]: [tag] }
+      },
+      limit,
+      offset: (page - 1) * limit,
+      order: [['publishedAt', 'DESC']],
+      include: [{
+        model: models.User,
+        as: 'author',
+        attributes: ['id', 'name', 'bloggerDescription']
+      }],
+      attributes: {
+        exclude: ['content']
+      }
+    });
+
+    const processedBlogs = blogs.map(blog => ({
+      ...blog.get({ plain: true }),
+      imageUrl: processImageUrl(blog.imageUrl)
+    }));
 
     res.status(200).json({
       status: 'success',
       data: {
-        blogs,
+        blogs: processedBlogs,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(count / limit),
           totalBlogs: count,
           blogsPerPage: limit
         }
-      }
-    });
-  } catch (error) {
-    console.error('Error in getUserBlogs:', error);
-    next(new AppError('Failed to fetch user blogs', 500));
-  }
-};
-
-exports.getBlogsByTag = async (req, res, next) => {
-  try {
-    console.log(`Getting blogs with tag: ${req.params.tag}`);
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const tag = req.params.tag;
-
-    const { count, rows: blogs } = await models.Blog.findAndCountAll({
-      where: {
-        tags: { [Op.contains]: [tag] },
-        status: 'published'
-      },
-      order: [['publishedAt', 'DESC']],
-      limit,
-      offset,
-      include: [{
-        model: models.User,
-        as: 'author',
-        attributes: ['id', 'name', 'email', 'bloggerDescription', 'avatar']
-      }]
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        blogs,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(count / limit),
-          totalBlogs: count,
-          blogsPerPage: limit
-        },
-        tag
       }
     });
   } catch (error) {
@@ -358,357 +442,12 @@ exports.getBlogsByTag = async (req, res, next) => {
   }
 };
 
-exports.getPopularTags = async (req, res, next) => {
-  try {
-    console.log('Getting popular tags');
-
-    const blogs = await models.Blog.findAll({
-      where: { status: 'published' },
-      attributes: ['tags']
-    });
-
-    // Count tag occurrences
-    const tagCount = {};
-    blogs.forEach(blog => {
-      blog.tags.forEach(tag => {
-        tagCount[tag] = (tagCount[tag] || 0) + 1;
-      });
-    });
-
-    // Convert to array and sort
-    const popularTags = Object.entries(tagCount)
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    res.status(200).json({
-      status: 'success',
-      data: { tags: popularTags }
-    });
-  } catch (error) {
-    console.error('Error in getPopularTags:', error);
-    next(new AppError('Failed to fetch popular tags', 500));
-  }
+module.exports = {
+  getAllBlogs: exports.getAllBlogs,
+  getBlogById: exports.getBlogById,
+  createBlog: exports.createBlog,
+  updateBlog: exports.updateBlog,
+  deleteBlog: exports.deleteBlog,
+  getRelatedBlogs: exports.getRelatedBlogs,
+  getBlogsByTag: exports.getBlogsByTag
 };
-
-// Stats and Analytics
-exports.getBlogStats = async (req, res, next) => {
-  try {
-    console.log('Getting blog statistics');
-
-    const totalBlogs = await models.Blog.count();
-    const publishedBlogs = await models.Blog.count({ where: { status: 'published' } });
-    const draftBlogs = await models.Blog.count({ where: { status: 'draft' } });
-    const totalViews = await models.Blog.sum('viewCount');
-    
-    const topBlogs = await models.Blog.findAll({
-      where: { status: 'published' },
-      order: [['viewCount', 'DESC']],
-      limit: 5,
-      attributes: ['id', 'title', 'viewCount', 'publishedAt'],
-      include: [{
-        model: models.User,
-        as: 'author',
-        attributes: ['id', 'name']
-      }]
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        stats: {
-          totalBlogs,
-          publishedBlogs,
-          draftBlogs,
-          totalViews,
-          averageViewsPerBlog: totalBlogs > 0 ? Math.round(totalViews / totalBlogs) : 0
-        },
-        topBlogs
-      }
-    });
-  } catch (error) {
-    console.error('Error in getBlogStats:', error);
-    next(new AppError('Failed to fetch blog statistics', 500));
-  }
-};
-
-exports.getAuthorStats = async (req, res, next) => {
-  try {
-    console.log(`Getting author statistics for user: ${req.user.id}`);
-
-    const authorStats = await models.Blog.findAndCountAll({
-      where: { authorId: req.user.id },
-      attributes: [
-        'status',
-        [models.sequelize.fn('COUNT', models.sequelize.col('id')), 'count'],
-        [models.sequelize.fn('SUM', models.sequelize.col('viewCount')), 'totalViews']
-      ],
-      group: ['status']
-    });
-
-    const topAuthorBlogs = await models.Blog.findAll({
-      where: { 
-        authorId: req.user.id,
-        status: 'published'
-      },
-      order: [['viewCount', 'DESC']],
-      limit: 5,
-      attributes: ['id', 'title', 'viewCount', 'publishedAt']
-    });
-
-    const monthlyViews = await models.Blog.findAll({
-      where: { 
-        authorId: req.user.id,
-        status: 'published'
-      },
-      attributes: [
-        [models.sequelize.fn('date_trunc', 'month', models.sequelize.col('publishedAt')), 'month'],
-        [models.sequelize.fn('SUM', models.sequelize.col('viewCount')), 'views']
-      ],
-      group: [models.sequelize.fn('date_trunc', 'month', models.sequelize.col('publishedAt'))],
-      order: [[models.sequelize.fn('date_trunc', 'month', models.sequelize.col('publishedAt')), 'DESC']],
-      limit: 12
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        stats: authorStats,
-        topBlogs: topAuthorBlogs,
-        monthlyViews
-      }
-    });
-  } catch (error) {
-    console.error('Error in getAuthorStats:', error);
-    next(new AppError('Failed to fetch author statistics', 500));
-  }
-};
-
-// Search and Discovery
-exports.searchBlogs = async (req, res, next) => {
-  try {
-    console.log('Searching blogs with query:', req.query);
-
-    const {
-      query = '',
-      page = 1,
-      limit = 10,
-      sortBy = 'relevance',
-      status = 'published',
-      tags = []
-    } = req.query;
-
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    // Build search conditions
-    const whereClause = {
-      status,
-      [Op.or]: [
-        { title: { [Op.iLike]: `%${query}%` } },
-        { content: { [Op.iLike]: `%${query}%` } },
-        { excerpt: { [Op.iLike]: `%${query}%` } }
-      ]
-    };
-
-    // Add tag filtering if provided
-    if (tags.length > 0) {
-      whereClause.tags = { [Op.overlap]: Array.isArray(tags) ? tags : [tags] };
-    }
-
-    // Determine sort order
-    let order;
-    switch (sortBy) {
-      case 'relevance':
-        // For relevance sorting, we might want to use full-text search capabilities
-        // This is a simplified version
-        order = [[models.sequelize.literal(`
-          CASE 
-            WHEN title ILIKE '%${query}%' THEN 1
-            WHEN excerpt ILIKE '%${query}%' THEN 2
-            ELSE 3
-          END
-        `), 'ASC'], ['publishedAt', 'DESC']];
-        break;
-      case 'latest':
-        order = [['publishedAt', 'DESC']];
-        break;
-      case 'popular':
-        order = [['viewCount', 'DESC']];
-        break;
-      default:
-        order = [['publishedAt', 'DESC']];
-    }
-
-    const { count, rows: blogs } = await models.Blog.findAndCountAll({
-      where: whereClause,
-      order,
-      limit: parseInt(limit),
-      offset,
-      include: [{
-        model: models.User,
-        as: 'author',
-        attributes: ['id', 'name', 'email', 'bloggerDescription', 'avatar']
-      }],
-      distinct: true
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        blogs,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(count / parseInt(limit)),
-          totalResults: count,
-          resultsPerPage: parseInt(limit)
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error in searchBlogs:', error);
-    next(new AppError('Failed to search blogs', 500));
-  }
-};
-
-// Featured and Related Content
-exports.getFeaturedBlogs = async (req, res, next) => {
-  try {
-    console.log('Getting featured blogs');
-
-    const featuredBlogs = await models.Blog.findAll({
-      where: { 
-        status: 'published',
-        viewCount: {
-          [Op.gte]: 100 // Minimum views to be considered featured
-        }
-      },
-      order: [
-        ['viewCount', 'DESC'],
-        ['publishedAt', 'DESC']
-      ],
-      limit: 5,
-      include: [{
-        model: models.User,
-        as: 'author',
-        attributes: ['id', 'name', 'bloggerDescription', 'avatar']
-      }]
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: { featuredBlogs }
-    });
-  } catch (error) {
-    console.error('Error in getFeaturedBlogs:', error);
-    next(new AppError('Failed to fetch featured blogs', 500));
-  }
-};
-
-exports.getRelatedBlogs = async (req, res, next) => {
-  try {
-    const blogId = req.params.id;
-    console.log(`Getting related blogs for blog: ${blogId}`);
-
-    const sourceBlog = await models.Blog.findByPk(blogId);
-    if (!sourceBlog) {
-      return next(new AppError('Blog not found', 404));
-    }
-
-    const relatedBlogs = await models.Blog.findAll({
-      where: {
-        id: { [Op.ne]: blogId },
-        status: 'published', // Only return published blogs
-        tags: { [Op.overlap]: sourceBlog.tags }
-      },
-      order: [['publishedAt', 'DESC']],
-      limit: 3,
-      include: [{
-        model: models.User,
-        as: 'author',
-        attributes: ['id', 'name', 'bloggerDescription', 'avatar']
-      }]
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: { relatedBlogs }
-    });
-  } catch (error) {
-    console.error('Error in getRelatedBlogs:', error);
-    next(new AppError('Failed to fetch related blogs', 500));
-  }
-};
-
-// Comment functionality (if needed)
-// Note: This would require a Comment model to be set up
-exports.addComment = async (req, res, next) => {
-  try {
-    const { blogId } = req.params;
-    const { content } = req.body;
-    const userId = req.user.id;
-
-    const blog = await models.Blog.findByPk(blogId);
-    if (!blog) {
-      return next(new AppError('Blog not found', 404));
-    }
-
-    const comment = await models.Comment.create({
-      content,
-      blogId,
-      userId
-    });
-
-    const commentWithUser = await models.Comment.findByPk(comment.id, {
-      include: [{
-        model: models.User,
-        attributes: ['id', 'name', 'avatar']
-      }]
-    });
-
-    res.status(201).json({
-      status: 'success',
-      data: { comment: commentWithUser }
-    });
-  } catch (error) {
-    console.error('Error in addComment:', error);
-    next(new AppError('Failed to add comment', 500));
-  }
-};
-
-exports.getComments = async (req, res, next) => {
-  try {
-    const { blogId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-
-    const { count, rows: comments } = await models.Comment.findAndCountAll({
-      where: { blogId },
-      order: [['createdAt', 'DESC']],
-      limit,
-      offset,
-      include: [{
-        model: models.User,
-        attributes: ['id', 'name', 'avatar']
-      }]
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        comments,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(count / limit),
-          totalComments: count,
-          commentsPerPage: limit
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error in getComments:', error);
-    next(new AppError('Failed to fetch comments', 500));
-  }
-};
-
-module.exports = exports;

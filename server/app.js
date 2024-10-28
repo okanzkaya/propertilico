@@ -11,7 +11,7 @@ const compression = require('compression');
 const session = require('express-session');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
+const fs = require('fs').promises;
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const { sequelize } = require('./config/db');
@@ -24,7 +24,8 @@ const UPLOAD_DIRS = {
   feedbacks: 'uploads/feedbacks',
   blogs: 'uploads/blog-images',
   avatars: 'uploads/avatars',
-  properties: 'uploads/properties'
+  properties: 'uploads/properties',
+  public: 'public'
 };
 
 const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5MB
@@ -33,93 +34,95 @@ const ALLOWED_IMAGE_TYPES = /jpeg|jpg|png|gif|webp/;
 // Initialize Express app
 const app = express();
 
-// Directory initialization
-const createRequiredDirectories = () => {
-  Object.values(UPLOAD_DIRS).forEach(dir => {
-    const dirPath = path.join(__dirname, dir);
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
-    }
-  });
+// Directory initialization with error handling
+const createRequiredDirectories = async () => {
+  try {
+    await Promise.all(
+      Object.values(UPLOAD_DIRS).map(async (dir) => {
+        const dirPath = path.join(__dirname, dir);
+        try {
+          await fs.access(dirPath);
+        } catch {
+          await fs.mkdir(dirPath, { recursive: true });
+          await fs.chmod(dirPath, 0o755); // Set proper permissions
+        }
+      })
+    );
+    console.log('All directories initialized successfully');
+  } catch (error) {
+    console.error('Error creating directories:', error);
+    throw error;
+  }
 };
 
-// Multer configurations
+// Enhanced Multer configurations
 const createStorage = (uploadPath) => multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, uploadPath)),
+  destination: async (req, file, cb) => {
+    const fullPath = path.join(__dirname, uploadPath);
+    try {
+      await fs.access(fullPath);
+      cb(null, fullPath);
+    } catch {
+      await fs.mkdir(fullPath, { recursive: true });
+      cb(null, fullPath);
+    }
+  },
   filename: (req, file, cb) => {
+    const uniqueId = uuidv4();
     const ext = path.extname(file.originalname).toLowerCase();
-    const uniqueFilename = `${uuidv4()}${ext}`;
-    cb(null, uniqueFilename);
+    const filename = `${path.parse(file.originalname).name}-${uniqueId}${ext}`;
+    cb(null, filename);
   }
 });
 
-const fileFilter = (req, file, cb) => {
-  const isValid = ALLOWED_IMAGE_TYPES.test(path.extname(file.originalname).toLowerCase()) &&
-                 ALLOWED_IMAGE_TYPES.test(file.mimetype.split('/')[1]);
-  cb(isValid ? null : new Error('Invalid file type. Only JPEG, JPG, PNG, GIF, and WebP files are allowed.'), isValid);
-};
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const avatarDir = path.join(__dirname, 'uploads/avatars');
-    if (!fs.existsSync(avatarDir)) {
-      fs.mkdirSync(avatarDir, { recursive: true });
+// Blog image storage configuration
+const blogStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadPath = path.join(__dirname, UPLOAD_DIRS.blogs);
+    try {
+      await fs.access(uploadPath);
+    } catch {
+      await fs.mkdir(uploadPath, { recursive: true });
     }
-    cb(null, avatarDir);
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
     const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `avatar-${uniqueSuffix}${ext}`);
+    cb(null, `blog-${uniqueSuffix}${ext}`);
   }
 });
-const avatarUpload = multer({
-  storage: avatarStorage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  },
-  fileFilter: (req, file, cb) => {
-    // Check both mimetype and extension
-    const filetypes = /jpeg|jpg|png/;
-    const mimetypes = /image\/jpeg|image\/jpg|image\/png/;
-    
-    const mimetype = mimetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
-    if (mimetype && extname) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only .png, .jpg and .jpeg formats are allowed'));
-    }
+// Enhanced file filter
+const fileFilter = (req, file, cb) => {
+  const mimeType = file.mimetype.toLowerCase();
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  const isValidMime = ALLOWED_IMAGE_TYPES.test(mimeType.split('/')[1]);
+  const isValidExt = ALLOWED_IMAGE_TYPES.test(ext.substring(1));
+  
+  if (isValidMime && isValidExt) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, JPG, PNG, GIF, and WebP files are allowed.'), false);
   }
-});
-const createMulterUpload = (uploadPath) => multer({
-  storage: createStorage(uploadPath),
-  limits: { fileSize: FILE_SIZE_LIMIT },
+};
+
+// Configure uploads with size limits and validation
+const configureUpload = (storage, options = {}) => multer({
+  storage,
+  limits: {
+    fileSize: options.fileSize || FILE_SIZE_LIMIT,
+    files: options.files || 1
+  },
   fileFilter
 });
 
-// Rate limiting configurations
-const createRateLimiter = (windowMs, max, message) => rateLimit({
-  windowMs,
-  max,
-  message,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const rateLimiters = {
-  general: createRateLimiter(15 * 60 * 1000, 500, 'Too many requests from this IP, please try again later.'),
-  preview: createRateLimiter(60 * 1000, 50, 'Too many preview requests, please try again later.'),
-  upload: createRateLimiter(15 * 60 * 1000, 50, 'Too many upload requests, please try again later.')
-};
-
-// Initialize directories and uploads
-createRequiredDirectories();
-const upload = createMulterUpload(UPLOAD_DIRS.blogs);
+const upload = configureUpload(blogStorage);
 
 // Basic middleware setup
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 
 // Enhanced security configuration
@@ -128,8 +131,8 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
+    'Content-Type',
+    'Authorization',
     'Cache-Control',
     'Pragma',
     'X-Requested-With',
@@ -141,10 +144,19 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Configure Helmet with necessary adjustments for image serving
 app.use(helmet({
-  crossOriginResourcePolicy: false,
-  contentSecurityPolicy: false
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'blob:', '*'],
+      connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:3000'],
+    }
+  }
 }));
+
 app.use(xss());
 app.use(hpp({
   whitelist: ['duration', 'ratingsQuantity', 'ratingsAverage', 'maxGroupSize', 'difficulty', 'price']
@@ -171,40 +183,78 @@ sessionStore.sync();
 // Logging configuration
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 
-// Static file serving configuration
+// Enhanced static file serving
 const staticFileOptions = {
-  setHeaders: (res, filepath) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    
-    if (ALLOWED_IMAGE_TYPES.test(filepath)) {
-      res.set('Cache-Control', 'public, max-age=31536000');
-      res.set('Pragma', 'public');
-    }
-  },
   maxAge: '1y',
   etag: true,
-  lastModified: true
+  lastModified: true,
+  setHeaders: (res, filepath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    
+    if (ALLOWED_IMAGE_TYPES.test(path.extname(filepath))) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.setHeader('Pragma', 'public');
+    }
+  }
 };
 
-// Image upload route
-app.post('/api/uploads', protect, rateLimiters.upload, upload.single('image'), (req, res, next) => {
-  if (!req.file) {
-    return res.status(400).json({ 
-      status: 'error',
-      message: 'No image file provided' 
-    });
+// Serve static files with proper configuration
+app.use('/public', express.static(path.join(__dirname, 'public'), staticFileOptions));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), staticFileOptions));
+
+// Rate limiting
+const createRateLimiter = (windowMs, max, message) => rateLimit({
+  windowMs,
+  max,
+  message,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const rateLimiters = {
+  general: createRateLimiter(15 * 60 * 1000, 500),
+  preview: createRateLimiter(60 * 1000, 50),
+  upload: createRateLimiter(15 * 60 * 1000, 50)
+};
+
+// Initialize directories
+(async () => {
+  try {
+    await createRequiredDirectories();
+    console.log('Directories initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize directories:', error);
+    process.exit(1);
   }
+})();
 
-  const imageUrl = `/uploads/blog-images/${req.file.filename}`;
-  res.status(200).json({ 
-    status: 'success',
-    url: imageUrl 
-  });
-}, errorHandler);
+// Enhanced image upload route with better error handling
+app.post('/api/uploads', protect, rateLimiters.upload, upload.single('image'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No image file provided'
+      });
+    }
 
-// Apply rate limiters and routes
+    const imageUrl = `/uploads/blog-images/${req.file.filename}`;
+    
+    // Verify file was saved
+    await fs.access(path.join(__dirname, 'uploads/blog-images', req.file.filename));
+    
+    res.status(200).json({
+      status: 'success',
+      url: imageUrl
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Apply routes with rate limiting
 app.use('/api/documents/:id/download', rateLimiters.preview);
 app.use('/api/auth', rateLimiters.general, require('./routes/authRoutes'));
 app.use('/api/user', rateLimiters.general, protect, require('./routes/userRoutes'));
@@ -216,42 +266,55 @@ app.use('/api/documents', rateLimiters.general, protect, require('./routes/docum
 app.use('/api/finances', rateLimiters.general, protect, require('./routes/financeRoutes'));
 app.use('/api/reports', rateLimiters.general, protect, require('./routes/reportRoutes'));
 app.use('/api/tasks', rateLimiters.general, protect, require('./routes/taskRoutes'));
-app.use('/api/blogs', rateLimiters.general, require('./routes/blogRoutes'));
+app.use('/api', rateLimiters.general, require('./routes/blogRoutes'));
 app.use('/api/taxes', rateLimiters.general, protect, require('./routes/taxRoutes'));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res, filepath) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'GET');
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-    
-    if (ALLOWED_IMAGE_TYPES.test(filepath)) {
-      res.set('Cache-Control', 'public, max-age=31536000');
-      res.set('Pragma', 'public');
-    }
-  }
-}));
-
-// Development routes
+// Development routes for debugging
 if (process.env.NODE_ENV === 'development') {
-  app.get('/debug/image/:filename', (req, res) => {
+  app.get('/debug/image/:filename', async (req, res) => {
     const filepath = path.join(__dirname, UPLOAD_DIRS.blogs, req.params.filename);
-    res.json({
-      exists: fs.existsSync(filepath),
-      stats: fs.existsSync(filepath) ? fs.statSync(filepath) : null,
-      fullPath: filepath
-    });
+    try {
+      const stats = await fs.stat(filepath);
+      res.json({
+        exists: true,
+        stats,
+        fullPath: filepath,
+        url: `/uploads/blog-images/${req.params.filename}`
+      });
+    } catch (error) {
+      res.json({
+        exists: false,
+        error: error.message,
+        fullPath: filepath
+      });
+    }
   });
 
-  app.get('/debug/check-image/:filename', (req, res) => {
-    const filepath = path.join(__dirname, UPLOAD_DIRS.root, req.params.filename);
-    res.json({
-      exists: fs.existsSync(filepath),
-      stats: fs.existsSync(filepath) ? fs.statSync(filepath) : null,
-      path: filepath
-    });
+  app.get('/debug/directories', async (req, res) => {
+    const dirs = {};
+    for (const [key, dir] of Object.entries(UPLOAD_DIRS)) {
+      const fullPath = path.join(__dirname, dir);
+      try {
+        const stats = await fs.stat(fullPath);
+        dirs[key] = {
+          exists: true,
+          path: fullPath,
+          stats: {
+            mode: stats.mode,
+            size: stats.size,
+            created: stats.birthtime,
+            modified: stats.mtime
+          }
+        };
+      } catch (error) {
+        dirs[key] = {
+          exists: false,
+          path: fullPath,
+          error: error.message
+        };
+      }
+    }
+    res.json(dirs);
   });
 }
 
@@ -266,15 +329,25 @@ if (process.env.NODE_ENV === 'production') {
 
 // Enhanced error handling
 app.use((error, req, res, next) => {
+  console.error('Application error:', error);
+
   if (error instanceof multer.MulterError) {
     return res.status(400).json({
       status: 'error',
-      message: error.code === 'LIMIT_FILE_SIZE' 
+      message: error.code === 'LIMIT_FILE_SIZE'
         ? `File size is too large. Maximum size is ${FILE_SIZE_LIMIT / (1024 * 1024)}MB`
         : error.message,
       code: error.code
     });
   }
+
+  if (error.name === 'ValidationError') {
+    return res.status(400).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+
   next(error);
 });
 
@@ -292,7 +365,7 @@ app.use(errorHandler);
   }
 })();
 
-// Error handling for uncaught exceptions
+// Error handling for uncaught exceptions and unhandled rejections
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   process.exit(1);
