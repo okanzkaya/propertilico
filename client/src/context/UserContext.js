@@ -33,16 +33,21 @@ export const UserProvider = ({ children }) => {
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
-
+  
     try {
       const response = await authApi.refreshToken(refreshToken);
-      setAuthToken(response.token, response.refreshToken, true);
+      const storage = localStorage.getItem('refreshToken') ? localStorage : sessionStorage;
+      
+      storage.setItem('token', response.token);
+      storage.setItem('refreshToken', response.refreshToken);
+      
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.token}`;
       return response.token;
     } catch (error) {
       clearStoredData();
       throw error;
     }
-  }, [clearStoredData, setAuthToken]);
+  }, [clearStoredData]);
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');

@@ -115,19 +115,42 @@ exports.authUser = async (req, res) => {
 exports.refreshAccessToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) return handleResponse(res, 401, { success: false, message: 'Refresh token required' });
+    if (!refreshToken) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Refresh token required' 
+      });
+    }
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const user = await models.User.findByPk(decoded.id);
-    if (!user) return handleResponse(res, 404, { success: false, message: 'User not found' });
-
-    const newTokens = generateTokens(user.id);
-    handleResponse(res, 200, { success: true, ...newTokens });
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return handleResponse(res, 403, { success: false, message: 'Invalid refresh token' });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
     }
-    handleResponse(res, 500, { success: false, message: error.message });
+
+    // Generate new tokens
+    const tokens = generateTokens(user.id);
+    
+    res.json({
+      success: true,
+      token: tokens.token,
+      refreshToken: tokens.refreshToken
+    });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid or expired refresh token' 
+      });
+    }
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
