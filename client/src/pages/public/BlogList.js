@@ -11,7 +11,7 @@ import './BlogList.css';
 
 const getImageUrl = (imageUrl) => {
   if (!imageUrl) {
-    return `${process.env.REACT_APP_API_URL.replace('/api', '')}/default-blog-image.png`;
+    return `${process.env.REACT_APP_API_URL.replace('/api', '')}/public/default-blog-image.png`;
   }
   
   if (imageUrl.startsWith('http')) {
@@ -42,7 +42,7 @@ const BlogImage = ({ src, alt }) => {
 
     img.onerror = () => {
       if (isMounted) {
-        const defaultImage = `${process.env.REACT_APP_API_URL.replace('/api', '')}/default-blog-image.png`;
+        const defaultImage = `${process.env.REACT_APP_API_URL.replace('/api', '')}/public/default-blog-image.png`;
         setImageSrc(defaultImage);
         setIsLoading(false);
       }

@@ -1,11 +1,10 @@
-// BlogEditor.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useUser } from '../../context/UserContext';
 import { FaSpinner, FaImage, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import './BlogEditor.css'; // Import the CSS file
+import './BlogEditor.css';
 
 const CHAR_LIMITS = {
   title: 3,
@@ -158,62 +157,50 @@ const BlogEditor = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Please log in to create or edit blog posts');
 
-      let imageUrl = blog.imageUrl;
+      const formData = new FormData();
+      formData.append('title', blog.title);
+      formData.append('content', blog.content);
+      formData.append('excerpt', blog.excerpt);
+      formData.append('status', blog.status);
 
+      // Process tags
+      const processedTags = blog.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      formData.append('tags', JSON.stringify(processedTags));
+
+      // Handle image upload
       if (imageFile) {
-        const formData = new FormData();
         formData.append('image', imageFile);
-
-        try {
-          const imageResponse = await axios.post(
-            `${process.env.REACT_APP_API_URL}/api/uploads`,
-            formData,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'multipart/form-data'
-              }
-            }
-          );
-          imageUrl = imageResponse.data.url;
-        } catch (imageError) {
-          throw new Error('Failed to upload image. Please try again.');
-        }
+      } else if (blog.imageUrl) {
+        formData.append('imageUrl', blog.imageUrl);
       }
-
-      const processedBlog = {
-        ...blog,
-        imageUrl,
-        tags: blog.tags.split(',').map(tag => tag.trim()).filter(Boolean)
-      };
 
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'multipart/form-data'
         }
       };
 
       if (id) {
         await axios.put(
           `${process.env.REACT_APP_API_URL}/api/blogs/${id}`,
-          processedBlog,
+          formData,
           config
         );
       } else {
         await axios.post(
           `${process.env.REACT_APP_API_URL}/api/blogs`,
-          processedBlog,
+          formData,
           config
         );
       }
-      
+
       setSuccessMessage('Blog post saved successfully! Redirecting...');
       setTimeout(() => navigate('/blog'), 1500);
     } catch (error) {
       console.error('Error saving blog:', error);
       let errorMessage = 'Failed to save blog post. ';
-      
+
       if (error.response?.status === 401) {
         errorMessage = 'Your session has expired. Please log in again.';
       } else if (error.response?.data?.message) {
@@ -223,7 +210,7 @@ const BlogEditor = () => {
       } else {
         errorMessage += 'Please try again.';
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -254,7 +241,7 @@ const BlogEditor = () => {
       <p className="info-text">
         <FaInfoCircle /> Fill out the form below to create your blog post. All fields marked with * are required.
       </p>
-      
+
       <form className="blog-form" onSubmit={handleSubmit}>
         <div className="form-section">
           <label className="form-label">Cover Image</label>
@@ -270,15 +257,15 @@ const BlogEditor = () => {
           <p className="info-text">Recommended size: 1200x630px, Maximum size: 5MB</p>
           {(imagePreview || blog.imageUrl) && (
             <div className="image-preview">
-              <img 
-                className="preview-image" 
-                src={imagePreview || blog.imageUrl} 
-                alt="Cover preview" 
+              <img
+                className="preview-image"
+                src={imagePreview || blog.imageUrl}
+                alt="Cover preview"
               />
-              <button 
+              <button
                 type="button"
-                className="remove-image-button" 
-                onClick={removeImage} 
+                className="remove-image-button"
+                onClick={removeImage}
                 aria-label="Remove image"
               >
                 <FaTimesCircle />
@@ -353,9 +340,9 @@ const BlogEditor = () => {
           </p>
         </div>
 
-        <button 
+        <button
           className={`button ${isSubmitting ? 'disabled' : ''}`}
-          type="submit" 
+          type="submit"
           disabled={isSubmitting}
           aria-label={isSubmitting ? 'Saving blog post...' : 'Save blog post'}
         >
@@ -382,7 +369,7 @@ const BlogEditor = () => {
             )}
           </div>
         )}
-        
+
         {successMessage && (
           <div className="success-message" role="status">
             {successMessage}

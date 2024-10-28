@@ -185,10 +185,21 @@ exports.getBlogById = async (req, res, next) => {
   }
 };
 
+// Update the createBlog function in blogController.js
 exports.createBlog = async (req, res, next) => {
   try {
-    console.log('Creating blog with file:', req.file);
-    const { title, content, excerpt, tags, status = 'published' } = req.body;
+    console.log('Creating blog with data:', req.body);
+    console.log('File received:', req.file);
+
+    const { title, content, excerpt, status = 'published' } = req.body;
+    let tags = [];
+    
+    try {
+      tags = JSON.parse(req.body.tags || '[]');
+    } catch (e) {
+      console.error('Error parsing tags:', e);
+      tags = [];
+    }
 
     const validationErrors = validateBlogData({ title, content, excerpt });
     if (validationErrors.length) {
@@ -198,33 +209,28 @@ exports.createBlog = async (req, res, next) => {
       return next(new AppError(validationErrors.join('. '), 400));
     }
 
+    // Process image
     let imageUrl = null;
     if (req.file) {
       imageUrl = `/uploads/blog-images/${req.file.filename}`;
-      console.log('Image saved:', imageUrl);
+      console.log('Image URL set to:', imageUrl);
     }
-
-    const processedTags = Array.isArray(tags) 
-      ? tags
-      : typeof tags === 'string' 
-        ? tags.split(',').map(tag => tag.trim()).filter(Boolean)
-        : [];
 
     const blogData = {
       title,
       content: sanitizeContent(content),
       excerpt,
-      tags: processedTags,
+      tags,
       authorId: req.user.id,
       status,
       imageUrl,
       publishedAt: status === 'published' ? new Date() : null
     };
 
-    console.log('Creating blog with data:', blogData);
+    console.log('Creating blog with processed data:', blogData);
 
     const blog = await models.Blog.create(blogData);
-    console.log('Blog created:', blog.id);
+    console.log('Blog created successfully:', blog.id);
 
     const blogWithAuthor = await models.Blog.findByPk(blog.id, {
       include: [{
