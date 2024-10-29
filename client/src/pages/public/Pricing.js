@@ -1,168 +1,158 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaCheck, FaTimes, FaCrown, FaRegLightbulb, FaRocket } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { FaCheck, FaTimes, FaCrown } from 'react-icons/fa';
 import './Pricing.css';
 
 const Pricing = () => {
+  const [isMonthly, setIsMonthly] = useState(true);
   const navigate = useNavigate();
-  const [showMonthly, setShowMonthly] = useState(true);
-  const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    document.title = "Propertilico Pricing - Revolutionary Property Management Plans";
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute("content", "Discover Propertilico's innovative pricing plans. Choose between Standard and Plus to revolutionize your property management experience.");
-    }
-
-    // Reset any global padding/margins that might affect the pricing page
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-      mainContent.style.padding = '0';
-      mainContent.style.marginTop = '0';
-    }
-
-    // Add a small delay to ensure styles are properly calculated
-    const timer = setTimeout(() => {
-      setIsReady(true);
-    }, 50);
-
-    // Cleanup function to restore original styles when component unmounts
-    return () => {
-      clearTimeout(timer);
-      if (mainContent) {
-        mainContent.style.padding = '16px';
-        mainContent.style.marginTop = '64px';
-      }
-    };
-  }, []);
-
-  const handleStartFreeTrial = useCallback((plan) => {
-    navigate(`/payment?plan=${plan}`);
-  }, [navigate]);
-
-  const plans = useMemo(() => [
+  const plans = [
     {
-      name: "Standard",
-      monthlyPrice: 19.5,
-      yearlyPrice: 17.5,
-      originalMonthlyPrice: 30,
-      originalYearlyPrice: 25,
+      name: 'Standard',
+      monthlyPrice: 19.99,
+      yearlyPrice: 167.91, // 19.99 * 12 * 0.7 (30% discount)
       features: [
-        { name: 'Up to 50 Property Listings', included: true },
-        { name: 'Basic Analytics Dashboard', included: true },
-        { name: 'Email Customer Support', included: true },
-        { name: 'Secure Cloud Data Storage', included: true },
-        { name: 'Standard Reporting', included: true },
-        { name: 'Basic Tenant Screening', included: true },
-        { name: 'Manual Rent Collection', included: true },
-        { name: 'Basic Maintenance Tracking', included: true },
-        { name: 'AI-Powered Market Insights', included: false },
-        { name: 'Multi-Property Portfolio Management', included: false },
+        { text: 'Up to 50 Property Listings', included: true },
+        { text: 'Basic Analytics', included: true },
+        { text: 'Email Support', included: true },
+        { text: 'Basic Reporting', included: true },
+        { text: 'Single User', included: true },
+        { text: 'API Access', included: false },
+        { text: 'Advanced Analytics', included: false },
+        { text: 'Custom Reporting', included: false },
       ],
-      featured: true,
+      isPopular: true,
+      discount: 30
     },
     {
-      name: "Plus",
-      monthlyPrice: 39.9,
-      yearlyPrice: 35.9,
-      originalMonthlyPrice: 60,
-      originalYearlyPrice: 50,
+      name: 'Premium',
+      monthlyPrice: 49.99,
+      yearlyPrice: 419.91, // 49.99 * 12 * 0.7 (30% discount)
       features: [
-        { name: 'Unlimited Property Listings', included: true },
-        { name: 'Advanced Analytics Dashboard', included: true },
-        { name: '24/7 Priority Customer Support', included: true },
-        { name: 'Enhanced Cloud Storage & Backup', included: true },
-        { name: 'Customizable Reporting', included: true },
-        { name: 'Advanced Tenant Screening Tools', included: true },
-        { name: 'Automated Rent Collection', included: true },
-        { name: 'Advanced Maintenance Request Tracking', included: true },
-        { name: 'AI-Powered Market Insights', included: true },
-        { name: 'Multi-Property Portfolio Management', included: true },
+        { text: 'Unlimited Property Listings', included: true },
+        { text: 'Advanced Analytics', included: true },
+        { text: 'Priority Support', included: true },
+        { text: 'Advanced Reporting', included: true },
+        { text: 'Multiple Users', included: true },
+        { text: 'API Access', included: true },
+        { text: 'Custom Integrations', included: true },
+        { text: 'White Label Option', included: true },
       ],
+      isPopular: false,
+      discount: 30
     },
-  ], []);
-
-  if (!isReady) {
-    return <div className="pricing-page pricing-container loading" />;
-  }
+  ];
 
   return (
-    <div className="pricing-page">
+    <div className="pricing-wrapper">
       <div className="pricing-container">
-        <div className="glass-panes" />
-        <div className="floating-icon icon-1"><FaRegLightbulb /></div>
-        <div className="floating-icon icon-2"><FaRocket /></div>
-        <div className="floating-icon icon-3"><FaCrown /></div>
-        <div className="content-wrapper">
-          <h1 className="header">Revolutionary Property Management</h1>
-          <p className="description">
-            Experience the future of property management with our innovative plans.
-            Start your 30-day free trial and transform your property portfolio today.
-          </p>
-          <div className="comparison-toggle">
-            <button 
-              className={`toggle-button ${showMonthly ? 'active' : ''}`}
-              onClick={() => setShowMonthly(true)}
+        <motion.h1 
+          className="pricing-title"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          Simple, Transparent Pricing
+        </motion.h1>
+        
+        <motion.p 
+          className="pricing-subtitle"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          Choose the perfect plan for your property management needs
+        </motion.p>
+
+        <div className="pricing-toggle">
+          <button 
+            className={isMonthly ? 'active' : ''}
+            onClick={() => setIsMonthly(true)}
+          >
+            Monthly
+          </button>
+          <button 
+            className={!isMonthly ? 'active' : ''}
+            onClick={() => setIsMonthly(false)}
+          >
+            Yearly <span className="discount-badge">30% off</span>
+          </button>
+        </div>
+
+        <div className="pricing-cards">
+          {plans.map((plan, index) => (
+            <motion.div 
+              key={plan.name}
+              className={`pricing-card ${plan.isPopular ? 'popular' : ''}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
             >
-              Monthly
-            </button>
-            <button 
-              className={`toggle-button ${!showMonthly ? 'active' : ''}`}
-              onClick={() => setShowMonthly(false)}
-            >
-              Yearly
-            </button>
-          </div>
-          <div className="plans-wrapper">
-            {plans.map((plan, index) => (
-              <div key={index} className={`plan-card ${plan.featured ? 'featured' : ''}`}>
-                {plan.featured && (
-                  <span className="popular-label">
-                    <FaCrown /> Most Popular
-                  </span>
-                )}
-                <span className="discount-label">35% OFF</span>
-                <div className="plan-content">
-                  <div className="plan-header-section">
-                    <h2 className="plan-header">{plan.name}</h2>
-                    <div className="price-container">
-                      <span className="original-price">
-                        ${showMonthly ? plan.originalMonthlyPrice : plan.originalYearlyPrice}/month
-                      </span>
-                      <span className="discounted-price">
-                        ${showMonthly ? plan.monthlyPrice.toFixed(2) : plan.yearlyPrice.toFixed(2)}/month
-                      </span>
-                    </div>
-                  </div>
-                  <div className="features-section">
-                    <ul className="feature-list">
-                      {plan.features.map((feature, featureIndex) => (
-                        <li 
-                          key={featureIndex} 
-                          className={`feature ${feature.included ? 'included' : ''}`}
-                        >
-                          <span className={`feature-icon ${feature.included ? 'included' : ''}`}>
-                            {feature.included ? <FaCheck /> : <FaTimes />}
-                          </span>
-                          <span className="feature-text">{feature.name}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="action-section">
-                    <button 
-                      className="cta-button"
-                      onClick={() => handleStartFreeTrial(plan.name.toLowerCase())}
-                    >
-                      Start Free Trial
-                    </button>
-                    <p className="trial-text">No credit card required for trial</p>
-                  </div>
+              {plan.isPopular && (
+                <div className="popular-tag">
+                  <FaCrown />
+                  Most Popular
                 </div>
+              )}
+              {!isMonthly && (
+                <div className="discount-tag">
+                  Save {plan.discount}%
+                </div>
+              )}
+              
+              <h2 className="plan-name">{plan.name}</h2>
+              
+              <div className="plan-price">
+                <span className="currency">$</span>
+                <span className="amount">
+                  {isMonthly 
+                    ? plan.monthlyPrice.toFixed(2) 
+                    : (plan.yearlyPrice / 12).toFixed(2)}
+                </span>
+                <span className="period">
+                  /month
+                </span>
               </div>
-            ))}
-          </div>
+              {!isMonthly && (
+                <div className="yearly-price">
+                  <span className="original-price">${(plan.monthlyPrice * 12).toFixed(2)}</span>
+                  <span className="discounted-price">${plan.yearlyPrice.toFixed(2)} billed yearly</span>
+                </div>
+              )}
+
+              <ul className="features-list">
+                {plan.features.map((feature, featureIndex) => (
+                  <li key={featureIndex} className="feature-item">
+                    {feature.included ? (
+                      <FaCheck className="check" />
+                    ) : (
+                      <FaTimes className="times" />
+                    )}
+                    {feature.text}
+                  </li>
+                ))}
+              </ul>
+
+              <button 
+                className="start-trial-btn"
+                onClick={() => navigate('/signup')}
+              >
+                {plan.name === 'Standard' ? 'Start Free Trial' : 'Get Started'}
+              </button>
+              
+              {plan.name === 'Standard' ? (
+                <p className="trial-note">
+                  14-day free trial, no credit card required
+                </p>
+              ) : (
+                <p className="trial-note">
+                  Instant access to all features
+                </p>
+              )}
+            </motion.div>
+          ))}
         </div>
       </div>
     </div>

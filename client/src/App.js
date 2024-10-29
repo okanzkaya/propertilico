@@ -1,7 +1,7 @@
 // App.js
 import React, { useState, useMemo, lazy, Suspense, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { CssBaseline, Box, CircularProgress } from '@mui/material';
+import { CssBaseline, Box, CircularProgress, GlobalStyles } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from 'react-query';
@@ -17,6 +17,44 @@ import { useUser } from './context/UserContext';
 import FontSizeWrapper from './components/app/FontSizeWrapper';
 import './App.css';
 
+// Global styles to ensure consistent component sizing
+const globalStyles = {
+  '.MuiButton-root': {
+    minHeight: '40px',
+    minWidth: '120px',
+    fontSize: '0.875rem',
+    padding: '8px 16px',
+  },
+  '.action-button': {
+    minHeight: '40px !important',
+    minWidth: '120px !important',
+    padding: '8px 16px !important',
+    fontSize: '0.875rem !important',
+    display: 'inline-flex !important',
+    alignItems: 'center !important',
+    justifyContent: 'center !important',
+  },
+  '.plan-card': {
+    height: 'auto !important',
+    minHeight: '600px !important',
+    maxHeight: '800px !important',
+    display: 'flex !important',
+    flexDirection: 'column !important',
+  },
+  '.feature-list': {
+    margin: '0 !important',
+    padding: '0 !important',
+    listStyle: 'none !important',
+  },
+  '.feature': {
+    margin: '8px 0 !important',
+    padding: '8px !important',
+    display: 'flex !important',
+    alignItems: 'center !important',
+    gap: '8px !important',
+  }
+};
+
 const LayoutRoot = styled('div')(({ theme }) => ({
   display: 'flex',
   minHeight: '100vh',
@@ -28,39 +66,84 @@ const LayoutRoot = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.default
 }));
 
-// Update the MainContent styled component in App.js:
-// Update the MainContent styled component in App.js:
 const MainContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
-  marginLeft: 0, // Left gap from sidebar
-  marginTop: 60, // Top gap
-  paddingTop: theme.spacing(2),
-  paddingBottom: theme.spacing(3),
-  paddingLeft: theme.spacing(3),
-  paddingRight: theme.spacing(3),
+  marginLeft: 0,
+  marginTop: 60,
+  padding: theme.spacing(3),
   position: 'relative',
   transition: 'all 0.3s ease',
-  overflow: 'hidden',
-  width: 'calc(100% - 250px)', // Take full width minus sidebar
-  maxWidth: '100%', // Allow full width
+  overflow: 'visible',
+  width: 'calc(100% - 250px)',
+  maxWidth: '100%',
 
+  // Base styles for critical components
+  '& .MuiButton-root': {
+    minHeight: '40px',
+    minWidth: '120px',
+    fontSize: '0.875rem',
+    padding: '8px 16px',
+  },
+
+  '& .action-button': {
+    minHeight: '40px',
+    padding: '8px 16px',
+    fontSize: '0.875rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Plan card styles
+  '& .plan-card': {
+    height: 'auto',
+    minHeight: '600px',
+    maxHeight: '800px',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+
+  // Feature list styles
+  '& .feature-list': {
+    margin: 0,
+    padding: 0,
+    '& .feature': {
+      margin: '8px 0',
+      padding: '8px',
+      gap: '8px',
+    }
+  },
+
+  // Subscription action styles
+  '& .subscription-actions': {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    padding: '24px',
+    
+    '& .action-button': {
+      margin: '4px',
+      flex: 1,
+    }
+  },
+
+  // Responsive styles
   [theme.breakpoints.down('md')]: {
     marginLeft: 0,
     width: '100%',
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
+    padding: theme.spacing(2),
     marginTop: 65,
   },
 
   [theme.breakpoints.down('sm')]: {
     marginTop: 60,
-    paddingLeft: theme.spacing(1),
-    paddingRight: theme.spacing(1),
+    padding: theme.spacing(1),
   }
 }));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -73,7 +156,7 @@ const queryClient = new QueryClient({
 
 const lazyLoad = (path) => lazy(() => import(`./pages/${path}`));
 
-// Your existing route configurations remain the same
+// Route configurations (unchanged)
 const publicRoutes = [
   { path: "/", element: lazyLoad('public/Home') },
   { path: "/features", element: lazyLoad('public/Features') },
@@ -127,11 +210,17 @@ const App = () => {
   const [fontSize, setFontSize] = useState(() => user?.fontSize || localStorage.getItem('fontSize') || 'medium');
 
   useEffect(() => {
+    // Remove any server-side generated styles
+    const jssStyles = document.querySelector('#jss-server-side');
+    if (jssStyles && jssStyles.parentElement) {
+      jssStyles.parentElement.removeChild(jssStyles);
+    }
+
     fetchUser();
-    const timer = requestAnimationFrame(() => {
+    const timer = setTimeout(() => {
       setLayoutReady(true);
-    });
-    return () => cancelAnimationFrame(timer);
+    }, 50);
+    return () => clearTimeout(timer);
   }, [fetchUser]);
 
   useEffect(() => {
@@ -178,6 +267,7 @@ const App = () => {
           }}
         >
           <BrowserRouter>
+            <GlobalStyles styles={globalStyles} />
             <AppContent
               appTheme={appTheme}
               publicTheme={publicTheme}
@@ -311,7 +401,7 @@ const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box className={`public-layout ${layoutReady ? 'ready' : ''}`}>
-        <PublicHeader toggleTheme={toggleTheme} />
+      <PublicHeader toggleTheme={toggleTheme} />
         <Box component="main" className="public-main">
           {children}
         </Box>

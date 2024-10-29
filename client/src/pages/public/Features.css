@@ -1,53 +1,213 @@
+:root {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary-color: #06b6d4;
+  --accent-color: #3b82f6;
+  --gradient-start: #4f46e5;
+  --gradient-end: #06b6d4;
+  --background-paper: rgba(255, 255, 255, 0.9);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 20px 30px rgba(0, 0, 0, 0.1);
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+}
+
 .feature-card {
-    background: var(--background-paper);
-    border-radius: 8px;
-    padding: 24px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    transition: all 0.3s ease-in-out;
-    cursor: pointer;
+  background: var(--background-paper);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  height: 100%;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.4s ease;
+  border-radius: 16px;
+}
+
+.feature-card:hover {
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: var(--shadow-lg);
+  border-color: transparent;
+}
+
+.feature-card:hover::before {
+  opacity: 0.05;
+}
+
+.icon-wrapper {
+  font-size: 3.5rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover .icon-wrapper {
+  transform: scale(1.1);
+}
+
+.features-title {
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-align: center;
+  position: relative;
+}
+
+.features-title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(to right, var(--gradient-start), var(--gradient-end));
+  border-radius: 2px;
+}
+
+.features-subtitle {
+  max-width: 800px;
+  margin: 0 auto 4rem auto;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+/* Feature Card Content Styles */
+.feature-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .features-title {
+    font-size: 2rem;
+    padding: 0 1rem;
+  }
+
+  .feature-card {
+    padding: 2rem 1.5rem;
+    min-height: 280px;
+  }
+
+  .icon-wrapper {
+    font-size: 2.8rem;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 960px) {
+  .features-title {
+    font-size: 2.5rem;
+  }
+
+  .feature-card {
+    padding: 2.2rem 1.8rem;
+    min-height: 300px;
+  }
+
+  .icon-wrapper {
+    font-size: 3.2rem;
+  }
+}
+
+@media (min-width: 961px) {
+  .features-title {
+    font-size: 3rem;
+  }
+
+  .feature-card {
+    padding: 2.5rem 2rem;
+    min-height: 320px;
+  }
+}
+
+/* Animation for cards on scroll */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feature-card {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Hover effects for modern interactivity */
+@media (hover: hover) {
+  .feature-card:hover h3 {
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (forced-colors: active) {
+  .feature-card {
+    border: 2px solid CanvasText;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .feature-card {
+    transition: none;
+    animation: none;
   }
   
   .feature-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 30px rgba(0, 0, 0, 0.2);
+    transform: none;
   }
   
   .icon-wrapper {
-    font-size: 3rem;
-    margin-bottom: 16px;
-    color: var(--primary-main);
+    transition: none;
   }
-  
-  .features-title {
-    font-weight: 900;
-    margin-bottom: 16px;
-  }
-  
-  @media (max-width: 600px) {
-    .features-title {
-      font-size: 2rem;
-    }
-  }
-  
-  @media (min-width: 601px) and (max-width: 960px) {
-    .features-title {
-      font-size: 2.5rem;
-    }
-  }
-  
-  @media (min-width: 961px) {
-    .features-title {
-      font-size: 3rem;
-    }
-  }
-  
-  .features-subtitle {
-    max-width: 800px;
-    margin: 0 auto 64px auto;
-    font-weight: 300;
-  }
+}

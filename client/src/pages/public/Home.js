@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
+import { useInView } from 'react-intersection-observer';
+import CountUp from 'react-countup';
 import { 
   FaBuilding,
   FaChartBar, 
@@ -15,7 +17,11 @@ import {
   FaUser,
   FaChartLine,
   FaUsers,
-  FaFileInvoiceDollar
+  FaFileInvoiceDollar,
+  FaRegBuilding,
+  FaSmile,
+  FaPiggyBank,
+  FaClock
 } from 'react-icons/fa';
 import './Home.css';
 
@@ -113,6 +119,11 @@ const Home = () => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [openFAQ, setOpenFAQ] = useState(null);
   const navigate = useNavigate();
+  
+  const { ref: trustRef, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.2
+  });
 
   const nextTestimonial = useCallback(() => {
     setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
@@ -166,31 +177,22 @@ const Home = () => {
         <meta name="keywords" content="property management software, real estate management, landlord software, tenant management, property analytics, automation tools" />
         <link rel="canonical" href="https://www.propertilico.com" />
         
-        {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://www.propertilico.com/" />
         <meta property="og:title" content="Propertilico - Smart Property Management Software" />
         <meta property="og:description" content="Transform your property management with AI-powered automation and analytics. Designed for modern landlords and property managers." />
         <meta property="og:image" content="https://www.propertilico.com/og-image.jpg" />
 
-        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://www.propertilico.com/" />
         <meta name="twitter:title" content="Propertilico - Smart Property Management Software" />
         <meta name="twitter:description" content="Transform your property management with AI-powered automation and analytics. Designed for modern landlords and property managers." />
         <meta name="twitter:image" content="https://www.propertilico.com/twitter-card.jpg" />
 
-        {/* Additional SEO meta tags */}
         <meta name="robots" content="index, follow" />
         <meta name="author" content="Propertilico" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        {/* Preconnect to required origins */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
-        {/* Structured Data */}
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
         </script>
@@ -218,7 +220,7 @@ const Home = () => {
                 Streamline operations, boost efficiency, and maximize returns with our AI-powered platform.
               </motion.p>
               <motion.button 
-                className="cta-button"
+                className="cta-button-new"
                 whileHover={{ scale: 1.05 }} 
                 whileTap={{ scale: 0.95 }} 
                 onClick={() => navigate('/get-started')}
@@ -267,8 +269,8 @@ const Home = () => {
 
         <section className="features-section" aria-labelledby="features-title">
           <div className="container">
-            <h2 id="features-title" className="section-title">Powerful Features</h2>
-            <div className="feature-grid">
+            <h2 id="features-title" className="section-title text-center">Powerful Features</h2>
+            <div className="feature-grid-new">
               {features.map((feature, index) => (
                 <motion.div 
                   key={index}
@@ -292,7 +294,7 @@ const Home = () => {
 
         <section className="testimonial-section" aria-labelledby="testimonials-title">
           <div className="container">
-            <h2 id="testimonials-title" className="section-title">What Our Clients Say</h2>
+            <h2 id="testimonials-title" className="section-title text-center">What Our Clients Say</h2>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTestimonial}
@@ -349,7 +351,7 @@ const Home = () => {
 
         <section className="faq-section" aria-labelledby="faq-title">
           <div className="container">
-            <h2 id="faq-title" className="section-title">Frequently Asked Questions</h2>
+            <h2 id="faq-title" className="section-title text-center">Frequently Asked Questions</h2>
             <div className="faq-grid">
               {faqs.map((faq, index) => (
                 <div 
@@ -389,7 +391,7 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="cta-section" aria-labelledby="cta-title">
+        <section className="cta-section-new" aria-labelledby="cta-title">
           <div className="container">
             <motion.div 
               className="cta-wrapper"
@@ -400,48 +402,69 @@ const Home = () => {
             >
               <h2 id="cta-title" className="cta-heading">Ready to Transform Your Property Management?</h2>
               <p className="cta-description">
-                Join thousands of property managers who have already streamlined their operations with Propertilico.
+                Join thousands of property managers who have already streamlined their operations.
               </p>
-              <div className="cta-buttons">
+              <div className="cta-button-container">
                 <motion.button
-                  className="primary-button"
+                  className="cta-button-new"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate('/get-started')}
                 >
                   Start Free Trial
                 </motion.button>
-                <motion.button
-                  className="secondary-button"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/demo')}
-                >
-                  Schedule Demo
-                </motion.button>
+                <p className="cta-note">No credit card required • 14-day free trial • Full featured</p>
               </div>
-              <p className="cta-note">No credit card required • 14-day free trial • Full featured</p>
             </motion.div>
           </div>
         </section>
 
-        <section className="trust-section" aria-labelledby="trust-title">
+        <section className="trust-section" aria-labelledby="trust-title" ref={trustRef}>
           <div className="container">
-            <h2 id="trust-title" className="section-title">Trusted by Industry Leaders</h2>
+            <h2 id="trust-title" className="section-title text-center">Trusted by Industry Leaders</h2>
             <div className="trust-metrics">
               <div className="metric-item">
-                <span className="metric-number">10k+</span>
+                <FaRegBuilding className="metric-icon" />
+                {inView && (
+                  <CountUp
+                    start={0}
+                    end={10}
+                    duration={2.5}
+                    separator=""
+                    suffix="k+"
+                    className="metric-number"
+                  />
+                )}
                 <span className="metric-label">Properties Managed</span>
               </div>
               <div className="metric-item">
-                <span className="metric-number">98%</span>
+                <FaSmile className="metric-icon" />
+                {inView && (
+                  <CountUp
+                    start={0}
+                    end={98}
+                    duration={2.5}
+                    suffix="%"
+                    className="metric-number"
+                  />
+                )}
                 <span className="metric-label">Customer Satisfaction</span>
               </div>
               <div className="metric-item">
-                <span className="metric-number">30%</span>
+                <FaPiggyBank className="metric-icon" />
+                {inView && (
+                  <CountUp
+                    start={0}
+                    end={30}
+                    duration={2.5}
+                    suffix="%"
+                    className="metric-number"
+                  />
+                )}
                 <span className="metric-label">Average Cost Reduction</span>
               </div>
               <div className="metric-item">
+                <FaClock className="metric-icon" />
                 <span className="metric-number">24/7</span>
                 <span className="metric-label">Customer Support</span>
               </div>
@@ -449,23 +472,6 @@ const Home = () => {
           </div>
         </section>
       </main>
-
-      <footer className="site-footer">
-        <div className="container">
-          <div className="footer-content">
-            <p className="footer-copyright">
-              © {new Date().getFullYear()} Propertilico. All rights reserved.
-            </p>
-            <nav className="footer-nav" aria-label="Footer navigation">
-              <ul className="footer-links">
-                <li><button onClick={() => navigate('/privacy')}>Privacy Policy</button></li>
-                <li><button onClick={() => navigate('/terms')}>Terms of Service</button></li>
-                <li><button onClick={() => navigate('/contact')}>Contact Us</button></li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-      </footer>
     </>
   );
 };
