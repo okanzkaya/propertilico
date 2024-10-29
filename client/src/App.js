@@ -1,6 +1,8 @@
+// App.js
 import React, { useState, useMemo, lazy, Suspense, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, Box, CircularProgress } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
@@ -13,7 +15,52 @@ import AuthenticatedRoute from './components/public/AuthenticatedRoute';
 import { createAppTheme } from './theme';
 import { useUser } from './context/UserContext';
 import FontSizeWrapper from './components/app/FontSizeWrapper';
+import './App.css';
 
+const LayoutRoot = styled('div')(({ theme }) => ({
+  display: 'flex',
+  minHeight: '100vh',
+  opacity: 0,
+  transition: 'opacity 0.3s ease',
+  '&.ready': {
+    opacity: 1
+  },
+  backgroundColor: theme.palette.background.default
+}));
+
+// Update the MainContent styled component in App.js:
+// Update the MainContent styled component in App.js:
+const MainContent = styled(Box)(({ theme }) => ({
+  flexGrow: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: '100vh',
+  marginLeft: 0, // Left gap from sidebar
+  marginTop: 60, // Top gap
+  paddingTop: theme.spacing(2),
+  paddingBottom: theme.spacing(3),
+  paddingLeft: theme.spacing(3),
+  paddingRight: theme.spacing(3),
+  position: 'relative',
+  transition: 'all 0.3s ease',
+  overflow: 'hidden',
+  width: 'calc(100% - 250px)', // Take full width minus sidebar
+  maxWidth: '100%', // Allow full width
+
+  [theme.breakpoints.down('md')]: {
+    marginLeft: 0,
+    width: '100%',
+    paddingLeft: theme.spacing(2),
+    paddingRight: theme.spacing(2),
+    marginTop: 65,
+  },
+
+  [theme.breakpoints.down('sm')]: {
+    marginTop: 60,
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
+  }
+}));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -26,6 +73,7 @@ const queryClient = new QueryClient({
 
 const lazyLoad = (path) => lazy(() => import(`./pages/${path}`));
 
+// Your existing route configurations remain the same
 const publicRoutes = [
   { path: "/", element: lazyLoad('public/Home') },
   { path: "/features", element: lazyLoad('public/Features') },
@@ -57,13 +105,13 @@ const AdminFeedbackDashboard = lazyLoad('app/AdminFeedbackDashboard');
 const BlogEditor = lazyLoad('public/BlogEditor');
 
 const LoadingFallback = () => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+  <Box className="loading-fallback">
     <CircularProgress />
   </Box>
 );
 
 const ErrorFallback = ({ error }) => (
-  <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+  <Box className="error-fallback">
     <h1>Oops! Something went wrong.</h1>
     <pre>{error.message}</pre>
   </Box>
@@ -71,6 +119,7 @@ const ErrorFallback = ({ error }) => (
 
 const App = () => {
   const { user, loading: userLoading, updateUserSettings, fetchUser, setShowReCaptcha } = useUser();
+  const [layoutReady, setLayoutReady] = useState(false);
   const [themeMode, setThemeMode] = useState(() => ({
     app: user?.theme || localStorage.getItem('appTheme') || 'light',
     public: localStorage.getItem('publicTheme') || 'light'
@@ -79,6 +128,10 @@ const App = () => {
 
   useEffect(() => {
     fetchUser();
+    const timer = requestAnimationFrame(() => {
+      setLayoutReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
   }, [fetchUser]);
 
   useEffect(() => {
@@ -106,11 +159,11 @@ const App = () => {
     [themeMode.app, fontSize]
   );
   const publicTheme = useMemo(() =>
-    createAppTheme(themeMode.public, 'medium'), // Always use medium for public pages
+    createAppTheme(themeMode.public, 'medium'),
     [themeMode.public]
   );
 
-  if (userLoading) return <LoadingFallback />;
+  if (userLoading || !layoutReady) return <LoadingFallback />;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -144,6 +197,16 @@ const App = () => {
 
 const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize, user, setShowReCaptcha }) => {
   const hasActiveSubscription = useMemo(() => user?.hasActiveSubscription || false, [user]);
+  const [contentReady, setContentReady] = useState(false);
+
+  useEffect(() => {
+    const timer = requestAnimationFrame(() => {
+      setContentReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
+
+  if (!contentReady) return null;
 
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -231,6 +294,14 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
 
 const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }) => {
   const { setShowReCaptcha } = useUser();
+  const [layoutReady, setLayoutReady] = useState(false);
+
+  useEffect(() => {
+    const timer = requestAnimationFrame(() => {
+      setLayoutReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
 
   useEffect(() => {
     setShowReCaptcha(showReCaptcha);
@@ -239,11 +310,13 @@ const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <PublicHeader toggleTheme={toggleTheme} />
-      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        {children}
+      <Box className={`public-layout ${layoutReady ? 'ready' : ''}`}>
+        <PublicHeader toggleTheme={toggleTheme} />
+        <Box component="main" className="public-main">
+          {children}
+        </Box>
+        <PublicFooter />
       </Box>
-      <PublicFooter />
       {!showReCaptcha && (
         <style>{`
           .grecaptcha-badge { visibility: hidden !important; }
@@ -253,8 +326,16 @@ const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }
   );
 });
 
-const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSize, changeFontSize, showReCaptcha }) => {
+const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSize, showReCaptcha }) => {
   const { setShowReCaptcha } = useUser();
+  const [layoutReady, setLayoutReady] = useState(false);
+
+  useEffect(() => {
+    const timer = requestAnimationFrame(() => {
+      setLayoutReady(true);
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
 
   useEffect(() => {
     setShowReCaptcha(showReCaptcha);
@@ -263,14 +344,14 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', height: '100vh' }}>
+      <LayoutRoot className={layoutReady ? 'ready' : ''}>
         <Sidebar themeMode={themeMode} toggleTheme={toggleTheme} />
-        <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, mt: '64px', overflow: 'auto' }}>
+        <MainContent component="main">
           <FontSizeWrapper fontSize={fontSize}>
             {children}
           </FontSizeWrapper>
-        </Box>
-      </Box>
+        </MainContent>
+      </LayoutRoot>
       {!showReCaptcha && (
         <style>{`
           .grecaptcha-badge { visibility: hidden !important; }
@@ -279,4 +360,5 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
     </ThemeProvider>
   );
 });
+
 export default App;

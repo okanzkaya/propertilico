@@ -1,22 +1,156 @@
+:root {
+  --global-border-radius: 8px;
+  --header-height: 64px;
+  --sidebar-width: 240px;
+  --main-transition: all 0.3s ease;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   margin: 0;
   font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  overflow-x: hidden;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+.public-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: var(--main-transition);
 }
 
-.content {
-  padding: 20px; /* Add padding for the content area */
+.public-layout.ready {
+  opacity: 1;
 }
 
-.main-content {
-  flex-grow: 1;
-  padding: 16px; /* Adjust padding */
-  margin-top: 64px; /* Ensure proper top margin for main content */
-  overflow-x: hidden; /* Prevent horizontal scrolling in content */
+.public-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
+
+.loading-fallback {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+}
+
+.error-fallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  padding: 20px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --global-border-radius: 8px;
+    --header-height: 64px;
+    --sidebar-width: 240px;
+    --main-transition: all 0.3s ease;
+  }
+  
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  
+  .public-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: var(--main-transition);
+  }
+  
+  .public-layout.ready {
+    opacity: 1;
+  }
+  
+  .public-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+  }
+  
+  .loading-fallback {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+  }
+  
+  .error-fallback {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    padding: 20px;
+    text-align: center;
+  }
+  
+  @media (max-width: 768px) {
+    :root {
+      --header-height: 56px;
+    }
+  }
+  
+  @media print {
+    .loading-fallback,
+    .error-fallback {
+      display: none;
+    }
+  }
+  
+  @supports (-webkit-touch-callout: none) {
+    .public-layout {
+      min-height: -webkit-fill-available;
+    }
+  }
+  
+  /* Utility classes for backward compatibility */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  
+  .no-print {
+    display: none !important;
+  }}
