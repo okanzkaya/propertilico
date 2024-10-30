@@ -15,7 +15,6 @@ import {
   ExpandLess as ExpandLessIcon, Close as CloseIcon
 } from '@mui/icons-material';
 import { contactApi } from '../../api';
-import './Contacts.css';
 
 const roles = [
   'All', 'Manager', 'Employee', 'Client', 'Contractor', 'Vendor', 'Investor',

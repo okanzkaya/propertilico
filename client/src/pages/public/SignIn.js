@@ -14,7 +14,6 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ErrorIcon from '@mui/icons-material/Error';
 import LockIcon from '@mui/icons-material/Lock';
 import GoogleIcon from '@mui/icons-material/Google';
-import './SignIn.css';
 
 const SignIn = () => {
   const [formData, setFormData] = useState({ 

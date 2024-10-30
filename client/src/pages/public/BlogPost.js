@@ -12,7 +12,6 @@ import {
   FaEdit, FaTrash, FaEye, FaBookmark, FaRegBookmark,
   FaPrint, FaEnvelope
 } from 'react-icons/fa';
-import './BlogPost.css';
 
 // Utility functions
 const getImageUrl = (imageUrl) => {

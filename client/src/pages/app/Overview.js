@@ -1,4 +1,3 @@
-import styles from './Overview.module.css';
 import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery } from 'react-query';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -56,7 +55,7 @@ import {
   taskApi,
   contactApi
 } from '../../api';
-import './Overview.css';
+import styles from './Overview.module.css';
 
 // Register ChartJS components
 ChartJS.register(

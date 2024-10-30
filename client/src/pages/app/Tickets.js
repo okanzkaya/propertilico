@@ -1,4 +1,3 @@
-import styles from './Tickets.module.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Typography, Grid, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -15,7 +14,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme, alpha } from '@mui/material/styles';
 import { createTicket, getTickets, updateTicket, deleteTicket, addNoteToTicket } from '../../api';
-import './Tickets.css';
+import styles from './Tickets.module.css';
 
 const TABS = [
   { label: 'All', icon: <DashboardIcon /> },

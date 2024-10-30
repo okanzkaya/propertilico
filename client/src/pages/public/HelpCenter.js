@@ -1,6 +1,5 @@
 import styles from './HelpCenter.module.css';
 import React from 'react';
-import './HelpCenter.css';
 
 const HelpCenter = () => {
   const contactMethods = [

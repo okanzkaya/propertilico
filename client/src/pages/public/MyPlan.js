@@ -12,7 +12,6 @@ import {
   AddCircleOutline, RemoveCircleOutline, InfoOutlined, CardGiftcard,
   Timeline, People, Apartment, MonetizationOn, Security, CreditCard
 } from '@mui/icons-material';
-import './MyPlan.css';
 
 const theme = createTheme({
   palette: {

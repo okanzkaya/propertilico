@@ -9,7 +9,6 @@ import {
   Checkbox, FormControlLabel, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { Email, Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
-import './SignUp.css';
 
 const PasswordStrengthBar = ({ password }) => {
   const getStrength = () => {

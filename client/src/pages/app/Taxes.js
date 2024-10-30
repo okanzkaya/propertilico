@@ -18,7 +18,6 @@ import { taxApi } from '../../api';
 import { format, isAfter, subDays } from 'date-fns';
 import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
-import './Taxes.css';
 
 ChartJS.register(ArcElement, ChartTooltip, Legend);
 

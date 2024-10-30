@@ -1,4 +1,3 @@
-import styles from './Finances.module.css';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Typography,
@@ -67,7 +66,7 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { format, parseISO, isValid } from 'date-fns';
-import './Finances.css';
+import styles from './Finances.module.css';
 
 ChartJS.register(
   ArcElement,

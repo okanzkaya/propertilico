@@ -24,7 +24,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useDropzone } from 'react-dropzone';
 import { sendFeedback, checkFeedbackLimit } from '../../api';
-import './Feedback.css';
+import styles from './Feedback.module.css';
 
 const INITIAL_STATE = {
   message: '',

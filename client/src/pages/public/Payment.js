@@ -1,7 +1,6 @@
 import styles from './Payment.module.css';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Payment.css';
 
 function Payment() {
   const navigate = useNavigate();

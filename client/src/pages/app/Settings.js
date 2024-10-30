@@ -1,4 +1,3 @@
-import styles from './Settings.module.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -17,7 +16,7 @@ import {
 import { useUser } from '../../context/UserContext';
 import { userApi, authApi } from '../../api';
 import moment from 'moment-timezone';
-import './Settings.css';
+import styles from './Settings.module.css';
 
 const usePasswordVisibility = () => {
   const [showPasswords, setShowPasswords] = useState({

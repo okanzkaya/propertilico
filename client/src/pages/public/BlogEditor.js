@@ -5,7 +5,6 @@ import axios from 'axios';
 import { useUser } from '../../context/UserContext';
 import { FaSpinner, FaImage, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import './BlogEditor.css';
 
 const CHAR_LIMITS = {
   title: 3,

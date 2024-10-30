@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { debounce } from 'lodash';
 import { Helmet } from 'react-helmet';
-import './BlogList.css';
 
 const getImageUrl = (imageUrl) => {
   if (!imageUrl) {

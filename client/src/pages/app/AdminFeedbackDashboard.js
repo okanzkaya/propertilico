@@ -44,7 +44,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { getFeedback, deleteFeedback, updateFeedback } from '../../api';
-import './AdminFeedback.css';
+import styles from './AdminFeedback.module.css';
 
 // Constants
 const ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
@@ -53,13 +53,13 @@ const SNACKBAR_DURATION = 6000;
 
 // Helper Components
 const LoadingSpinner = () => (
-  <Box className="loading-spinner">
+  <Box className={styles.loadingSpinner}>
     <CircularProgress />
   </Box>
 );
 
 const ErrorAlert = ({ message }) => (
-  <Alert severity="error" className="error-alert">
+  <Alert severity="error" className={styles.errorAlert}>
     {message}
   </Alert>
 );
@@ -98,7 +98,7 @@ const MediaRenderer = ({ attachment }) => {
     return <Typography variant="body2">Attachment: {attachment}</Typography>;
   };
 
-  return <div className="media-container">{renderMedia()}</div>;
+  return <div className={styles.mediaContainer}>{renderMedia()}</div>;
 };
 
 const SortableTableCell = ({
@@ -108,8 +108,8 @@ const SortableTableCell = ({
   currentSortOrder,
   onSort
 }) => (
-  <TableCell className="table-cell-header">
-    <Box className="sortable-header">
+  <TableCell className={styles.tableCellHeader}>
+    <Box className={styles.sortableHeader}>
       {label}
       <Tooltip title={`Sort by ${label}`}>
         <IconButton size="small" onClick={() => onSort(sortKey)}>
@@ -125,8 +125,8 @@ const SortableTableCell = ({
 );
 
 const FeedbackDetailsContent = ({ feedback }) => (
-  <Box className="dialog-content">
-    <Box className="feedback-section">
+  <Box className={styles.dialogContent}>
+    <Box className={styles.feedbackSection}>
       <Typography variant="subtitle1" color="primary" gutterBottom>
         User Information
       </Typography>
@@ -138,11 +138,11 @@ const FeedbackDetailsContent = ({ feedback }) => (
       </Typography>
     </Box>
 
-    <Box className="feedback-section">
+    <Box className={styles.feedbackSection}>
       <Typography variant="subtitle1" color="primary" gutterBottom>
         Feedback Information
       </Typography>
-      <Typography variant="body1" className="feedback-type">
+      <Typography variant="body1" className={styles.feedbackType}>
         Type:
         <Chip
           label={feedback.feedbackType}
@@ -161,17 +161,17 @@ const FeedbackDetailsContent = ({ feedback }) => (
       </Typography>
     </Box>
 
-    <Box className="feedback-section">
+    <Box className={styles.feedbackSection}>
       <Typography variant="subtitle1" color="primary" gutterBottom>
         Message
       </Typography>
-      <Paper variant="outlined" className="message-paper">
+      <Paper variant="outlined" className={styles.messagePaper}>
         <Typography variant="body1">{feedback.message}</Typography>
       </Paper>
     </Box>
 
     {feedback.rating > 0 && (
-      <Box className="feedback-section">
+      <Box className={styles.feedbackSection}>
         <Typography variant="subtitle1" color="primary" gutterBottom>
           Rating
         </Typography>
@@ -179,13 +179,13 @@ const FeedbackDetailsContent = ({ feedback }) => (
           value={feedback.rating}
           readOnly
           precision={0.5}
-          className="custom-rating"
+          className={styles.customRating}
         />
       </Box>
     )}
 
     {feedback.attachment && (
-      <Box className="feedback-section">
+      <Box className={styles.feedbackSection}>
         <Typography variant="subtitle1" color="primary" gutterBottom>
           Attachment
         </Typography>
@@ -193,7 +193,7 @@ const FeedbackDetailsContent = ({ feedback }) => (
       </Box>
     )}
 
-    <Box className="dialog-chips">
+    <Box className={styles.dialogChips}>
       <Chip
         label={feedback.isRead ? "Read" : "Unread"}
         color={feedback.isRead ? "primary" : "default"}
@@ -377,22 +377,22 @@ const AdminFeedbackDashboard = () => {
   }
 
   return (
-    <div className="feedback-dashboard">
+    <div className={styles.feedbackDashboard}>
       <Typography variant="h4" gutterBottom>
         Admin Feedback Dashboard
       </Typography>
 
       {/* Controls Section */}
-      <Box className="feedback-controls">
+      <Box className={styles.feedbackControls}>
         <TextField
           label="Search"
           variant="outlined"
           size="small"
           value={state.searchTerm}
           onChange={(e) => setState(prev => ({ ...prev, searchTerm: e.target.value }))}
-          className="search-field"
+          className={styles.searchField}
         />
-        <FormControl variant="outlined" size="small" className="filter-control">
+        <FormControl variant="outlined" size="small" className={styles.filterControl}>
           <InputLabel>Filter</InputLabel>
           <Select
             value={state.filterType}
@@ -411,7 +411,7 @@ const AdminFeedbackDashboard = () => {
       </Box>
 
       {/* Feedback Table */}
-      <TableContainer component={Paper} className="feedback-table-container">
+      <TableContainer component={Paper} className={styles.feedbackTableContainer}>
         <Table>
           <TableHead>
             <TableRow>
@@ -422,7 +422,7 @@ const AdminFeedbackDashboard = () => {
                 currentSortOrder={state.sortOrder}
                 onSort={handleSort}
               />
-              <TableCell className="table-cell-header">Message</TableCell>
+              <TableCell className={styles.tableCellHeader}>Message</TableCell>
               <SortableTableCell
                 label="Type"
                 sortKey="feedbackType"
@@ -444,7 +444,7 @@ const AdminFeedbackDashboard = () => {
                 currentSortOrder={state.sortOrder}
                 onSort={handleSort}
               />
-              <TableCell className="table-cell-header">Actions</TableCell>
+              <TableCell className={styles.tableCellHeader}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -455,242 +455,252 @@ const AdminFeedbackDashboard = () => {
               )
               .map((item) => (
                 <TableRow
-                  key={item.id}
-                  className={`table-row ${!item.isRead ? 'unread' : ''}`}
-                  onClick={() => setState(prev => ({
-                    ...prev,
-                    selectedFeedback: item,
-                    openDialog: true
-                  }))}
-                >
-                  <TableCell>{item.user?.name || 'Unknown User'}</TableCell>
-                  <TableCell>
-                    {item.message?.substring(0, 50)}
-                    {item.message?.length > 50 ? '...' : ''}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={item.feedbackType}
+                key={item.id}
+                className={`${styles.tableRow} ${!item.isRead ? styles.unread : ''}`}
+                onClick={() => setState(prev => ({
+                  ...prev,
+                  selectedFeedback: item,
+                  openDialog: true
+                }))}
+              >
+                <TableCell>{item.user?.name || 'Unknown User'}</TableCell>
+                <TableCell>
+                  {item.message?.substring(0, 50)}
+                  {item.message?.length > 50 ? '...' : ''}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={item.feedbackType}
+                    size="small"
+                    color={
+                      item.feedbackType === 'bug' ? 'error' :
+                      item.feedbackType === 'feature' ? 'primary' :
+                      item.feedbackType === 'improvement' ? 'success' :
+                      'default'
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  {item.rating > 0 ? (
+                    <Rating
+                      value={item.rating}
+                      readOnly
                       size="small"
-                      color={
-                        item.feedbackType === 'bug' ? 'error' :
-                        item.feedbackType === 'feature' ? 'primary' :
-                        item.feedbackType === 'improvement' ? 'success' :
-                        'default'
-                      }
+                      precision={0.5}
+                      className={styles.customRating}
                     />
-                  </TableCell>
-                  <TableCell>
-                    {item.rating > 0 ? (
-                      <Rating
-                        value={item.rating}
-                        readOnly
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No rating
+                    </Typography>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {new Date(item.createdAt).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <Box className={styles.tableActions}>
+                    <Tooltip title="View Details">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setState(prev => ({
+                            ...prev,
+                            selectedFeedback: item,
+                            openDialog: true
+                          }));
+                        }}
                         size="small"
-                        precision={0.5}
-                        className="custom-rating"
-                      />
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No rating
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(item.createdAt).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <Box className="table-actions">
-                      <Tooltip title="View Details">
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setState(prev => ({
-                              ...prev,
-                              selectedFeedback: item,
-                              openDialog: true
-                            }));
-                          }}
-                          size="small"
-                        >
-                          <VisibilityIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={item.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFeedbackAction('favorite', item.id, item.isFavorite);
-                          }}
-                          size="small"
-                        >
-                          {item.isFavorite ? 
-                            <FavoriteIcon color="error" /> : 
-                            <FavoriteBorderIcon />
-                          }
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={item.isRead ? "Mark as Unread" : "Mark as Read"}>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFeedbackAction('read', item.id, item.isRead);
-                          }}
-                          size="small"
-                        >
-                          {item.isRead ? 
-                            <MarkEmailReadIcon color="primary" /> : 
-                            <MarkEmailUnreadIcon />
-                          }
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFeedbackAction('delete', item.id);
-                          }}
-                          size="small"
-                          color="error"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                        className={styles.actionButton}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={item.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFeedbackAction('favorite', item.id, item.isFavorite);
+                        }}
+                        size="small"
+                        className={styles.actionButton}
+                      >
+                        {item.isFavorite ? 
+                          <FavoriteIcon className={styles.favoriteIcon} /> : 
+                          <FavoriteBorderIcon />
+                        }
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={item.isRead ? "Mark as Unread" : "Mark as Read"}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFeedbackAction('read', item.id, item.isRead);
+                        }}
+                        size="small"
+                        className={styles.actionButton}
+                      >
+                        {item.isRead ? 
+                          <MarkEmailReadIcon className={styles.readIcon} /> : 
+                          <MarkEmailUnreadIcon />
+                        }
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFeedbackAction('delete', item.id);
+                        }}
+                        size="small"
+                        color="error"
+                        className={styles.actionButton}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
 
-      {/* Pagination */}
-      <TablePagination
-        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-        component="div"
-        count={filteredAndSortedFeedback.length}
-        rowsPerPage={state.rowsPerPage}
-        page={state.page}
-        onPageChange={(event, newPage) => 
-          setState(prev => ({ ...prev, page: newPage }))
-        }
-        onRowsPerPageChange={(event) => 
-          setState(prev => ({
-            ...prev,
-            rowsPerPage: parseInt(event.target.value, 10),
-            page: 0
-          }))
-        }
-      />
+    {/* Pagination */}
+    <TablePagination
+      rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+      component="div"
+      count={filteredAndSortedFeedback.length}
+      rowsPerPage={state.rowsPerPage}
+      page={state.page}
+      onPageChange={(event, newPage) => 
+        setState(prev => ({ ...prev, page: newPage }))
+      }
+      onRowsPerPageChange={(event) => 
+        setState(prev => ({
+          ...prev,
+          rowsPerPage: parseInt(event.target.value, 10),
+          page: 0
+        }))
+      }
+      className={styles.pagination}
+    />
 
-      {/* Details Dialog */}
-      <Dialog
-        open={state.openDialog}
-        onClose={() => setState(prev => ({ ...prev, openDialog: false }))}
-        maxWidth="md"
-        fullWidth
-        className="feedback-dialog"
-      >
-        {state.selectedFeedback && (
-          <>
-            <DialogTitle>
-              <Typography variant="h6">Feedback Details</Typography>
-            </DialogTitle>
-            <DialogContent dividers>
-              <FeedbackDetailsContent feedback={state.selectedFeedback} />
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => handleFeedbackAction(
-                  'read',
-                  state.selectedFeedback.id,
-                  state.selectedFeedback.isRead
-                )}
-              >
-                Mark as {state.selectedFeedback.isRead ? 'Unread' : 'Read'}
-              </Button>
-              <Button
-                onClick={() => handleFeedbackAction(
-                  'favorite',
-                  state.selectedFeedback.id,
-                  state.selectedFeedback.isFavorite
-                )}
-              >
-                {state.selectedFeedback.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
-              </Button>
-              <Button
-                onClick={() => handleFeedbackAction('delete', state.selectedFeedback.id)}
-                color="error"
-              >
-                Delete
-              </Button>
-              <Button
-                onClick={() => setState(prev => ({ ...prev, openDialog: false }))}
-                variant="contained"
-              >
-                Close
-              </Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
+    {/* Details Dialog */}
+    <Dialog
+      open={state.openDialog}
+      onClose={() => setState(prev => ({ ...prev, openDialog: false }))}
+      maxWidth="md"
+      fullWidth
+      className={styles.feedbackDialog}
+    >
+      {state.selectedFeedback && (
+        <>
+          <DialogTitle className={styles.dialogTitle}>
+            <Typography variant="h6">Feedback Details</Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            <FeedbackDetailsContent feedback={state.selectedFeedback} />
+          </DialogContent>
+          <DialogActions className={styles.dialogActions}>
+            <Button
+              onClick={() => handleFeedbackAction(
+                'read',
+                state.selectedFeedback.id,
+                state.selectedFeedback.isRead
+              )}
+              className={styles.actionButton}
+            >
+              Mark as {state.selectedFeedback.isRead ? 'Unread' : 'Read'}
+            </Button>
+            <Button
+              onClick={() => handleFeedbackAction(
+                'favorite',
+                state.selectedFeedback.id,
+                state.selectedFeedback.isFavorite
+              )}
+              className={styles.actionButton}
+            >
+              {state.selectedFeedback.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+            </Button>
+            <Button
+              onClick={() => handleFeedbackAction('delete', state.selectedFeedback.id)}
+              color="error"
+              className={styles.deleteButton}
+            >
+              Delete
+            </Button>
+            <Button
+              onClick={() => setState(prev => ({ ...prev, openDialog: false }))}
+              variant="contained"
+              className={styles.closeButton}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </>
+      )}
+    </Dialog>
 
-      {/* Notifications */}
-      <Snackbar
-        open={state.snackbar.open}
-        autoHideDuration={SNACKBAR_DURATION}
+    {/* Notifications */}
+    <Snackbar
+      open={state.snackbar.open}
+      autoHideDuration={SNACKBAR_DURATION}
+      onClose={() => setState(prev => ({
+        ...prev,
+        snackbar: { ...prev.snackbar, open: false }
+      }))}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert
         onClose={() => setState(prev => ({
           ...prev,
           snackbar: { ...prev.snackbar, open: false }
         }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        severity={state.snackbar.severity}
+        variant="filled"
+        className={styles.alert}
       >
-        <Alert
-          onClose={() => setState(prev => ({
-            ...prev,
-            snackbar: { ...prev.snackbar, open: false }
-          }))}
-          severity={state.snackbar.severity}
-          variant="filled"
-        >
-          {state.snackbar.message}
-        </Alert>
-      </Snackbar>
-    </div>
-  );
+        {state.snackbar.message}
+      </Alert>
+    </Snackbar>
+  </div>
+);
 };
 
 // PropTypes Definitions
 ErrorAlert.propTypes = {
-  message: PropTypes.string.isRequired
+message: PropTypes.string.isRequired
 };
 
 MediaRenderer.propTypes = {
-  attachment: PropTypes.string
+attachment: PropTypes.string
 };
 
 SortableTableCell.propTypes = {
-  label: PropTypes.string.isRequired,
-  sortKey: PropTypes.string.isRequired,
-  currentSortBy: PropTypes.string.isRequired,
-  currentSortOrder: PropTypes.string.isRequired,
-  onSort: PropTypes.func.isRequired
+label: PropTypes.string.isRequired,
+sortKey: PropTypes.string.isRequired,
+currentSortBy: PropTypes.string.isRequired,
+currentSortOrder: PropTypes.string.isRequired,
+onSort: PropTypes.func.isRequired
 };
 
 FeedbackDetailsContent.propTypes = {
-  feedback: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    user: PropTypes.shape({
-      name: PropTypes.string,
-      email: PropTypes.string
-    }),
-    message: PropTypes.string,
-    feedbackType: PropTypes.string,
-    rating: PropTypes.number,
-    createdAt: PropTypes.string,
-    attachment: PropTypes.string,
-    isRead: PropTypes.bool,
-    isFavorite: PropTypes.bool
-  }).isRequired
+feedback: PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  user: PropTypes.shape({
+    name: PropTypes.string,
+    email: PropTypes.string
+  }),
+  message: PropTypes.string,
+  feedbackType: PropTypes.string,
+  rating: PropTypes.number,
+  createdAt: PropTypes.string,
+  attachment: PropTypes.string,
+  isRead: PropTypes.bool,
+  isFavorite: PropTypes.bool
+}).isRequired
 };
 
 export default AdminFeedbackDashboard;

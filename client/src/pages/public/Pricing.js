@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaCheck, FaTimes, FaCrown } from 'react-icons/fa';
-import './Pricing.css';
 
 const Pricing = () => {
   const [isMonthly, setIsMonthly] = useState(true);

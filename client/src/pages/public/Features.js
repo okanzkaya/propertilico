@@ -6,7 +6,6 @@ import {
   Analytics, Security, BuildCircle, People, LightbulbOutlined, Headset,
   CloudQueue, Settings, PhoneAndroid, Autorenew, LocationOn, Receipt
 } from '@mui/icons-material';
-import './Features.css';
 
 const features = [
   { icon: <Analytics />, title: 'Advanced Analytics', description: 'Gain deep insights with our cutting-edge analytics tools.' },

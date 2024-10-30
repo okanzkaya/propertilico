@@ -62,7 +62,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
 import { formatDistanceToNow } from 'date-fns';
 import axiosInstance from '../../axiosSetup';
-import './Documents.css';
 
 // Constants
 const FILE_CONFIG = {

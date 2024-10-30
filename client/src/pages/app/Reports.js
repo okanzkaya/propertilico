@@ -1,5 +1,6 @@
 import styles from './Reports.module.css';
 import React, { useState, useMemo, useCallback, useRef } from "react";
+import PropTypes from 'prop-types';
 import {
   Typography, Grid, Box, Card, CardContent, Button, TextField,
   MenuItem, InputAdornment, Select, FormControl, InputLabel, 
@@ -187,7 +188,7 @@ const downloadReport = async (format, report, chartRef) => {
 
 // Component Sections
 const FilterSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, filterTags, setFilterTags }) => (
-  <Grid container spacing={2} mb={3}>
+  <Grid container spacing={2} className={styles.filterSection}>
     <Grid item xs={12} sm={4}>
       <TextField
         fullWidth
@@ -195,6 +196,7 @@ const FilterSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, f
         placeholder="Search Reports"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+        className={styles.searchInput}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
@@ -205,7 +207,7 @@ const FilterSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, f
       />
     </Grid>
     <Grid item xs={12} sm={4}>
-      <FormControl fullWidth variant="outlined">
+      <FormControl fullWidth variant="outlined" className={styles.formControl}>
         <InputLabel>Filter by Type</InputLabel>
         <Select
           value={filterType}
@@ -220,7 +222,7 @@ const FilterSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, f
       </FormControl>
     </Grid>
     <Grid item xs={12} sm={4}>
-      <FormControl fullWidth variant="outlined">
+      <FormControl fullWidth variant="outlined" className={styles.formControl}>
         <InputLabel>Filter by Tags</InputLabel>
         <Select
           multiple
@@ -228,9 +230,9 @@ const FilterSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, f
           onChange={(e) => setFilterTags(e.target.value)}
           label="Filter by Tags"
           renderValue={(selected) => (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            <Box className={styles.selectedTags}>
               {selected.map((value) => (
-                <Chip key={value} label={value} size="small" />
+                <Chip key={value} label={value} size="small" className={styles.tagChip} />
               ))}
             </Box>
           )}
@@ -245,33 +247,34 @@ const FilterSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, f
 );
 
 const ReportsGrid = ({ reports, renderChart, onReportSelect }) => (
-  <Grid container spacing={3}>
+  <Grid container spacing={3} className={styles.reportsGrid}>
     {reports.map((report) => (
       <Grid item xs={12} sm={6} md={4} key={report.id}>
-        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Card className={styles.reportCard}>
           <CardContent>
             <Typography variant="h6" gutterBottom>{report.title}</Typography>
             <Typography variant="body2" color="textSecondary" paragraph>
               {report.description}
             </Typography>
-            <Box mb={2}>
+            <Box className={styles.tagsContainer}>
               {report.tags.map((tag) => (
                 <Chip 
                   key={tag} 
                   label={tag} 
                   size="small" 
-                  sx={{ mr: 0.5, mb: 0.5 }} 
+                  className={styles.tagChip}
                 />
               ))}
             </Box>
-            <Box height={300}>
+            <Box className={styles.chartContainer}>
               {renderChart(report.type, report.data, report.chartType)}
             </Box>
-            <Box mt={2} display="flex" justifyContent="space-between">
+            <Box className={styles.cardActions}>
               <Button
                 variant="outlined"
                 startIcon={<VisibilityIcon />}
                 onClick={() => onReportSelect(report)}
+                className={styles.viewButton}
               >
                 View Details
               </Button>
@@ -284,12 +287,13 @@ const ReportsGrid = ({ reports, renderChart, onReportSelect }) => (
 );
 
 const PaginationSection = ({ count, page, onChange }) => (
-  <Box display="flex" justifyContent="center" mt={3}>
+  <Box className={styles.paginationContainer}>
     <Pagination 
       count={count} 
       page={page} 
       onChange={onChange} 
       color="primary" 
+      className={styles.pagination}
     />
   </Box>
 );
@@ -310,34 +314,30 @@ const ReportDialog = ({
     onClose={onClose}
     fullWidth
     maxWidth="md"
+    className={styles.reportDialog}
   >
     {report && (
       <>
-        <DialogTitle>
+        <DialogTitle className={styles.dialogTitle}>
           {report.title}
           <IconButton
             onClick={onClose}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: 'grey.500'
-            }}
+            className={styles.closeButton}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers className={styles.dialogContent}>
           <Typography variant="body1" paragraph>{report.description}</Typography>
           <Typography variant="subtitle1" gutterBottom>Report Type: {report.type}</Typography>
-          <Box mb={2}>
+          <Box className={styles.dialogTags}>
             {report.tags.map((tag) => (
-              <Chip key={tag} label={tag} sx={{ mr: 0.5, mb: 0.5 }} />
+              <Chip key={tag} label={tag} className={styles.dialogTagChip} />
             ))}
           </Box>
-          <Grid container spacing={2} mb={2}>
+          <Grid container spacing={2} className={styles.controlsContainer}>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth className={styles.formControl}>
                 <InputLabel>Frequency</InputLabel>
                 <Select value={frequency} onChange={onFrequencyChange} label="Frequency">
                   <MenuItem value="daily">Daily</MenuItem>
@@ -348,7 +348,7 @@ const ReportDialog = ({
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth className={styles.formControl}>
                 <InputLabel>Chart Type</InputLabel>
                 <Select 
                   value={chartType || report.chartType} 
@@ -364,15 +364,15 @@ const ReportDialog = ({
               </FormControl>
             </Grid>
           </Grid>
-          <Box ref={chartRef} height={400}>
+          <Box ref={chartRef} className={styles.detailChartContainer}>
             {renderChart(report.type, report.data, chartType || report.chartType)}
           </Box>
-          <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <TableContainer component={Paper} className={styles.dataTable}>
             <Table>
               <TableHead>
                 <TableRow>
                   {Object.keys(report.data[0]).map((key) => (
-                    <TableCell key={key}>
+                    <TableCell key={key} className={styles.tableHeader}>
                       {key.charAt(0).toUpperCase() + key.slice(1)}
                     </TableCell>
                   ))}
@@ -380,9 +380,11 @@ const ReportDialog = ({
               </TableHead>
               <TableBody>
                 {report.data.map((row, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={index} className={styles.tableRow}>
                     {Object.values(row).map((value, cellIndex) => (
-                      <TableCell key={cellIndex}>{value}</TableCell>
+                      <TableCell key={cellIndex} className={styles.tableCell}>
+                        {value}
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))}
@@ -390,33 +392,44 @@ const ReportDialog = ({
             </Table>
           </TableContainer>
         </DialogContent>
-        <DialogActions>
+        <DialogActions className={styles.dialogActions}>
           <CSVLink
             data={report.data}
             filename={`${report.title}.csv`}
-            className="hidden"
+            className={`${styles.downloadButton} ${styles.hidden}`}
           >
             <Button startIcon={<DownloadIcon />} onClick={() => onDownload('csv')}>
               Download CSV
             </Button>
           </CSVLink>
-          <Button onClick={() => onDownload('excel')} startIcon={<ExcelIcon />}>
+          <Button 
+            onClick={() => onDownload('excel')} 
+            startIcon={<ExcelIcon />}
+            className={styles.downloadButton}
+          >
             Download Excel
           </Button>
-          <Button onClick={() => onDownload('pdf')} startIcon={<PdfIcon />}>
+          <Button 
+            onClick={() => onDownload('pdf')} 
+            startIcon={<PdfIcon />}
+            className={styles.downloadButton}
+          >
             Download PDF
           </Button>
-          <Button onClick={() => onDownload('png')} startIcon={<ImageIcon />}>
+          <Button 
+            onClick={() => onDownload('png')} 
+            startIcon={<ImageIcon />}
+            className={styles.downloadButton}
+          >
             Download PNG
           </Button>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose} className={styles.closeButton}>Close</Button>
         </DialogActions>
       </>
     )}
   </Dialog>
 );
 
-// Main Component
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -432,7 +445,6 @@ const Reports = () => {
   const [chartType, setChartType] = useState("");
   const chartRef = useRef(null);
 
-  // Memoized Filters
   const filteredReports = useMemo(() => {
     return sampleReports.filter(report => {
       const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -510,9 +522,9 @@ const Reports = () => {
   };
 
   return (
-    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+    <Box className={styles.pageWrapper}>
       <Typography variant="h4" gutterBottom>Reports Dashboard</Typography>
-      <Typography variant="body1" paragraph>
+      <Typography variant="body1" paragraph className={styles.dashboardDescription}>
         Welcome to the Reports Dashboard. Here you can view and analyze various aspects 
         of your property management business.
       </Typography>
@@ -562,12 +574,54 @@ const Reports = () => {
           onClose={() => setSnackbarState(prev => ({ ...prev, open: false }))} 
           severity={snackbarState.severity}
           sx={{ width: '100%' }}
+          className={styles.alert}
         >
           {snackbarState.message}
         </Alert>
       </Snackbar>
     </Box>
   );
+};
+
+FilterSection.propTypes = {
+  searchTerm: PropTypes.string.isRequired,
+  setSearchTerm: PropTypes.func.isRequired,
+  filterType: PropTypes.string.isRequired,
+  setFilterType: PropTypes.func.isRequired,
+  filterTags: PropTypes.arrayOf(PropTypes.string).isRequired,
+  setFilterTags: PropTypes.func.isRequired
+};
+
+ReportsGrid.propTypes = {
+  reports: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+    chartType: PropTypes.string.isRequired,
+    tags: PropTypes.arrayOf(PropTypes.string).isRequired,
+    data: PropTypes.arrayOf(PropTypes.object).isRequired
+  })).isRequired,
+  renderChart: PropTypes.func.isRequired,
+  onReportSelect: PropTypes.func.isRequired
+};
+
+PaginationSection.propTypes = {
+  count: PropTypes.number.isRequired,
+  page: PropTypes.number.isRequired,
+  onChange: PropTypes.func.isRequired
+};
+
+ReportDialog.propTypes = {
+  report: PropTypes.object,
+  onClose: PropTypes.func.isRequired,
+  frequency: PropTypes.string.isRequired,
+  chartType: PropTypes.string.isRequired,
+  onFrequencyChange: PropTypes.func.isRequired,
+  onChartTypeChange: PropTypes.func.isRequired,
+  renderChart: PropTypes.func.isRequired,
+  onDownload: PropTypes.func.isRequired,
+  chartRef: PropTypes.object.isRequired
 };
 
 export default Reports;

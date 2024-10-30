@@ -24,7 +24,6 @@ import {
   FaPiggyBank,
   FaClock
 } from 'react-icons/fa';
-import './Home.css';
 
 const features = [
   { 

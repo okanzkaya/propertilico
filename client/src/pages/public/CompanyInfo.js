@@ -1,6 +1,5 @@
 import styles from './CompanyInfo.module.css';
 import React from 'react';
-import './CompanyInfo.css';
 
 const CompanyInfo = () => {
   const teamMembers = [
