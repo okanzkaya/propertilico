@@ -94,6 +94,12 @@
   transform: scale(1.05);
 }
 
+.popular {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
 .popularTag {
   position: absolute;
   top: -12px;
@@ -163,7 +169,6 @@
   border-radius: 8px;
 }
 
-
 .originalPrice {
   color: rgba(255, 255, 255, 0.7);
   text-decoration: line-through;
@@ -179,19 +184,18 @@
   align-items: center;
   gap: 4px;
 }
+
 .discountedPrice::before {
   content: '→';
   color: #22c55e;
 }
+
 .featuresList {
   list-style: none;
   padding: 0;
   margin: 0 0 32px 0;
 }
-.pricingCard.popular .yearlyPrice {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-}
+
 .featureItem {
   display: flex;
   align-items: center;
@@ -221,19 +225,8 @@
   transition: all 0.3s ease;
 }
 
-.pricingCard.popular .startTrialBtn {
-  background: #22c55e;
-  color: white;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-}
-
 .startTrialBtn:hover {
   transform: translateY(-2px);
-}
-
-.pricingCard.popular .startTrialBtn:hover {
-  background: #1ea84d;
-  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
 }
 
 .trialNote {

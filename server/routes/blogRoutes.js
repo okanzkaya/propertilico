@@ -96,11 +96,13 @@ const handleMulterError = (err, req, res, next) => {
 };
 
 // Clean up old image middleware
+// In server/routes/blogRoutes.js
 const cleanupOldImage = async (req, res, next) => {
   if (!req.file || !req.params.id) return next();
 
   try {
-    const blog = await req.app.get('models').Blog.findByPk(req.params.id);
+    const { models } = require('../config/db');  // Import models directly
+    const blog = await models.Blog.findByPk(req.params.id);
     if (blog && blog.imageUrl) {
       const oldImagePath = path.join(__dirname, '..', blog.imageUrl);
       try {

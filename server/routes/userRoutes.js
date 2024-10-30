@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 const userController = require('../controllers/userController');
 
 // Configure multer for avatar uploads
@@ -69,13 +69,21 @@ router.post('/avatar', protect, (req, res, next) => {
   });
 }, userController.uploadAvatar);
 
-router.get('/profile', userController.getUserProfile);
-router.put('/', userController.updateUserProfile);
-router.post('/change-password', userController.changePassword);
-router.post('/change-email', userController.changeEmail);
-router.get('/subscription', userController.getSubscriptionDetails);
-router.get('/notifications', userController.getNotifications);
-router.put('/notifications/:id/read', userController.markNotificationAsRead);
-router.put('/preferences', userController.updateUserPreferences);
+// User profile routes
+router.get('/profile', protect, userController.getUserProfile);
+router.put('/', protect, userController.updateUserProfile);
+router.post('/change-password', protect, userController.changePassword);
+router.post('/change-email', protect, userController.changeEmail);
+
+// Subscription routes
+router.get('/subscription', protect, userController.getSubscriptionDetails);
+router.post('/extend-subscription', protect, admin, userController.extendSubscription);
+router.post('/reduce-subscription', protect, admin, userController.reduceSubscription);
+router.post('/get-one-month-subscription', protect, admin, userController.getOneMonthSubscription);
+
+// Notification routes
+router.get('/notifications', protect, userController.getNotifications);
+router.put('/notifications/:id/read', protect, userController.markNotificationAsRead);
+router.put('/preferences', protect, userController.updateUserPreferences);
 
 module.exports = router;

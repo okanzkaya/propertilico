@@ -1,14 +1,11 @@
-import styles from './BlogEditor.module.css';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useUser } from '../../context/UserContext';
-import { FaSpinner, FaImage, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import styles from './BlogEditor.module.css';
 
-const CHAR_LIMITS = {
-  title: 3,
-  content: 100,
+const VALIDATION_RULES = {
+  title: { min: 3, max: 100 },
+  content: { min: 100, max: 50000 },
   excerpt: { min: 10, max: 300 }
 };
 
@@ -27,17 +24,51 @@ const BlogEditor = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [validationDetails, setValidationDetails] = useState({
-    title: { valid: true, message: '' },
-    content: { valid: true, message: '' },
-    excerpt: { valid: true, message: '' }
+  const [validation, setValidation] = useState({
+    title: { isValid: true, message: '' },
+    content: { isValid: true, message: '' },
+    excerpt: { isValid: true, message: '' }
   });
 
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useUser();
+
+  const validateField = (name, value) => {
+    const rules = VALIDATION_RULES[name];
+    if (!rules) return { isValid: true, message: '' };
+
+    if (value.length < rules.min) {
+      return {
+        isValid: false,
+        message: `Must be at least ${rules.min} characters`
+      };
+    }
+
+    if (value.length > rules.max) {
+      return {
+        isValid: false,
+        message: `Must not exceed ${rules.max} characters`
+      };
+    }
+
+    return { isValid: true, message: '' };
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setBlog(prev => ({ ...prev, [name]: value }));
+    
+    if (VALIDATION_RULES[name]) {
+      const validationResult = validateField(name, value);
+      setValidation(prev => ({
+        ...prev,
+        [name]: validationResult
+      }));
+    }
+  };
 
   const fetchBlog = useCallback(async () => {
+    if (!id) return;
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
       const blogData = response.data.data.blog;
@@ -54,15 +85,12 @@ const BlogEditor = () => {
       }
     } catch (error) {
       setError('Failed to fetch blog post. Please try again.');
-      console.error('Error fetching blog:', error);
     }
   }, [id]);
 
   useEffect(() => {
-    if (id) {
-      fetchBlog();
-    }
-  }, [id, fetchBlog]);
+    fetchBlog();
+  }, [fetchBlog]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -79,101 +107,51 @@ const BlogEditor = () => {
     }
 
     setImageFile(file);
-    const previewUrl = URL.createObjectURL(file);
-    setImagePreview(previewUrl);
+    setImagePreview(URL.createObjectURL(file));
     setError('');
   };
 
-  const removeImage = useCallback(() => {
-    setImageFile(null);
-    if (imagePreview && !imagePreview.startsWith('/')) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    setImagePreview(null);
-    setBlog(prev => ({ ...prev, imageUrl: '' }));
-  }, [imagePreview]);
-
-  const validateField = useCallback((name, value) => {
-    switch (name) {
-      case 'title':
-        return {
-          valid: value.length >= CHAR_LIMITS.title,
-          message: value.length < CHAR_LIMITS.title ? `Title must be at least ${CHAR_LIMITS.title} characters long` : ''
-        };
-      case 'content':
-        return {
-          valid: value.length >= CHAR_LIMITS.content,
-          message: value.length < CHAR_LIMITS.content ? `${CHAR_LIMITS.content - value.length} more characters needed` : ''
-        };
-      case 'excerpt':
-        return {
-          valid: value.length >= CHAR_LIMITS.excerpt.min && value.length <= CHAR_LIMITS.excerpt.max,
-          message: value.length < CHAR_LIMITS.excerpt.min ? `Excerpt must be at least ${CHAR_LIMITS.excerpt.min} characters` : 
-                  value.length > CHAR_LIMITS.excerpt.max ? `Excerpt must be less than ${CHAR_LIMITS.excerpt.max} characters` : ''
-        };
-      default:
-        return { valid: true, message: '' };
-    }
-  }, []);
-
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setBlog(prev => ({ ...prev, [name]: value }));
-    setValidationDetails(prev => ({
-      ...prev,
-      [name]: validateField(name, value)
-    }));
-    setError('');
-  }, [validateField]);
-
-  const validateForm = useCallback(() => {
-    const validations = {
+  const validateForm = () => {
+    const newValidation = {
       title: validateField('title', blog.title),
       content: validateField('content', blog.content),
       excerpt: validateField('excerpt', blog.excerpt)
     };
 
-    setValidationDetails(validations);
+    setValidation(newValidation);
 
-    return Object.entries(validations)
-      .filter(([_, value]) => !value.valid)
-      .map(([field, value]) => `${field.charAt(0).toUpperCase() + field.slice(1)}: ${value.message}`);
-  }, [blog.title, blog.content, blog.excerpt, validateField]);
+    return Object.values(newValidation).every(field => field.isValid);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
 
-    const validationErrors = validateForm();
-    if (validationErrors.length) {
-      setError('Please fix the following errors:');
+    if (!validateForm()) {
+      setError('Please fix the validation errors before submitting.');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('Please log in to create or edit blog posts');
-
       const formData = new FormData();
       formData.append('title', blog.title);
       formData.append('content', blog.content);
       formData.append('excerpt', blog.excerpt);
       formData.append('status', blog.status);
 
-      // Process tags
       const processedTags = blog.tags.split(',').map(tag => tag.trim()).filter(Boolean);
       formData.append('tags', JSON.stringify(processedTags));
 
-      // Handle image upload
       if (imageFile) {
         formData.append('image', imageFile);
       } else if (blog.imageUrl) {
         formData.append('imageUrl', blog.imageUrl);
       }
 
+      const token = localStorage.getItem('token');
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -182,201 +160,154 @@ const BlogEditor = () => {
       };
 
       if (id) {
-        await axios.put(
-          `${process.env.REACT_APP_API_URL}/api/blogs/${id}`,
-          formData,
-          config
-        );
+        await axios.put(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`, formData, config);
       } else {
-        await axios.post(
-          `${process.env.REACT_APP_API_URL}/api/blogs`,
-          formData,
-          config
-        );
+        await axios.post(`${process.env.REACT_APP_API_URL}/api/blogs`, formData, config);
       }
 
-      setSuccessMessage('Blog post saved successfully! Redirecting...');
+      setSuccessMessage('Blog post saved successfully!');
       setTimeout(() => navigate('/blog'), 1500);
     } catch (error) {
-      console.error('Error saving blog:', error);
-      let errorMessage = 'Failed to save blog post. ';
-
-      if (error.response?.status === 401) {
-        errorMessage = 'Your session has expired. Please log in again.';
-      } else if (error.response?.data?.message) {
-        errorMessage += error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      } else {
-        errorMessage += 'Please try again.';
-      }
-
-      setError(errorMessage);
+      setError(error.response?.data?.message || 'Failed to save blog post.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!user?.isBlogger) {
-    return (
-      <motion.div
-        className={styles.editorContainer}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className={styles.errorMessage}>You do not have permission to access this page.</div>
-      </motion.div>
-    );
-  }
-
   return (
-    <motion.div
-      className={styles.editorContainer}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <h2>{id ? 'Edit Blog Post' : 'Create New Blog Post'}</h2>
-      <p className={styles.infoText}>
-        <FaInfoCircle /> Fill out the form below to create your blog post. All fields marked with * are required.
-      </p>
+    <div className={styles.editorContainer}>
+      <h1 className={styles.editorTitle}>
+        {id ? 'Edit Blog Post' : 'Create New Blog Post'}
+      </h1>
 
-      <form className={styles.blogForm} onSubmit={handleSubmit}>
-        <div className={styles.formSection}>
-          <label className={styles.formLabel}>Cover Image</label>
-          <label className={styles.imageUploadButton}>
-            <FaImage /> {imageFile ? 'Change Cover Image' : 'Upload Cover Image'}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              disabled={isSubmitting}
-            />
-          </label>
-          <p className={styles.infoText}>Recommended size: 1200x630px, Maximum size: 5MB</p>
-          {(imagePreview || blog.imageUrl) && (
-            <div className={styles.imagePreview}>
-              <img
-                className={styles.previewImage}
-                src={imagePreview || blog.imageUrl}
-                alt="Cover preview"
-              />
-              <button
-                type="button"
-                className={styles.removeImageButton}
-                onClick={removeImage}
-                aria-label="Remove image"
-              >
-                <FaTimesCircle />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className={styles.formSection}>
-          <label className={styles.formLabel}>Title *</label>
-          <input
-            className={`input ${validationDetails.title.valid ? '' : styles.invalid}`}
-            type="text"
-            name="title"
-            value={blog.title}
-            onChange={handleChange}
-            placeholder="Enter a compelling title..."
-            required
-            aria-label="Blog title"
-          />
-          <span className={`character-count ${validationDetails.title.valid ? styles.valid : styles.invalid}`}>
-            {blog.title.length} / {CHAR_LIMITS.title}+ characters
-          </span>
-        </div>
-
-        <div className={styles.formSection}>
-          <label className={styles.formLabel}>Content *</label>
-          <textarea
-            className={`textarea ${validationDetails.content.valid ? '' : styles.invalid}`}
-            name="content"
-            value={blog.content}
-            onChange={handleChange}
-            placeholder="Write your blog content here..."
-            required
-            aria-label="Blog content"
-          />
-          <span className={`character-count ${validationDetails.content.valid ? styles.valid : styles.invalid}`}>
-            {blog.content.length} / {CHAR_LIMITS.content}+ characters
-          </span>
-        </div>
-
-        <div className={styles.formSection}>
-          <label className={styles.formLabel}>Excerpt *</label>
-          <input
-            className={`input ${validationDetails.excerpt.valid ? '' : styles.invalid}`}
-            type="text"
-            name="excerpt"
-            value={blog.excerpt}
-            onChange={handleChange}
-            placeholder="Write a brief summary of your blog post..."
-            required
-            aria-label="Blog excerpt"
-          />
-          <span className={`character-count ${validationDetails.excerpt.valid ? styles.valid : styles.invalid}`}>
-            {blog.excerpt.length} / {CHAR_LIMITS.excerpt.min}-{CHAR_LIMITS.excerpt.max} characters
-          </span>
-        </div>
-
-        <div className={styles.formSection}>
-          <label className={styles.formLabel}>Tags</label>
-          <input
-            className={styles.input}
-            type="text"
-            name="tags"
-            value={blog.tags}
-            onChange={handleChange}
-            placeholder="Enter tags separated by commas (e.g., property, management, tips)"
-            aria-label="Blog tags"
-          />
-          <p className={styles.infoText}>
-            <FaInfoCircle /> Separate tags with commas. Good tags help readers find your content.
-          </p>
-        </div>
-
-        <button
-          className={`button ${isSubmitting ? styles.disabled : ''}`}
-          type="submit"
-          disabled={isSubmitting}
-          aria-label={isSubmitting ? 'Saving blog post...' : 'Save blog post'}
-        >
-          {isSubmitting ? (
-            <>
-              <FaSpinner className={styles.spinner} /> Saving...
-            </>
-          ) : (
-            'Save Blog Post'
-          )}
-        </button>
-
-        {error && (
-          <div className={styles.errorMessage} role="alert">
-            {error}
-            {validationDetails && (
-              <ul className={styles.errorDetails}>
-                {Object.entries(validationDetails)
-                  .filter(([_, value]) => !value.valid)
-                  .map(([field, value]) => (
-                    <li key={field}>{value.message}</li>
-                  ))}
-              </ul>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.imageSection}>
+          <h3>Cover Image</h3>
+          <div className={styles.imageUploadArea}>
+            {imagePreview ? (
+              <div className={styles.imagePreviewContainer}>
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className={styles.imagePreview}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview(null);
+                    setBlog(prev => ({ ...prev, imageUrl: '' }));
+                  }}
+                  className={styles.removeImageButton}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className={styles.uploadPrompt}>
+                <label className={styles.uploadButton}>
+                  Upload Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className={styles.hiddenInput}
+                  />
+                </label>
+                <p className={styles.uploadHint}>
+                  Recommended: 1200x630px, Max: 5MB
+                </p>
+              </div>
             )}
           </div>
-        )}
+        </div>
 
-        {successMessage && (
-          <div className={styles.successMessage} role="status">
-            {successMessage}
-          </div>
-        )}
+        <div className={styles.formGroup}>
+          <label htmlFor="title">Title *</label>
+          <input
+            id="title"
+            name="title"
+            type="text"
+            value={blog.title}
+            onChange={handleInputChange}
+            placeholder="Enter a compelling title..."
+            className={`${styles.input} ${!validation.title.isValid ? styles.inputError : ''}`}
+            required
+          />
+          {!validation.title.isValid && (
+            <span className={styles.errorText}>{validation.title.message}</span>
+          )}
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="content">Content *</label>
+          <textarea
+            id="content"
+            name="content"
+            value={blog.content}
+            onChange={handleInputChange}
+            placeholder="Write your blog content here..."
+            className={`${styles.textarea} ${!validation.content.isValid ? styles.inputError : ''}`}
+            required
+          />
+          {!validation.content.isValid && (
+            <span className={styles.errorText}>{validation.content.message}</span>
+          )}
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="excerpt">Excerpt *</label>
+          <textarea
+            id="excerpt"
+            name="excerpt"
+            value={blog.excerpt}
+            onChange={handleInputChange}
+            placeholder="Write a brief summary of your post..."
+            className={`${styles.input} ${!validation.excerpt.isValid ? styles.inputError : ''}`}
+            required
+          />
+          {!validation.excerpt.isValid && (
+            <span className={styles.errorText}>{validation.excerpt.message}</span>
+          )}
+          <span className={styles.hint}>
+            A brief summary that appears in blog listings ({VALIDATION_RULES.excerpt.min}-{VALIDATION_RULES.excerpt.max} characters)
+          </span>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="tags">Tags</label>
+          <input
+            id="tags"
+            name="tags"
+            type="text"
+            value={blog.tags}
+            onChange={handleInputChange}
+            placeholder="Enter tags separated by commas (e.g., property management, tips, maintenance)"
+            className={styles.input}
+          />
+        </div>
+
+        {error && <div className={styles.error}>{error}</div>}
+        {successMessage && <div className={styles.success}>{successMessage}</div>}
+
+        <div className={styles.buttonGroup}>
+          <button
+            type="button"
+            onClick={() => navigate('/blog')}
+            className={`${styles.button} ${styles.secondaryButton}`}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`${styles.button} ${styles.primaryButton}`}
+          >
+            {isSubmitting ? 'Saving...' : 'Save Post'}
+          </button>
+        </div>
       </form>
-    </motion.div>
+    </div>
   );
 };
 

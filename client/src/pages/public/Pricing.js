@@ -1,7 +1,7 @@
 import styles from './Pricing.module.css';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheck, FaTimes, FaCrown } from 'react-icons/fa';
 
 const Pricing = () => {
@@ -12,7 +12,7 @@ const Pricing = () => {
     {
       name: 'Standard',
       monthlyPrice: 19.99,
-      yearlyPrice: 167.91, // 19.99 * 12 * 0.7 (30% discount)
+      yearlyPrice: 167.91,
       features: [
         { text: 'Up to 50 Property Listings', included: true },
         { text: 'Basic Analytics', included: true },
@@ -29,7 +29,7 @@ const Pricing = () => {
     {
       name: 'Premium',
       monthlyPrice: 49.99,
-      yearlyPrice: 419.91, // 49.99 * 12 * 0.7 (30% discount)
+      yearlyPrice: 419.91,
       features: [
         { text: 'Unlimited Property Listings', included: true },
         { text: 'Advanced Analytics', included: true },
@@ -44,6 +44,55 @@ const Pricing = () => {
       discount: 30
     },
   ];
+
+  const PriceDisplay = ({ plan }) => {
+    const price = isMonthly ? plan.monthlyPrice : plan.yearlyPrice / 12;
+    
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={isMonthly ? 'monthly' : 'yearly'}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className={styles.planPrice}
+        >
+          <span className={styles.currency}>$</span>
+          <motion.span
+            key={price}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={styles.amount}
+          >
+            {price.toFixed(2)}
+          </motion.span>
+          <span className={styles.period}>/month</span>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
+
+  const YearlyPriceDisplay = ({ plan }) => (
+    <AnimatePresence>
+      {!isMonthly && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+          className={styles.yearlyPrice}
+        >
+          <span className={styles.originalPrice}>
+            ${(plan.monthlyPrice * 12).toFixed(2)}
+          </span>
+          <span className={styles.discountedPrice}>
+            ${plan.yearlyPrice.toFixed(2)} billed yearly
+          </span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <div className={styles.pricingWrapper}>
@@ -68,13 +117,13 @@ const Pricing = () => {
 
         <div className={styles.pricingToggle}>
           <button 
-            className={isMonthly ? styles.active : ''}
+            className={`${isMonthly ? styles.active : ''}`}
             onClick={() => setIsMonthly(true)}
           >
             Monthly
           </button>
           <button 
-            className={!isMonthly ? styles.active : ''}
+            className={`${!isMonthly ? styles.active : ''}`}
             onClick={() => setIsMonthly(false)}
           >
             Yearly <span className={styles.discountBadge}>30% off</span>
@@ -85,7 +134,7 @@ const Pricing = () => {
           {plans.map((plan, index) => (
             <motion.div 
               key={plan.name}
-              className={`pricing-card ${plan.isPopular ? styles.popular : ''}`}
+              className={`${styles.pricingCard} ${plan.isPopular ? styles.popular : ''}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
@@ -96,31 +145,24 @@ const Pricing = () => {
                   Most Popular
                 </div>
               )}
-              {!isMonthly && (
-                <div className={styles.discountTag}>
-                  Save {plan.discount}%
-                </div>
-              )}
+              <AnimatePresence>
+                {!isMonthly && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.3 }}
+                    className={styles.discountTag}
+                  >
+                    Save {plan.discount}%
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               <h2 className={styles.planName}>{plan.name}</h2>
               
-              <div className={styles.planPrice}>
-                <span className={styles.currency}>$</span>
-                <span className={styles.amount}>
-                  {isMonthly 
-                    ? plan.monthlyPrice.toFixed(2) 
-                    : (plan.yearlyPrice / 12).toFixed(2)}
-                </span>
-                <span className={styles.period}>
-                  /month
-                </span>
-              </div>
-              {!isMonthly && (
-                <div className={styles.yearlyPrice}>
-                  <span className={styles.originalPrice}>${(plan.monthlyPrice * 12).toFixed(2)}</span>
-                  <span className={styles.discountedPrice}>${plan.yearlyPrice.toFixed(2)} billed yearly</span>
-                </div>
-              )}
+              <PriceDisplay plan={plan} />
+              <YearlyPriceDisplay plan={plan} />
 
               <ul className={styles.featuresList}>
                 {plan.features.map((feature, featureIndex) => (
