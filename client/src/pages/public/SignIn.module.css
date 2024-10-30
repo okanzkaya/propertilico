@@ -1,4 +1,4 @@
-.signin-container {
+.signinContainer {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -7,7 +7,7 @@
     padding: 20px;
   }
   
-  .signin-box {
+  .signinBox {
     padding: 40px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -18,33 +18,33 @@
     backdrop-filter: blur(10px);
   }
   
-  .signin-title {
+  .signinTitle {
     color: #6e8efb;
     font-weight: bold;
   }
   
-  .signin-form {
+  .signinForm {
     display: flex;
     flex-direction: column;
     gap: 20px;
   }
   
-  .input-icon {
+  .inputIcon {
     color: #6e8efb;
   }
   
-  .form-controls {
+  .formControls {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
   
-  .forgot-password {
+  .forgotPassword {
     color: #6e8efb;
     text-decoration: none;
   }
   
-  .error-message {
+  .errorMessage {
     color: #f44336;
     display: flex;
     align-items: center;
@@ -52,37 +52,37 @@
     margin-top: 16px;
   }
   
-  .submit-button {
+  .submitButton {
     background-color: #6e8efb;
     height: 48px;
   }
   
-  .submit-button:hover {
+  .submitButton:hover {
     background-color: #5c7cfa;
   }
   
-  .google-button {
+  .googleButton {
     height: 48px;
     background-color: #4285F4;
     color: white;
     opacity: 0.7;
   }
   
-  .google-button:hover {
+  .googleButton:hover {
     background-color: #357ae8;
   }
   
-  .google-button.Mui-disabled {
+  .googleButton.MuiDisabled {
     color: white;
     background-color: #4285F4;
   }
   
-  .signup-link {
+  .signupLink {
     margin-top: 16px;
     color: #666;
   }
   
-  .signup-link a {
+  .signupLink a {
     color: #6e8efb;
     text-decoration: none;
   }

@@ -28,19 +28,19 @@
   }
   
   /* Layout & Container Styles */
-  .documents-page {
+  .documentsPage {
     min-height: 100vh;
     background-color: var(--primary-bg);
     padding: 1.5rem;
   }
   
-  .documents-container {
+  .documentsContainer {
     max-width: 1920px;
     margin: 0 auto;
   }
   
   /* Header Styles */
-  .documents-header {
+  .documentsHeader {
     background-color: var(--secondary-bg);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
@@ -48,56 +48,56 @@
     box-shadow: var(--shadow-md);
   }
   
-  .header-title {
+  .headerTitle {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
   }
   
-  .title-text {
+  .titleText {
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--text-primary);
   }
   
   /* Storage Info Styles */
-  .storage-info {
+  .storageInfo {
     background-color: var(--primary-bg);
     border-radius: var(--radius-md);
     padding: 1rem;
     margin: 1rem 0;
   }
   
-  .storage-progress {
+  .storageProgress {
     height: 8px !important;
     border-radius: var(--radius-sm);
     background-color: rgba(37, 99, 235, 0.1) !important;
   }
   
-  .storage-progress .MuiLinearProgress-bar {
+  .storageProgress .MuiLinearProgressBar {
     background-color: var(--primary-color);
   }
   
   /* Search and Filter Section */
-  .search-filter-section {
+  .searchFilterSection {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
   }
   
-  .search-field {
+  .searchField {
     background-color: var(--secondary-bg);
     border-radius: var(--radius-md);
   }
   
-  .search-field .MuiOutlinedInput-root {
+  .searchField .MuiOutlinedInputRoot {
     border-radius: var(--radius-md);
   }
   
   /* Document Grid */
-  .documents-grid {
+  .documentsGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.5rem;
@@ -105,7 +105,7 @@
   }
   
   /* Document Card Styles */
-  .document-card {
+  .documentCard {
     background-color: var(--secondary-bg);
     border-radius: var(--radius-md) !important;
     border: 1px solid var(--border-color);
@@ -114,12 +114,12 @@
     overflow: hidden;
   }
   
-  .document-card:hover {
+  .documentCard:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
   }
   
-  .preview-container {
+  .previewContainer {
     height: 200px;
     background-color: var(--primary-bg);
     display: flex;
@@ -131,7 +131,7 @@
     overflow: hidden; /* Add this */
   }
   
-  .preview-image {
+  .previewImage {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -141,7 +141,7 @@
   }
   
   /* Add loading indicator styles */
-  .preview-loading {
+  .previewLoading {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -149,7 +149,7 @@
     z-index: 1;
   }
   
-  .preview-placeholder {
+  .previewPlaceholder {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -158,23 +158,23 @@
     text-align: center;
   }
   
-  .file-details {
+  .fileDetails {
     padding: 1rem;
   }
   
-  .file-name {
+  .fileName {
     font-weight: 500;
     color: var(--text-primary);
     margin-bottom: 0.5rem;
     word-break: break-word;
   }
   
-  .file-size {
+  .fileSize {
     color: var(--text-tertiary);
     font-size: 0.875rem;
   }
   
-  .file-actions {
+  .fileActions {
     padding: 0.5rem;
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -184,7 +184,7 @@
   }
   
   /* Empty State */
-  .empty-state {
+  .emptyState {
     text-align: center;
     padding: 3rem;
     background-color: var(--secondary-bg);
@@ -192,14 +192,14 @@
     box-shadow: var(--shadow-md);
   }
   
-  .empty-icon {
+  .emptyIcon {
     font-size: 4rem;
     color: var(--text-tertiary);
     margin-bottom: 1.5rem;
   }
   
   /* Loading State */
-  .loading-state {
+  .loadingState {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -207,11 +207,11 @@
   }
   
   /* Dialog Styles */
-  .upload-dialog {
+  .uploadDialog {
     border-radius: var(--radius-lg);
   }
   
-  .dialog-title {
+  .dialogTitle {
     padding: 1.5rem;
     background-color: var(--primary-bg);
   }
@@ -236,17 +236,17 @@
   }
   
   /* Chip and Tag Styles */
-  .category-chip {
+  .categoryChip {
     border-radius: var(--radius-sm) !important;
   }
   
-  .favorite-chip {
+  .favoriteChip {
     background-color: var(--warning-color) !important;
     color: white !important;
   }
   
   /* Context Menu */
-  .context-menu .MuiPaper-root {
+  .contextMenu .MuiPaperRoot {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
   }
@@ -272,66 +272,66 @@
   
   /* Responsive Adjustments */
   @media (max-width: 640px) {
-    .documents-page {
+    .documentsPage {
       padding: 1rem;
     }
   
-    .documents-header {
+    .documentsHeader {
       padding: 1rem;
     }
   
-    .documents-grid {
+    .documentsGrid {
       gap: 1rem;
     }
   
-    .header-title {
+    .headerTitle {
       flex-direction: column;
       align-items: stretch;
       gap: 1rem;
     }
   
-    .search-filter-section {
+    .searchFilterSection {
       grid-template-columns: 1fr;
     }
   }
   
   /* Animation Classes */
-  .fade-enter {
+  .fadeEnter {
     opacity: 0;
     transform: translateY(10px);
   }
   
-  .fade-enter-active {
+  .fadeEnterActive {
     opacity: 1;
     transform: translateY(0);
     transition: opacity 200ms ease-out, transform 200ms ease-out;
   }
   
-  .fade-exit {
+  .fadeExit {
     opacity: 1;
     transform: translateY(0);
   }
   
-  .fade-exit-active {
+  .fadeExitActive {
     opacity: 0;
     transform: translateY(-10px);
     transition: opacity 200ms ease-in, transform 200ms ease-in;
   }
   
   /* Utility Classes */
-  .text-ellipsis {
+  .textEllipsis {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   
-  .flex-center {
+  .flexCenter {
     display: flex;
     align-items: center;
     justify-content: center;
   }
   
-  .flex-between {
+  .flexBetween {
     display: flex;
     align-items: center;
     justify-content: space-between;

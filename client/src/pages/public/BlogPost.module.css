@@ -1,5 +1,5 @@
 /* Base container styles */
-.post-container {
+.postContainer {
     max-width: 800px;
     margin: 0 auto;
     padding: 2rem;
@@ -11,14 +11,14 @@
   }
   
   @media (max-width: 768px) {
-    .post-container {
+    .postContainer {
       padding: 1rem;
       margin: 0 1rem;
     }
   }
   
   /* Header and navigation */
-  .header-image {
+  .headerImage {
     width: 100%;
     height: 400px;
     border-radius: 8px 8px 0 0;
@@ -27,7 +27,7 @@
     position: relative;
   }
   
-  .header-image img {
+  .headerImage img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -35,11 +35,11 @@
     transition: opacity 0.3s ease-in-out;
   }
   
-  .header-image img.loaded {
+  .headerImage img.loaded {
     opacity: 1;
   }
   
-  .back-button {
+  .backButton {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -51,13 +51,13 @@
     transition: all 0.3s ease;
   }
   
-  .back-button:hover {
+  .backButton:hover {
     background: #f5f5f5;
     color: #333;
   }
   
   /* Post title and metadata */
-  .post-title {
+  .postTitle {
     font-size: 2.5rem;
     font-weight: 700;
     color: #1a1a1a;
@@ -66,12 +66,12 @@
   }
   
   @media (max-width: 768px) {
-    .post-title {
+    .postTitle {
       font-size: 2rem;
     }
   }
   
-  .meta-data {
+  .metaData {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -81,18 +81,18 @@
     font-size: 0.9rem;
   }
   
-  .meta-item {
+  .metaItem {
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
   
-  .meta-item svg {
+  .metaItem svg {
     color: #888;
   }
   
   /* Tags */
-  .tag-list {
+  .tagList {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -115,13 +115,13 @@
   }
   
   /* Action buttons */
-  .action-button-group {
+  .actionButtonGroup {
     display: flex;
     gap: 1rem;
     margin-bottom: 2rem;
   }
   
-  .action-button {
+  .actionButton {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -133,50 +133,50 @@
     font-weight: 500;
   }
   
-  .action-button:hover {
+  .actionButton:hover {
     opacity: 0.9;
     transform: translateY(-2px);
   }
   
-  .action-button svg {
+  .actionButton svg {
     font-size: 1.1rem;
   }
   
   /* Post content styles */
-  .post-content {
+  .postContent {
     font-size: 1.1rem;
     line-height: 1.8;
     color: #333;
     margin-bottom: 3rem;
   }
   
-  .post-content h2 {
+  .postContent h2 {
     font-size: 1.8rem;
     font-weight: 600;
     margin: 2rem 0 1rem;
     color: #1a1a1a;
   }
   
-  .post-content h3 {
+  .postContent h3 {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 1.5rem 0 1rem;
     color: #1a1a1a;
   }
   
-  .post-content p {
+  .postContent p {
     margin-bottom: 1.5rem;
     max-width: 100%;
   }
   
-  .post-content img {
+  .postContent img {
     max-width: 100%;
     height: auto;
     border-radius: 8px;
     margin: 2rem 0;
   }
   
-  .post-content pre {
+  .postContent pre {
     max-width: 100%;
     overflow-x: auto;
     background: #f5f5f5;
@@ -185,7 +185,7 @@
     margin: 1.5rem 0;
   }
   
-  .post-content blockquote {
+  .postContent blockquote {
     border-left: 4px solid #1a1a1a;
     padding-left: 1rem;
     margin: 2rem 0;
@@ -193,19 +193,19 @@
     color: #666;
   }
   
-  .post-content a {
+  .postContent a {
     color: #007bff;
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 0.3s ease;
   }
   
-  .post-content a:hover {
+  .postContent a:hover {
     border-bottom-color: #007bff;
   }
   
   /* Author section */
-  .author-section {
+  .authorSection {
     display: flex;
     align-items: center;
     gap: 1.5rem;
@@ -215,24 +215,24 @@
     margin: 3rem 0;
   }
   
-  .author-avatar {
+  .authorAvatar {
     width: 80px;
     height: 80px;
     border-radius: 50%;
     object-fit: cover;
   }
   
-  .author-info {
+  .authorInfo {
     flex: 1;
   }
   
-  .author-name {
+  .authorName {
     margin: 0 0 0.5rem;
     font-size: 1.2rem;
     color: #1a1a1a;
   }
   
-  .author-bio {
+  .authorBio {
     margin: 0;
     color: #666;
     font-size: 0.9rem;
@@ -240,18 +240,18 @@
   }
   
   /* Share section */
-  .share-section {
+  .shareSection {
     margin: 3rem 0;
   }
   
-  .share-title {
+  .shareTitle {
     font-size: 1.2rem;
     color: #1a1a1a;
     margin-bottom: 1rem;
     text-align: center;
   }
   
-  .share-buttons {
+  .shareButtons {
     display: flex;
     justify-content: center;
     gap: 1rem;
@@ -259,23 +259,23 @@
   }
   
   /* Related posts */
-  .related-posts {
+  .relatedPosts {
     margin-top: 4rem;
   }
   
-  .related-posts-title {
+  .relatedPostsTitle {
     font-size: 1.5rem;
     color: #1a1a1a;
     margin-bottom: 1.5rem;
   }
   
-  .related-posts-grid {
+  .relatedPostsGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
   }
   
-  .related-post-card {
+  .relatedPostCard {
     display: flex;
     flex-direction: column;
     text-decoration: none;
@@ -285,12 +285,12 @@
     transition: transform 0.3s ease;
   }
   
-  .related-post-card:hover {
+  .relatedPostCard:hover {
     transform: translateY(-5px);
   }
   
   /* Utility classes */
-  .loading-spinner {
+  .loadingSpinner {
     border: 3px solid #f3f3f3;
     border-top: 3px solid #1a1a1a;
     border-radius: 50%;
@@ -305,7 +305,7 @@
     100% { transform: rotate(360deg); }
   }
   
-  .error-message {
+  .errorMessage {
     background: #fff0f0;
     color: #d63031;
     padding: 1rem;
@@ -327,7 +327,7 @@
   }
   
   /* Table of contents */
-  .table-of-contents {
+  .tableOfContents {
     position: sticky;
     top: 2rem;
     margin-bottom: 2rem;
@@ -337,32 +337,32 @@
   }
   
   @media (max-width: 1200px) {
-    .table-of-contents {
+    .tableOfContents {
       display: none;
     }
   }
   
-  .table-of-contents ul {
+  .tableOfContents ul {
     list-style: none;
     padding: 0;
     margin: 0;
   }
   
-  .table-of-contents li {
+  .tableOfContents li {
     margin-bottom: 0.5rem;
   }
   
-  .table-of-contents a {
+  .tableOfContents a {
     color: #666;
     text-decoration: none;
     transition: color 0.3s ease;
   }
   
-  .table-of-contents a:hover {
+  .tableOfContents a:hover {
     color: #1a1a1a;
   }
   
-  .table-of-contents a.active {
+  .tableOfContents a.active {
     color: #1a1a1a;
     font-weight: 600;
   }

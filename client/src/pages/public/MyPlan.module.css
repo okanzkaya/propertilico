@@ -1,4 +1,4 @@
-.styled-paper {
+.styledPaper {
     padding: 32px;
     border-radius: 24px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -6,12 +6,12 @@
     transition: all 0.3s ease-in-out;
   }
   
-  .styled-paper:hover {
+  .styledPaper:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
   }
   
-  .gradient-box {
+  .gradientBox {
     position: relative;
     overflow: hidden;
     border-radius: 36px;
@@ -21,7 +21,7 @@
     color: white;
   }
   
-  .gradient-box::before {
+  .gradientBox::before {
     content: "";
     position: absolute;
     top: -50%;
@@ -32,7 +32,7 @@
     transform: rotate(30deg);
   }
   
-  .subscription-actions {
+  .subscriptionActions {
     background-color: #ffffff;
     padding: 24px;
     border-radius: 24px;
@@ -40,7 +40,7 @@
     margin-bottom: 32px;
   }
   
-  .action-button {
+  .actionButton {
     border-radius: 36px;
     padding: 12px 24px;
     font-weight: 600;
@@ -48,12 +48,12 @@
     transition: all 0.3s ease-in-out;
   }
   
-  .action-button:hover:not(:disabled) {
+  .actionButton:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
   }
   
-  .feature-card {
+  .featureCard {
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -62,12 +62,12 @@
     overflow: hidden;
   }
   
-  .feature-card:hover {
+  .featureCard:hover {
     transform: scale(1.03);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   }
   
-  .feature-content {
+  .featureContent {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -75,34 +75,34 @@
     text-align: center;
   }
   
-  .feature-icon {
+  .featureIcon {
     margin-bottom: 16px;
     width: 60px;
     height: 60px;
   }
   
-  .progress-bar {
+  .progressBar {
     height: 12px;
     border-radius: 6px;
   }
   
-  .progress-bar.active {
+  .progressBar.active {
     background-color: rgba(255, 255, 255, 0.3);
   }
   
-  .progress-bar.active .MuiLinearProgress-bar {
+  .progressBar.active .MuiLinearProgressBar {
     background-color: #4caf50;
   }
   
-  .progress-bar.expiring .MuiLinearProgress-bar {
+  .progressBar.expiring .MuiLinearProgressBar {
     background-color: #ff9800;
   }
   
-  .progress-bar.expired .MuiLinearProgress-bar {
+  .progressBar.expired .MuiLinearProgressBar {
     background-color: #f44336;
   }
   
-  .view-pricing-button {
+  .viewPricingButton {
     margin-top: 16px;
     max-width: 300px;
     margin-left: auto;
@@ -116,7 +116,7 @@
   }
   
   .dialog {
-    & .MuiPaper-root {
+    & .MuiPaperRoot {
       border-radius: 16px;
       padding: 16px;
     }
@@ -124,30 +124,30 @@
   
   /* Responsive styles */
   @media (max-width: 600px) {
-    .styled-paper {
+    .styledPaper {
       padding: 16px;
     }
   
-    .gradient-box {
+    .gradientBox {
       padding: 24px;
     }
   
-    .subscription-actions {
+    .subscriptionActions {
       padding: 16px;
     }
   
-    .action-button {
+    .actionButton {
       padding: 8px 16px;
     }
   }
   
   /* Theme overrides for Material-UI components */
-  .MuiButton-root {
+  .MuiButtonRoot {
     text-transform: none;
     padding: 10px 20px;
     transition: all 0.3s ease-in-out;
   }
   
-  .MuiPaper-root {
+  .MuiPaperRoot {
     transition: box-shadow 0.3s ease-in-out;
   }

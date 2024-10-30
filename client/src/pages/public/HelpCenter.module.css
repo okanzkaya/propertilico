@@ -1,36 +1,36 @@
-.help-container {
+.helpContainer {
     padding: 2.5rem;
     max-width: 50rem;
     margin: 0 auto;
     text-align: center;
   }
   
-  .help-title {
+  .helpTitle {
     margin-bottom: 1.25rem;
     color: var(--primary-color, #007BFF);
     font-size: 2.25rem;
     font-weight: 600;
   }
   
-  .help-text {
+  .helpText {
     font-size: 1.2rem;
     color: var(--text-secondary, #666);
     margin-bottom: 1.875rem;
     line-height: 1.6;
   }
   
-  .contact-methods {
+  .contactMethods {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
     align-items: center;
   }
   
-  .contact-method {
+  .contactMethod {
     margin-bottom: 1.25rem;
   }
   
-  .contact-link {
+  .contactLink {
     color: var(--primary-color, #007BFF);
     text-decoration: none;
     font-size: 1.1rem;
@@ -40,7 +40,7 @@
     display: inline-block;
   }
   
-  .contact-link:hover {
+  .contactLink:hover {
     color: var(--primary-hover, #0056b3);
     transform: translateY(-2px);
     text-decoration: underline;
@@ -48,19 +48,19 @@
   
   /* Responsive Design */
   @media (max-width: 48rem) {
-    .help-container {
+    .helpContainer {
       padding: 1.25rem;
     }
   
-    .help-title {
+    .helpTitle {
       font-size: 1.75rem;
     }
   
-    .help-text {
+    .helpText {
       font-size: 1rem;
     }
   
-    .contact-link {
+    .contactLink {
       font-size: 1rem;
     }
   }

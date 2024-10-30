@@ -1,5 +1,5 @@
 /* BlogEditor.css */
-.editor-container {
+.editorContainer {
   max-width: 800px;
   margin: 2rem auto;
   padding: 2rem;
@@ -8,7 +8,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.blog-form {
+.blogForm {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -80,8 +80,8 @@
   transform: none;
 }
 
-.error-message,
-.success-message {
+.errorMessage,
+.successMessage {
   padding: 1rem;
   margin-top: 1rem;
   border-radius: 4px;
@@ -89,19 +89,19 @@
   animation: fadeIn 0.3s ease;
 }
 
-.error-message {
+.errorMessage {
   color: #dc3545;
   background: #ffe6e6;
   border: 1px solid rgba(220, 53, 69, 0.2);
 }
 
-.success-message {
+.successMessage {
   color: #28a745;
   background: #e6ffe6;
   border: 1px solid rgba(40, 167, 69, 0.2);
 }
 
-.image-preview {
+.imagePreview {
   position: relative;
   margin-top: 1rem;
   border-radius: 8px;
@@ -109,14 +109,14 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.preview-image {
+.previewImage {
   width: 100%;
   max-height: 300px;
   object-fit: cover;
   display: block;
 }
 
-.remove-image-button {
+.removeImageButton {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -133,16 +133,16 @@
   transition: all 0.3s ease;
 }
 
-.remove-image-button:hover {
+.removeImageButton:hover {
   background: rgba(0, 0, 0, 0.9);
   transform: scale(1.1);
 }
 
-.remove-image-button:active {
+.removeImageButton:active {
   transform: scale(1);
 }
 
-.image-upload-button {
+.imageUploadButton {
   display: inline-flex;
   align-items: center;
   padding: 0.8rem 1.5rem;
@@ -155,26 +155,26 @@
   color: #495057;
 }
 
-.image-upload-button:hover {
+.imageUploadButton:hover {
   background: #e9ecef;
   border-color: #007bff;
   color: #007bff;
 }
 
-.image-upload-button svg {
+.imageUploadButton svg {
   margin-right: 0.5rem;
   transition: transform 0.3s ease;
 }
 
-.image-upload-button:hover svg {
+.imageUploadButton:hover svg {
   transform: scale(1.1);
 }
 
-.image-upload-button input {
+.imageUploadButton input {
   display: none;
 }
 
-.info-text {
+.infoText {
   color: #6c757d;
   font-size: 0.9rem;
   margin-top: 0.5rem;
@@ -183,38 +183,38 @@
   gap: 0.5rem;
 }
 
-.info-text svg {
+.infoText svg {
   color: #007bff;
   flex-shrink: 0;
 }
 
-.character-count {
+.characterCount {
   font-size: 0.8rem;
   margin-top: 0.25rem;
   display: block;
   transition: color 0.3s ease;
 }
 
-.character-count.valid {
+.characterCount.valid {
   color: #28a745;
 }
 
-.character-count.invalid {
+.characterCount.invalid {
   color: #dc3545;
 }
 
-.form-section {
+.formSection {
   margin-bottom: 1.5rem;
 }
 
-.form-label {
+.formLabel {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: #212529;
 }
 
-.error-details {
+.errorDetails {
   list-style: none;
   padding: 0;
   margin: 0.5rem 0 0;
@@ -222,7 +222,7 @@
   font-size: 0.9rem;
 }
 
-.error-details li {
+.errorDetails li {
   margin-top: 0.25rem;
 }
 
@@ -242,7 +242,7 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .editor-container {
+  .editorContainer {
     margin: 1rem;
     padding: 1rem;
   }
@@ -251,12 +251,12 @@
     width: 100%;
   }
 
-  .image-upload-button {
+  .imageUploadButton {
     width: 100%;
     justify-content: center;
   }
 
-  .preview-image {
+  .previewImage {
     max-height: 200px;
   }
 }
@@ -264,8 +264,8 @@
 /* Accessibility - Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .button,
-  .image-upload-button,
-  .remove-image-button,
+  .imageUploadButton,
+  .removeImageButton,
   .input,
   .textarea {
     transition: none;
@@ -283,19 +283,19 @@
 
 /* Print Styles */
 @media print {
-  .editor-container {
+  .editorContainer {
     margin: 0;
     padding: 0;
     box-shadow: none;
   }
 
-  .image-upload-button,
-  .remove-image-button,
+  .imageUploadButton,
+  .removeImageButton,
   .button {
     display: none;
   }
 
-  .preview-image {
+  .previewImage {
     max-height: none;
     width: 100%;
   }

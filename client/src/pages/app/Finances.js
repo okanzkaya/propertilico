@@ -375,9 +375,9 @@ const StatsCard = React.memo(({ title, value, trend, trendValue, icon: Icon, col
           <Fade in timeout={800}>
             <Box className={`stats-card-trend ${trend}`}>
               {trend === 'up' ? (
-                <KeyboardArrowUpIcon className="trend-icon" />
+                <KeyboardArrowUpIcon className={styles.trendIcon} />
               ) : (
-                <KeyboardArrowDownIcon className="trend-icon" />
+                <KeyboardArrowDownIcon className={styles.trendIcon} />
               )}
               <Typography variant="body2">
                 {trendValue}% vs last month
@@ -489,14 +489,14 @@ const TransactionRow = React.memo(({
             anchorEl={menuAnchor}
             open={Boolean(menuAnchor)}
             onClose={handleMenuClose}
-            className="action-menu"
+            className={styles.actionMenu}
           >
             <MenuItem onClick={handleEdit}>
-              <EditIcon fontSize="small" className="menu-icon" />
+              <EditIcon fontSize="small" className={styles.menuIcon} />
               <Typography variant="body2">Edit</Typography>
             </MenuItem>
-            <MenuItem onClick={handleDelete} className="delete-menu-item">
-              <DeleteIcon fontSize="small" className="menu-icon" />
+            <MenuItem onClick={handleDelete} className={styles.deleteMenuItem}>
+              <DeleteIcon fontSize="small" className={styles.menuIcon} />
               <Typography variant="body2">Delete</Typography>
             </MenuItem>
           </Menu>
@@ -555,7 +555,7 @@ const TransactionsTable = React.memo(({
     <Card className={styles.transactionsCard}>
       <CardHeader
         title={
-          <Box className="table-header">
+          <Box className={styles.tableHeader}>
             <Typography variant="h6">Transactions</Typography>
             {!compact && (
               <Typography variant="body2" color="textSecondary">
@@ -598,7 +598,7 @@ const TransactionsTable = React.memo(({
           </Box>
         }
       />
-      <Box className="table-container">
+      <Box className={styles.tableContainer}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
@@ -625,14 +625,14 @@ const TransactionsTable = React.memo(({
         </Table>
       </Box>
       {!compact && (
-        <Box className="table-pagination">
+        <Box className={styles.tablePagination}>
           <Grid container justifyContent="flex-end">
             <Grid item>
               <Select
                 value={rowsPerPage}
                 onChange={onRowsPerPageChange}
                 size="small"
-                className="rows-per-page"
+                className={styles.rowsPerPage}
               >
                 {ROWS_PER_PAGE_OPTIONS.map((option) => (
                   <MenuItem key={option} value={option}>
@@ -649,7 +649,7 @@ const TransactionsTable = React.memo(({
         anchorEl={filterAnchor}
         open={Boolean(filterAnchor)}
         onClose={handleFilterClose}
-        className="filter-menu"
+        className={styles.filterMenu}
       >
         <MenuItem
           selected={filterConfig === 'all'}
@@ -675,10 +675,10 @@ const TransactionsTable = React.memo(({
         anchorEl={sortAnchor}
         open={Boolean(sortAnchor)}
         onClose={handleSortClose}
-        className="sort-menu"
+        className={styles.sortMenu}
       >
         <MenuItem onClick={() => handleSortChange({ key: 'date', direction: sortConfig.key === 'date' ? (sortConfig.direction === 'asc' ? 'desc' : 'asc') : 'desc' })}>
-          <Box className="sort-menu-item">
+          <Box className={styles.sortMenuItem}>
             <Typography>Sort by Date</Typography>
             {sortConfig.key === 'date' && (
               <CompareArrowsIcon className={`sort-icon ${sortConfig.direction}`} />
@@ -686,7 +686,7 @@ const TransactionsTable = React.memo(({
           </Box>
         </MenuItem>
         <MenuItem onClick={() => handleSortChange({ key: 'amount', direction: sortConfig.key === 'amount' ? (sortConfig.direction === 'asc' ? 'desc' : 'asc') : 'desc' })}>
-          <Box className="sort-menu-item">
+          <Box className={styles.sortMenuItem}>
             <Typography>Sort by Amount</Typography>
             {sortConfig.key === 'amount' && (
               <CompareArrowsIcon className={`sort-icon ${sortConfig.direction}`} />
@@ -742,7 +742,7 @@ const TransactionModal = React.memo(({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      className="transaction-modal"
+      className={styles.transactionModal}
     >
       <form onSubmit={handleSubmit}>
         <DialogTitle className={styles.modalTitle}>
@@ -1192,7 +1192,7 @@ const Finances = () => {
         </Tabs>
       </Paper>
 
-      <Box className="content-container">
+      <Box className={styles.contentContainer}>
         <Fade in timeout={500}>
           <Box>
             {renderContent()}

@@ -1,11 +1,11 @@
-.page-wrapper {
+.pageWrapper {
     padding: 24px;
     background-color: var(--background-default);
     min-height: 100vh;
   }
   
   /* Card Styles */
-  .ticket-card {
+  .ticketCard {
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -16,30 +16,30 @@
     background: linear-gradient(45deg, rgba(25, 118, 210, 0.05), rgba(156, 39, 176, 0.05));
   }
   
-  .ticket-card:hover {
+  .ticketCard:hover {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     transform: translateY(-5px);
   }
   
-  .card-header {
+  .cardHeader {
     padding: 16px;
     background: linear-gradient(45deg, #1976d2 30%, #9c27b0 90%);
     color: white;
   }
   
-  .card-title {
+  .cardTitle {
     font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   
-  .card-content {
+  .cardContent {
     padding: 16px;
     flex-grow: 1;
   }
   
-  .card-description {
+  .cardDescription {
     margin-bottom: 16px;
     height: 3em;
     overflow: hidden;
@@ -49,7 +49,7 @@
     -webkit-box-orient: vertical;
   }
   
-  .card-footer {
+  .cardFooter {
     padding: 16px;
     border-top: 1px solid rgba(0, 0, 0, 0.12);
     display: flex;
@@ -58,116 +58,116 @@
   }
   
   /* Status Chips */
-  .status-chip {
+  .statusChip {
     font-weight: bold;
     border-radius: 16px;
   }
   
-  .status-chip-error {
+  .statusChipError {
     box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
   }
   
-  .status-chip-warning {
+  .statusChipWarning {
     box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
   }
   
-  .status-chip-success {
+  .statusChipSuccess {
     box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
   }
   
-  .status-chip-default {
+  .statusChipDefault {
     box-shadow: 0 0 8px rgba(158, 158, 158, 0.5);
   }
   
   /* Avatar and Icons */
-  .assignee-avatar {
+  .assigneeAvatar {
     width: 24px;
     height: 24px;
     margin-right: 8px;
     background-color: var(--primary-main);
   }
   
-  .due-date-icon {
+  .dueDateIcon {
     margin-right: 4px;
   }
   
-  .warning-icon {
+  .warningIcon {
     margin-left: 4px;
   }
   
-  .expired-date {
+  .expiredDate {
     color: var(--error-main);
   }
   
   /* Search and Filters */
-  .search-bar {
+  .searchBar {
     border-radius: 20px;
   }
   
-  .search-bar .MuiOutlinedInput-root {
+  .searchBar .MuiOutlinedInputRoot {
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.15);
   }
   
-  .search-bar .MuiOutlinedInput-root:hover {
+  .searchBar .MuiOutlinedInputRoot:hover {
     background-color: rgba(255, 255, 255, 0.25);
   }
   
-  .search-bar .MuiOutlinedInput-root fieldset {
+  .searchBar .MuiOutlinedInputRoot fieldset {
     border-color: transparent;
   }
   
-  .search-bar .MuiOutlinedInput-root:hover fieldset {
+  .searchBar .MuiOutlinedInputRoot:hover fieldset {
     border-color: transparent;
   }
   
-  .search-bar .MuiOutlinedInput-root.Mui-focused fieldset {
+  .searchBar .MuiOutlinedInputRoot.MuiFocused fieldset {
     border-color: var(--primary-main);
   }
   
   /* Tabs */
-  .custom-tabs {
+  .customTabs {
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: 16px;
     margin-bottom: 32px;
   }
   
-  .custom-tab {
+  .customTab {
     min-width: auto;
     padding: 8px 16px;
     font-weight: 500;
   }
   
-  .custom-tab.Mui-selected {
+  .customTab.MuiSelected {
     background-color: rgba(25, 118, 210, 0.1);
     border-radius: 8px;
   }
   
   /* Dialog Styles */
-  .dialog-view {
+  .dialogView {
     padding: 24px;
   }
   
-  .dialog-form {
+  .dialogForm {
     padding: 16px;
   }
   
-  .dialog-delete {
+  .dialogDelete {
     padding: 24px;
     text-align: center;
   }
   
-  .note-input {
+  .noteInput {
     margin-top: 16px;
   }
   
-  .dialog-title {
+  .dialogTitle {
     background: linear-gradient(45deg, var(--primary-main) 30%, var(--secondary-main) 90%);
     color: white;
     font-weight: bold;
   }
   
-  .dialog-close-button {
+  .dialogCloseButton {
     position: absolute;
     right: 8px;
     top: 8px;
@@ -175,28 +175,28 @@
   }
   
   /* List Styles */
-  .notes-list {
+  .notesList {
     margin-top: 16px;
   }
   
-  .note-item {
+  .noteItem {
     background-color: rgba(255, 255, 255, 0.5);
     margin-bottom: 8px;
     border-radius: 8px;
     padding: 12px;
   }
   
-  .note-timestamp {
+  .noteTimestamp {
     font-size: 0.875rem;
     color: rgba(0, 0, 0, 0.6);
   }
   
-  .note-content {
+  .noteContent {
     margin-top: 4px;
   }
   
   /* Loading State */
-  .loading-container {
+  .loadingContainer {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -204,53 +204,53 @@
   }
   
   /* Empty State */
-  .empty-state {
+  .emptyState {
     padding: 32px;
     text-align: center;
     border-radius: 16px;
   }
   
   /* Snackbar */
-  .custom-snackbar {
+  .customSnackbar {
     border-radius: 20px;
   }
   
   /* Buttons */
-  .action-button {
+  .actionButton {
     border-radius: 20px;
     text-transform: none;
   }
   
-  .add-button {
+  .addButton {
     border-radius: 20px;
     margin-right: 8px;
   }
   
   /* Responsive Styles */
   @media (max-width: 600px) {
-    .page-wrapper {
+    .pageWrapper {
       padding: 16px;
     }
     
-    .header-actions {
+    .headerActions {
       flex-direction: column;
       align-items: stretch;
     }
     
-    .search-filters {
+    .searchFilters {
       flex-direction: column;
       gap: 16px;
     }
     
-    .filter-group {
+    .filterGroup {
       width: 100%;
     }
     
-    .custom-tabs {
+    .customTabs {
       margin-bottom: 24px;
     }
     
-    .ticket-card {
+    .ticketCard {
       margin-bottom: 16px;
     }
   }
@@ -267,54 +267,54 @@
     }
   }
   
-  .fade-enter {
+  .fadeEnter {
     animation: fadeIn 0.3s ease-out;
   }
   
   /* Custom Scrollbar */
-  .custom-scrollbar::-webkit-scrollbar {
+  .customScrollbar::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   
-  .custom-scrollbar::-webkit-scrollbar-track {
+  .customScrollbar::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
   
-  .custom-scrollbar::-webkit-scrollbar-thumb {
+  .customScrollbar::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
   }
   
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  .customScrollbar::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
   
   /* Utility Classes */
-  .flex-center {
+  .flexCenter {
     display: flex;
     justify-content: center;
     align-items: center;
   }
   
-  .space-between {
+  .spaceBetween {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
   
-  .text-ellipsis {
+  .textEllipsis {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   
-  .full-width {
+  .fullWidth {
     width: 100%;
   }
   
-  .margin-bottom {
+  .marginBottom {
     margin-bottom: 16px;
   }
   

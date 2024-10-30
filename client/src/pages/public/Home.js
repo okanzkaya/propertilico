@@ -18,11 +18,7 @@ import {
   FaUser,
   FaChartLine,
   FaUsers,
-  FaFileInvoiceDollar,
-  FaRegBuilding,
-  FaSmile,
-  FaPiggyBank,
-  FaClock
+  FaFileInvoiceDollar
 } from 'react-icons/fa';
 
 const features = [
@@ -120,11 +116,6 @@ const Home = () => {
   const [openFAQ, setOpenFAQ] = useState(null);
   const navigate = useNavigate();
   
-  const { ref: trustRef, inView } = useInView({
-    triggerOnce: true,
-    threshold: 0.2
-  });
-
   const nextTestimonial = useCallback(() => {
     setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
   }, []);
@@ -138,9 +129,9 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [nextTestimonial]);
 
-  const toggleFAQ = (index) => {
+  const toggleFAQ = useCallback((index) => {
     setOpenFAQ(openFAQ === index ? null : index);
-  };
+  }, [openFAQ]);
 
   const structuredData = {
     "@context": "http://schema.org",
@@ -161,12 +152,7 @@ const Home = () => {
       "bestRating": "5",
       "worstRating": "1"
     },
-    "featureList": [
-      "Smart Property Management",
-      "Advanced Analytics",
-      "Bank-Level Security",
-      "24/7 Tenant Support"
-    ]
+    "featureList": features.map(f => f.title)
   };
 
   return (
@@ -269,7 +255,7 @@ const Home = () => {
 
         <section className={styles.featuresSection} aria-labelledby="features-title">
           <div className={styles.container}>
-            <h2 id="features-title" className="section-title text-center">Powerful Features</h2>
+            <h2 id="features-title" className={styles.sectionTitle}>Powerful Features</h2>
             <div className={styles.featureGridNew}>
               {features.map((feature, index) => (
                 <motion.div 
@@ -294,7 +280,7 @@ const Home = () => {
 
         <section className={styles.testimonialSection} aria-labelledby="testimonials-title">
           <div className={styles.container}>
-            <h2 id="testimonials-title" className="section-title text-center">What Our Clients Say</h2>
+            <h2 id="testimonials-title" className={styles.sectionTitle}>What Our Clients Say</h2>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTestimonial}
@@ -308,7 +294,7 @@ const Home = () => {
                   <div className={styles.testimonialIcon}>
                     <FaUser aria-hidden="true" />
                   </div>
-                  <div className="testimonial-text">
+                  <div className={styles.testimonialText}>
                     <h3>{testimonials[activeTestimonial].name}</h3>
                     <p className={styles.testimonialTitle}>
                       {testimonials[activeTestimonial].title} at {testimonials[activeTestimonial].company}
@@ -320,7 +306,7 @@ const Home = () => {
                     </div>
                     <blockquote>
                       <p>{testimonials[activeTestimonial].text}</p>
-                      <footer className="testimonial-location">
+                      <footer className={styles.testimonialLocation}>
                         <cite>{testimonials[activeTestimonial].location}</cite>
                       </footer>
                     </blockquote>
@@ -330,7 +316,7 @@ const Home = () => {
             </AnimatePresence>
             <div className={styles.testimonialNavigation}>
               <button 
-                className="nav-button prev"
+                className={styles.navButton}
                 onClick={prevTestimonial}
                 disabled={activeTestimonial === 0}
                 aria-label="Previous testimonial"
@@ -338,7 +324,7 @@ const Home = () => {
                 <FaArrowLeft aria-hidden="true" />
               </button>
               <button 
-                className="nav-button next"
+                className={styles.navButton}
                 onClick={nextTestimonial}
                 disabled={activeTestimonial === testimonials.length - 1}
                 aria-label="Next testimonial"
@@ -351,7 +337,7 @@ const Home = () => {
 
         <section className={styles.faqSection} aria-labelledby="faq-title">
           <div className={styles.container}>
-            <h2 id="faq-title" className="section-title text-center">Frequently Asked Questions</h2>
+            <h2 id="faq-title" className={styles.sectionTitle}>Frequently Asked Questions</h2>
             <div className={styles.faqGrid}>
               {faqs.map((faq, index) => (
                 <div 
@@ -364,11 +350,11 @@ const Home = () => {
                     aria-expanded={openFAQ === index}
                     aria-controls={`faq-answer-${index}`}
                   >
-                    <span className="question-text">{faq.question}</span>
+                    <span className={styles.questionText}>{faq.question}</span>
                     {openFAQ === index ? (
-                      <FaChevronUp aria-hidden="true" className="faq-icon" />
+                      <FaChevronUp aria-hidden="true" className={styles.faqIcon} />
                     ) : (
-                      <FaChevronDown aria-hidden="true" className="faq-icon" />
+                      <FaChevronDown aria-hidden="true" className={styles.faqIcon} />
                     )}
                   </button>
                   <AnimatePresence>
@@ -376,12 +362,27 @@ const Home = () => {
                       <motion.div
                         id={`faq-answer-${index}`}
                         className={styles.faqAnswer}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ 
+                          height: 'auto', 
+                          opacity: 1,
+                          transition: {
+                            height: { duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] },
+                            opacity: { duration: 0.3, delay: 0.1 }
+                          }
+                        }}
+                        exit={{ 
+                          height: 0, 
+                          opacity: 0,
+                          transition: {
+                            height: { duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] },
+                            opacity: { duration: 0.2 }
+                          }
+                        }}
                       >
-                        <p>{faq.answer}</p>
+                        <div className={styles.faqAnswerContent}>
+                          <p>{faq.answer}</p>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -418,62 +419,12 @@ const Home = () => {
             </motion.div>
           </div>
         </section>
-
-        <section className={styles.trustSection} aria-labelledby="trust-title" ref={trustRef}>
-          <div className={styles.container}>
-            <h2 id="trust-title" className="section-title text-center">Trusted by Industry Leaders</h2>
-            <div className={styles.trustMetrics}>
-              <div className={styles.metricItem}>
-                <FaRegBuilding className={styles.metricIcon} />
-                {inView && (
-                  <CountUp
-                    start={0}
-                    end={10}
-                    duration={2.5}
-                    separator=""
-                    suffix="k+"
-                    className={styles.metricNumber}
-                  />
-                )}
-                <span className={styles.metricLabel}>Properties Managed</span>
-              </div>
-              <div className={styles.metricItem}>
-                <FaSmile className={styles.metricIcon} />
-                {inView && (
-                  <CountUp
-                    start={0}
-                    end={98}
-                    duration={2.5}
-                    suffix="%"
-                    className={styles.metricNumber}
-                  />
-                )}
-                <span className={styles.metricLabel}>Customer Satisfaction</span>
-              </div>
-              <div className={styles.metricItem}>
-                <FaPiggyBank className={styles.metricIcon} />
-                {inView && (
-                  <CountUp
-                    start={0}
-                    end={30}
-                    duration={2.5}
-                    suffix="%"
-                    className={styles.metricNumber}
-                  />
-                )}
-                <span className={styles.metricLabel}>Average Cost Reduction</span>
-              </div>
-              <div className={styles.metricItem}>
-                <FaClock className={styles.metricIcon} />
-                <span className={styles.metricNumber}>24/7</span>
-                <span className={styles.metricLabel}>Customer Support</span>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
     </>
   );
 };
 
-export default Home;
+// Performance optimization
+const MemoizedHome = React.memo(Home);
+
+export default MemoizedHome;

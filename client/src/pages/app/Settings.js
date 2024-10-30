@@ -116,7 +116,7 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
           />
         </div>
       </div>
-      <Grid container spacing={2} className="form-grid">
+      <Grid container spacing={2} className={styles.formGrid}>
         <Grid item xs={12} sm={6}>
           <TextField
             label="Username"
@@ -197,13 +197,13 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
           </FormControl>
         </Grid>
       </Grid>
-      <Box className="save-button-container">
+      <Box className={styles.saveButtonContainer}>
         <Button
           variant="contained"
           color="primary"
           onClick={handleSave}
           startIcon={<SaveIcon />}
-          className="save-button"
+          className={styles.saveButton}
         >
           Save Preferences
         </Button>
@@ -213,7 +213,7 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
 };
 
 const NotificationSettings = ({ settings, handleChange }) => (
-  <div className="notifications-container">
+  <div className={styles.notificationsContainer}>
     <SectionTitle
       icon={<NotificationsIcon />}
       title="Notification Settings"
@@ -225,11 +225,11 @@ const NotificationSettings = ({ settings, handleChange }) => (
           checked={settings.emailNotifications}
           onChange={handleChange}
           name="emailNotifications"
-          className="settings-switch"
+          className={styles.settingsSwitch}
         />
       }
       label="Email Notifications"
-      className="switch-label"
+      className={styles.switchLabel}
     />
     <FormControlLabel
       control={
@@ -237,11 +237,11 @@ const NotificationSettings = ({ settings, handleChange }) => (
           checked={settings.pushNotifications}
           onChange={handleChange}
           name="pushNotifications"
-          className="settings-switch"
+          className={styles.settingsSwitch}
         />
       }
       label="Push Notifications"
-      className="switch-label"
+      className={styles.switchLabel}
     />
     <FormControlLabel
       control={
@@ -249,17 +249,17 @@ const NotificationSettings = ({ settings, handleChange }) => (
           checked={settings.inAppNotifications}
           onChange={handleChange}
           name="inAppNotifications"
-          className="settings-switch"
+          className={styles.settingsSwitch}
         />
       }
       label="In-App Notifications"
-      className="switch-label"
+      className={styles.switchLabel}
     />
   </div>
 );
 
 const AppearanceSettings = ({ settings, handleChange }) => (
-  <div className="appearance-container">
+  <div className={styles.appearanceContainer}>
     <SectionTitle
       icon={<PaletteIcon />}
       title="Appearance"
@@ -292,7 +292,7 @@ const AppearanceSettings = ({ settings, handleChange }) => (
 );
 
 const SecuritySettings = ({ settings, handleChange, handleChangePassword, handleEmailChangeRequest, userEmail }) => (
-  <div className="security-container">
+  <div className={styles.securityContainer}>
     <SectionTitle
       icon={<SecurityIcon />}
       title="Security Settings"
@@ -304,11 +304,11 @@ const SecuritySettings = ({ settings, handleChange, handleChangePassword, handle
           checked={settings.twoFactorAuth}
           onChange={handleChange}
           name="twoFactorAuth"
-          className="settings-switch"
+          className={styles.settingsSwitch}
         />
       }
       label="Two-Factor Authentication"
-      className="switch-label"
+      className={styles.switchLabel}
     />
     <FormControlLabel
       control={
@@ -316,31 +316,31 @@ const SecuritySettings = ({ settings, handleChange, handleChangePassword, handle
           checked={settings.loginAlerts}
           onChange={handleChange}
           name="loginAlerts"
-          className="settings-switch"
+          className={styles.settingsSwitch}
         />
       }
       label="Login Alerts"
-      className="switch-label"
+      className={styles.switchLabel}
     />
-    <Box className="email-section">
+    <Box className={styles.emailSection}>
       <SectionTitle
         icon={<EmailIcon />}
         title="Email Address"
         tooltipText="Change your email address"
       />
-      <Box className="email-change-container">
-        <Typography variant="body1" className="current-email">{userEmail}</Typography>
+      <Box className={styles.emailChangeContainer}>
+        <Typography variant="body1" className={styles.currentEmail}>{userEmail}</Typography>
         <Button
           variant="outlined"
           color="primary"
           onClick={handleEmailChangeRequest}
-          className="change-email-button"
+          className={styles.changeEmailButton}
         >
           Change Email
         </Button>
       </Box>
     </Box>
-    <Box className="password-section">
+    <Box className={styles.passwordSection}>
       <SectionTitle
         icon={<LockIcon />}
         title="Change Password"
@@ -351,7 +351,7 @@ const SecuritySettings = ({ settings, handleChange, handleChangePassword, handle
         color="primary"
         onClick={handleChangePassword}
         startIcon={<LockIcon />}
-        className="change-password-button"
+        className={styles.changePasswordButton}
       >
         Change Password
       </Button>
@@ -646,11 +646,11 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
       <Dialog 
         open={dialogState.email.open} 
         onClose={() => setDialogState(prev => ({ ...prev, email: { ...prev.email, open: false } }))}
-        className="dialog-container"
+        className={styles.dialogContainer}
       >
         <DialogTitle>Change Email Address</DialogTitle>
         <DialogContent className={styles.dialogContent}>
-          <Typography variant="body2" color="text.secondary" className="dialog-description">
+          <Typography variant="body2" color="text.secondary" className={styles.dialogDescription}>
             You can only change your email address once every 24 hours. Are you sure you want to proceed?
           </Typography>
           <TextField
@@ -661,7 +661,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.email.newEmail}
             onChange={(e) => setDialogState(prev => ({ ...prev, email: { ...prev.email, newEmail: e.target.value } }))}
-            className="dialog-field"
+            className={styles.dialogField}
           />
           <TextField
             margin="dense"
@@ -670,7 +670,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.email.password}
             onChange={(e) => setDialogState(prev => ({ ...prev, email: { ...prev.email, password: e.target.value } }))}
-            className="dialog-field"
+            className={styles.dialogField}
           />
         </DialogContent>
         <DialogActions className={styles.dialogActions}>
@@ -686,11 +686,11 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
       <Dialog 
         open={dialogState.password.open} 
         onClose={() => setDialogState(prev => ({ ...prev, password: { ...prev.password, open: false } }))}
-        className="dialog-container"
+        className={styles.dialogContainer}
       >
         <DialogTitle>Change Password</DialogTitle>
         <DialogContent className={styles.dialogContent}>
-          <Typography variant="body2" color="text.secondary" className="dialog-description">
+          <Typography variant="body2" color="text.secondary" className={styles.dialogDescription}>
             You can only change your password once every 30 minutes. Are you sure you want to proceed?
           </Typography>
           <TextField
@@ -700,7 +700,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.password.oldPassword}
             onChange={(e) => setDialogState(prev => ({ ...prev, password: { ...prev.password, oldPassword: e.target.value } }))}
-            className="dialog-field"
+            className={styles.dialogField}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -722,7 +722,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.password.newPassword}
             onChange={(e) => setDialogState(prev => ({ ...prev, password: { ...prev.password, newPassword: e.target.value } }))}
-            className="dialog-field"
+            className={styles.dialogField}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -744,7 +744,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             fullWidth
             value={dialogState.password.confirmPassword}
             onChange={(e) => setDialogState(prev => ({ ...prev, password: { ...prev.password, confirmPassword: e.target.value } }))}
-            className="dialog-field"
+            className={styles.dialogField}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -775,12 +775,12 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        className="snackbar"
+        className={styles.snackbar}
       >
         <Alert 
           onClose={() => setSnackbar({ ...snackbar, open: false })} 
           severity={snackbar.severity}
-          className="alert"
+          className={styles.alert}
         >
           {snackbar.message}
         </Alert>

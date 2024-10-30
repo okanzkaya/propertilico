@@ -42,7 +42,7 @@ const LazyImage = ({ src, alt, className }) => {
 
   return (
     <div className={className}>
-      {!isLoaded && !error && <div className="image-placeholder" />}
+      {!isLoaded && !error && <div className={styles.imagePlaceholder} />}
       <img
         src={src}
         alt={alt}
@@ -457,7 +457,7 @@ const BlogPost = () => {
                       className={styles.headerImage}
                     />
                   )}
-                  <div className="related-post-content">
+                  <div className={styles.relatedPostContent}>
                     <h3>{relatedPost.title}</h3>
                     <time dateTime={relatedPost.createdAt}>
                       {formatDate(relatedPost.createdAt)}

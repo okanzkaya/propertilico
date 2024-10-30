@@ -221,7 +221,7 @@ const FeedbackPage = () => {
             <div className={styles.feedbackCard}>
               <div className={styles.sectionTitle}>
                 <Tooltip title="Send Feedback">
-                  <Avatar className="feedback-icon">
+                  <Avatar className={styles.feedbackIcon}>
                     <FeedbackIcon />
                   </Avatar>
                 </Tooltip>

@@ -1,4 +1,4 @@
-.signup-container {
+.signupContainer {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -7,7 +7,7 @@
     padding: 20px;
   }
   
-  .signup-box {
+  .signupBox {
     padding: 40px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -18,45 +18,45 @@
     backdrop-filter: blur(10px);
   }
   
-  .signup-form {
+  .signupForm {
     display: flex;
     flex-direction: column;
     gap: 20px;
   }
   
-  .signup-title {
+  .signupTitle {
     color: #6e8efb;
     font-weight: bold;
   }
   
-  .signup-subtitle {
+  .signupSubtitle {
     color: #666;
     margin-bottom: 20px;
   }
   
-  .signup-button {
+  .signupButton {
     background-color: #6e8efb !important;
     height: 48px;
   }
   
-  .signup-button:hover {
+  .signupButton:hover {
     background-color: #5c7cfa !important;
   }
   
-  .signup-link {
+  .signupLink {
     margin-top: 20px;
     color: #666;
   }
   
-  .signup-link a {
+  .signupLink a {
     color: #6e8efb;
     text-decoration: none;
   }
   
-  .terms-text {
+  .termsText {
     font-size: 14px;
   }
   
-  .icon-color {
+  .iconColor {
     color: #6e8efb;
   }

@@ -1,5 +1,5 @@
 /* Base Styles */
-.page-wrapper {
+.pageWrapper {
     padding: 24px;
     min-height: 100vh;
     background-color: var(--background-default);
@@ -7,88 +7,88 @@
   }
   
   /* Card Styles */
-  .report-card {
+  .reportCard {
     height: 100%;
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease-in-out;
   }
   
-  .report-card:hover {
+  .reportCard:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-4);
   }
   
   /* Chart Container */
-  .chart-container {
+  .chartContainer {
     height: 300px;
     width: 100%;
   }
   
-  .detail-chart-container {
+  .detailChartContainer {
     height: 400px;
     width: 100%;
   }
   
   /* Search and Filter Section */
-  .filters-container {
+  .filtersContainer {
     margin-bottom: 24px;
   }
   
-  .search-input {
+  .searchInput {
     width: 100%;
   }
   
   /* Tags Display */
-  .tags-container {
+  .tagsContainer {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     margin-bottom: 16px;
   }
   
-  .tag-chip {
+  .tagChip {
     margin-right: 4px;
     margin-bottom: 4px;
   }
   
   /* Dialog Styles */
-  .dialog-title {
+  .dialogTitle {
     position: relative;
     padding-right: 48px;
   }
   
-  .close-button {
+  .closeButton {
     position: absolute !important;
     right: 8px;
     top: 8px;
   }
   
   /* Table Styles */
-  .data-table {
+  .dataTable {
     margin-top: 20px;
   }
   
   /* Pagination */
-  .pagination-container {
+  .paginationContainer {
     display: flex;
     justify-content: center;
     margin-top: 24px;
   }
   
   /* Download Buttons */
-  .download-button {
+  .downloadButton {
     text-decoration: none;
   }
   
   /* Responsive Adjustments */
   @media (max-width: 600px) {
-    .page-wrapper {
+    .pageWrapper {
       padding: 16px;
     }
     
-    .chart-container,
-    .detail-chart-container {
+    .chartContainer,
+    .detailChartContainer {
       height: 250px;
     }
   }
@@ -99,6 +99,6 @@
     to { opacity: 1; }
   }
   
-  .fade-in {
+  .fadeIn {
     animation: fadeIn 0.3s ease-in;
   }

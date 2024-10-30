@@ -377,7 +377,7 @@ const Header = () => {
         <MobileMenuIcon onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
           <FaBars />
         </MobileMenuIcon>
-        <MobileMenu $isOpen={mobileMenuOpen} className="mobile-menu">
+        <MobileMenu $isOpen={mobileMenuOpen}>
           <CloseButton onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
             <FaTimes />
           </CloseButton>

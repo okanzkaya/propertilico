@@ -590,7 +590,7 @@ const Dashboard = () => {
           <Card className={styles.chartCard}>
             <Box className={styles.chartHeader}>
               <Typography variant="h6">Occupancy Rate</Typography>
-              <Typography variant="h4" className="success-text">
+              <Typography variant="h4" className={styles.successText}>
                 {occupancyRate}%
               </Typography>
             </Box>
@@ -642,7 +642,7 @@ const Dashboard = () => {
                 ))}
               </MapContainer>
             ) : (
-              <Box className="empty-state">
+              <Box className={styles.emptyState}>
                 <Typography color="textSecondary">
                   No property location data available
                 </Typography>
@@ -694,7 +694,7 @@ const Dashboard = () => {
               {renderTasks(tasks?.slice(0, 5))}
             </List>
             {tasks?.length > 5 && (
-              <Box className="view-all-button">
+              <Box className={styles.viewAllButton}>
                 <Button
                   onClick={() => setDialogsOpen(prev => ({ ...prev, allTasks: true }))}
                   startIcon={<Icons.MoreVert />}

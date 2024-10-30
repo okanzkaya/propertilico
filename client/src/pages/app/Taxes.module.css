@@ -1,24 +1,24 @@
-.taxes-container {
+.taxesContainer {
     padding: 24px;
   }
   
-  .header-actions {
+  .headerActions {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
   }
   
-  .header-buttons {
+  .headerButtons {
     display: flex;
     gap: 8px;
   }
   
-  .add-button {
+  .addButton {
     margin-right: 8px;
   }
   
-  .filters-container {
+  .filtersContainer {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -26,70 +26,70 @@
     gap: 16px;
   }
   
-  .search-field {
+  .searchField {
     width: 30%;
   }
   
-  .filter-selects {
+  .filterSelects {
     display: flex;
     gap: 8px;
   }
   
-  .filter-select {
+  .filterSelect {
     min-width: 120px;
   }
   
-  .table-container {
+  .tableContainer {
     max-height: 400px;
     overflow: auto;
   }
   
-  .action-cell {
+  .actionCell {
     white-space: nowrap;
     display: flex;
     gap: 4px;
   }
   
-  .mobile-view {
+  .mobileView {
     display: flex;
     flex-direction: column;
     gap: 16px;
   }
   
-  .mobile-card {
+  .mobileCard {
     margin-bottom: 16px;
   }
   
-  .action-buttons {
+  .actionButtons {
     display: flex;
     gap: 8px;
     margin-top: 8px;
   }
   
-  .expiration-alert {
+  .expirationAlert {
     margin-top: 8px;
   }
   
-  .chart-container {
+  .chartContainer {
     margin-top: 24px;
     text-align: center;
   }
   
-  .pie-chart {
+  .pieChart {
     height: 200px;
     margin-top: 16px;
   }
   
-  .help-button {
+  .helpButton {
     margin-top: 8px;
   }
   
-  .file-input {
+  .fileInput {
     margin-top: 16px;
     width: 100%;
   }
   
-  .json-example {
+  .jsonExample {
     background-color: #f5f5f5;
     padding: 16px;
     border-radius: 4px;
@@ -97,116 +97,116 @@
     margin-top: 8px;
   }
   
-  .tax-details {
+  .taxDetails {
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
   
-  .calculation-result {
+  .calculationResult {
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
   
-  .snackbar-alert {
+  .snackbarAlert {
     width: 100%;
   }
   
   /* Responsive styles */
   @media (max-width: 600px) {
-    .taxes-container {
+    .taxesContainer {
       padding: 16px;
     }
   
-    .header-actions {
+    .headerActions {
       flex-direction: column;
       align-items: stretch;
       gap: 16px;
     }
   
-    .header-buttons {
+    .headerButtons {
       flex-direction: column;
     }
   
-    .add-button {
+    .addButton {
       margin-right: 0;
       margin-bottom: 8px;
     }
   
-    .filters-container {
+    .filtersContainer {
       flex-direction: column;
     }
   
-    .search-field {
+    .searchField {
       width: 100%;
     }
   
-    .filter-selects {
+    .filterSelects {
       flex-direction: column;
       width: 100%;
     }
   
-    .filter-select {
+    .filterSelect {
       width: 100%;
     }
   
-    .chart-container {
+    .chartContainer {
       margin-top: 16px;
     }
   
-    .pie-chart {
+    .pieChart {
       height: 250px;
     }
   }
   
   /* Dialog styles */
-  .MuiDialog-paper {
+  .MuiDialogPaper {
     min-width: 320px;
   }
   
   /* Custom scrollbar */
-  .table-container::-webkit-scrollbar {
+  .tableContainer::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   
-  .table-container::-webkit-scrollbar-track {
+  .tableContainer::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
   
-  .table-container::-webkit-scrollbar-thumb {
+  .tableContainer::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
   }
   
-  .table-container::-webkit-scrollbar-thumb:hover {
+  .tableContainer::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
   
   /* Animation for status changes */
-  .MuiChip-root {
+  .MuiChipRoot {
     transition: all 0.3s ease;
   }
   
   /* Hover effects */
-  .action-cell .MuiIconButton-root:hover {
+  .actionCell .MuiIconButtonRoot:hover {
     background-color: rgba(0, 0, 0, 0.04);
   }
   
   /* Form field spacing */
-  .MuiFormControl-root {
+  .MuiFormControlRoot {
     margin: 8px 0;
   }
   
   /* Button styling */
-  .calculator-button {
+  .calculatorButton {
     margin-top: 16px;
   }
   
   /* Chart legend styling */
-  .chart-container .recharts-default-legend {
+  .chartContainer .rechartsDefaultLegend {
     margin-top: 16px;
     display: flex;
     flex-wrap: wrap;
@@ -215,30 +215,30 @@
   }
   
   /* Status chip colors */
-  .MuiChip-root.MuiChip-colorSuccess {
+  .MuiChipRoot.MuiChipColorSuccess {
     background-color: #e8f5e9;
     color: #2e7d32;
   }
   
-  .MuiChip-root.MuiChip-colorDefault {
+  .MuiChipRoot.MuiChipColorDefault {
     background-color: #f5f5f5;
     color: #616161;
   }
   
   /* Alert styling */
-  .expiration-alert.MuiAlert-root {
+  .expirationAlert.MuiAlertRoot {
     margin: 8px 0;
     border-radius: 4px;
   }
   
   /* Table header styling */
-  .MuiTableHead-root .MuiTableCell-root {
+  .MuiTableHeadRoot .MuiTableCellRoot {
     background-color: #f5f5f5;
     font-weight: 600;
   }
   
   /* Dialog content spacing */
-  .MuiDialogContent-root {
+  .MuiDialogContentRoot {
     padding: 16px 24px;
   }
   
@@ -252,17 +252,17 @@
   }
   
   /* Tooltip styling */
-  .MuiTooltip-tooltip {
+  .MuiTooltipTooltip {
     font-size: 12px;
   }
   
   /* Progress bar styling */
-  .MuiLinearProgress-root {
+  .MuiLinearProgressRoot {
     margin: 16px 0;
   }
   
   /* Card content padding */
-  .MuiCardContent-root {
+  .MuiCardContentRoot {
     padding: 16px;
   }
   
@@ -275,18 +275,18 @@
   }
   
   /* Select dropdown styling */
-  .MuiSelect-select {
+  .MuiSelectSelect {
     padding: 8px 32px 8px 12px;
   }
   
   /* Dialog transition */
-  .MuiDialog-paper {
+  .MuiDialogPaper {
     transition: all 0.3s ease-in-out;
   }
   
   /* Mobile card hover effect */
   @media (hover: hover) {
-    .mobile-card:hover {
+    .mobileCard:hover {
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       transform: translateY(-2px);
       transition: all 0.3s ease;

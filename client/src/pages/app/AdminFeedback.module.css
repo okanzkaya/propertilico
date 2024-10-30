@@ -1,9 +1,9 @@
 /* Base Styles */
-.feedback-dashboard {
+.feedbackDashboard {
     padding: 1.5rem;
   }
   
-  .feedback-controls {
+  .feedbackControls {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -12,109 +12,109 @@
     flex-wrap: wrap;
   }
   
-  .search-field {
+  .searchField {
     min-width: 200px;
     flex: 1;
   }
   
-  .filter-control {
+  .filterControl {
     min-width: 150px;
   }
   
   /* Table Styles */
-  .feedback-table-container {
+  .feedbackTableContainer {
     margin-bottom: 1rem;
     border-radius: 4px;
   }
   
-  .table-row {
+  .tableRow {
     transition: background-color 0.3s;
     cursor: pointer;
   }
   
-  .table-row:nth-of-type(odd) {
+  .tableRow:nth-of-type(odd) {
     background-color: var(--odd-row-bg);
   }
   
-  .table-row:hover {
+  .tableRow:hover {
     background-color: var(--hover-bg);
   }
   
-  .table-cell-header {
+  .tableCellHeader {
     font-weight: 600;
   }
   
-  .table-actions {
+  .tableActions {
     display: flex;
     gap: 0.5rem;
   }
   
   /* Dialog Styles */
-  .dialog-content {
+  .dialogContent {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
   
-  .message-paper {
+  .messagePaper {
     padding: 1rem;
   }
   
-  .dialog-chips {
+  .dialogChips {
     display: flex;
     gap: 0.5rem;
     margin-top: 0.5rem;
   }
   
   /* Media Styles */
-  .media-container img,
-  .media-container video {
+  .mediaContainer img,
+  .mediaContainer video {
     max-width: 100%;
     max-height: 300px;
     object-fit: contain;
     border-radius: 4px;
   }
   
-  .media-container audio {
+  .mediaContainer audio {
     width: 100%;
     margin-top: 0.5rem;
   }
   
   /* Custom Rating Styles */
-  .custom-rating .MuiRating-iconFilled {
+  .customRating .MuiRatingIconFilled {
     color: #ff6d75;
   }
   
-  .custom-rating .MuiRating-iconHover {
+  .customRating .MuiRatingIconHover {
     color: #ff3d47;
   }
   
   /* Responsive Adjustments */
   @media (max-width: 600px) {
-    .feedback-controls {
+    .feedbackControls {
       flex-direction: column;
     }
     
-    .search-field,
-    .filter-control {
+    .searchField,
+    .filterControl {
       width: 100%;
     }
     
-    .table-actions {
+    .tableActions {
       flex-wrap: wrap;
     }
   }
   
   /* Dark Mode Adjustments */
-  [data-theme='dark'] .feedback-dashboard {
+  [data-theme='dark'] .feedbackDashboard {
     background-color: var(--dark-bg);
     color: var(--dark-text);
   }
   
-  [data-theme='dark'] .table-row:nth-of-type(odd) {
+  [data-theme='dark'] .tableRow:nth-of-type(odd) {
     background-color: var(--dark-odd-row-bg);
   }
   
-  [data-theme='dark'] .table-row:hover {
+  [data-theme='dark'] .tableRow:hover {
     background-color: var(--dark-hover-bg);
   }

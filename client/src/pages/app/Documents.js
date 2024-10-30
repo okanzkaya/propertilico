@@ -134,9 +134,9 @@ const validateFiles = (files) => {
 
 // Error Fallback Component
 const ErrorFallback = ({ error, resetErrorBoundary }) => (
-  <div className="error-fallback">
-    <ErrorIcon className="error-icon" />
-    <Typography variant="h6" className="error-message">
+  <div className={styles.errorFallback}>
+    <ErrorIcon className={styles.errorIcon} />
+    <Typography variant="h6" className={styles.errorMessage}>
       {error.message}
     </Typography>
     <Button
@@ -217,16 +217,16 @@ useEffect(() => {
   const renderPlaceholder = () => (
     <div className={styles.previewPlaceholder}>
       {file.category === 'document' ? (
-        <DescriptionIcon className="placeholder-icon" />
+        <DescriptionIcon className={styles.placeholderIcon} />
       ) : file.category === 'video' ? (
-        <VideoFileIcon className="placeholder-icon" />
+        <VideoFileIcon className={styles.placeholderIcon} />
       ) : (
-        <FileIcon className="placeholder-icon" />
+        <FileIcon className={styles.placeholderIcon} />
       )}
-      <Typography variant="caption" className="placeholder-text">
+      <Typography variant="caption" className={styles.placeholderText}>
         {file.name}
       </Typography>
-      <Typography variant="caption" className="placeholder-size">
+      <Typography variant="caption" className={styles.placeholderSize}>
         {formatFileSize(file.size)}
       </Typography>
     </div>
@@ -308,7 +308,7 @@ const UploadDialog = React.memo(({
           <IconButton
             aria-label="close"
             onClick={onClose}
-            className="close-button"
+            className={styles.closeButton}
           >
             <CloseIcon />
           </IconButton>
@@ -321,7 +321,7 @@ const UploadDialog = React.memo(({
           className={`dropzone ${isDragActive ? styles.active : ''} ${isDragReject ? 'reject' : ''}`}
         >
           <input {...getInputProps()} />
-          <CloudUploadOutlined className="upload-icon" />
+          <CloudUploadOutlined className={styles.uploadIcon} />
           <Typography variant="h6">
             Drag & Drop Files Here
           </Typography>
@@ -339,7 +339,7 @@ const UploadDialog = React.memo(({
         </div>
 
         {acceptedFiles.length > 0 && (
-          <Paper className="accepted-files">
+          <Paper className={styles.acceptedFiles}>
             <List>
               {acceptedFiles.map((file, index) => (
                 <ListItem key={index}>
@@ -370,7 +370,7 @@ const UploadDialog = React.memo(({
         )}
 
         {fileRejections.length > 0 && (
-          <Alert severity="error" className="rejection-alert">
+          <Alert severity="error" className={styles.rejectionAlert}>
             {fileRejections.length} file(s) were rejected:
             <List>
               {fileRejections.map(({ file, errors }) => (
@@ -386,7 +386,7 @@ const UploadDialog = React.memo(({
         )}
 
         {isUploading && (
-          <div className="upload-progress">
+          <div className={styles.uploadProgress}>
             <LinearProgress
               variant="determinate"
               value={uploadProgress}
@@ -463,26 +463,26 @@ const FileDetailsDialog = React.memo(({
       onClose={!isUpdating ? onClose : undefined}
       maxWidth="md"
       fullWidth
-      className="file-details-dialog"
+      className={styles.fileDetailsDialog}
     >
       <DialogTitle className={styles.dialogTitle}>
-        <div className="dialog-title-content">
+        <div className={styles.dialogTitleContent}>
           <Typography variant="h6">File Details</Typography>
           {!isUpdating && (
             <IconButton
               aria-label="close"
               onClick={onClose}
               size="small"
-              className="close-button"
+              className={styles.closeButton}
             >
               <CloseIcon />
             </IconButton>
           )}
         </div>
       </DialogTitle>
-      <DialogContent dividers className="dialog-content">
-        <div className="file-details-grid">
-          <div className="preview-section">
+      <DialogContent dividers className={styles.dialogContent}>
+        <div className={styles.fileDetailsGrid}>
+          <div className={styles.previewSection}>
             <FilePreview 
               file={file}
               onLoadError={(fileId) => {
@@ -490,7 +490,7 @@ const FileDetailsDialog = React.memo(({
               }}
             />
           </div>
-          <div className="details-section">
+          <div className={styles.detailsSection}>
             <TextField
               fullWidth
               label="File Name"
@@ -499,7 +499,7 @@ const FileDetailsDialog = React.memo(({
                 ...editedFile,
                 name: `${e.target.value.trim()}.${fileExtension}`
               })}
-              className="filename-input"
+              className={styles.filenameInput}
               error={!isValidName}
               helperText={!isValidName ? "File name cannot be empty" : ""}
               disabled={isUpdating}
@@ -514,8 +514,8 @@ const FileDetailsDialog = React.memo(({
               }}
             />
 
-            <div className="file-metadata-grid">
-              <div className="metadata-item">
+            <div className={styles.fileMetadataGrid}>
+              <div className={styles.metadataItem}>
                 <Typography variant="subtitle2" color="textSecondary">
                   Type
                 </Typography>
@@ -523,7 +523,7 @@ const FileDetailsDialog = React.memo(({
                   {file.category.charAt(0).toUpperCase() + file.category.slice(1)}
                 </Typography>
               </div>
-              <div className="metadata-item">
+              <div className={styles.metadataItem}>
                 <Typography variant="subtitle2" color="textSecondary">
                   Size
                 </Typography>
@@ -531,7 +531,7 @@ const FileDetailsDialog = React.memo(({
                   {formatFileSize(file.size)}
                 </Typography>
               </div>
-              <div className="metadata-item">
+              <div className={styles.metadataItem}>
                 <Typography variant="subtitle2" color="textSecondary">
                   Created
                 </Typography>
@@ -539,7 +539,7 @@ const FileDetailsDialog = React.memo(({
                   {formatDistanceToNow(new Date(file.createdAt))} ago
                 </Typography>
               </div>
-              <div className="metadata-item">
+              <div className={styles.metadataItem}>
                 <Typography variant="subtitle2" color="textSecondary">
                   Last Modified
                 </Typography>
@@ -547,11 +547,11 @@ const FileDetailsDialog = React.memo(({
                   {formatDistanceToNow(new Date(file.updatedAt))} ago
                 </Typography>
               </div>
-              <div className="metadata-item">
+              <div className={styles.metadataItem}>
                 <Typography variant="subtitle2" color="textSecondary">
                   MIME Type
                 </Typography>
-                <Typography variant="body1" className="mime-type">
+                <Typography variant="body1" className={styles.mimeType}>
                   {file.mimeType}
                 </Typography>
               </div>
@@ -560,34 +560,34 @@ const FileDetailsDialog = React.memo(({
         </div>
 
         {isUpdating && (
-          <div className="update-progress">
+          <div className={styles.updateProgress}>
             <LinearProgress
               variant="determinate"
               value={localUpdateProgress}
-              className="progress-bar"
+              className={styles.progressBar}
             />
-            <Typography variant="caption" className="progress-text">
+            <Typography variant="caption" className={styles.progressText}>
               Updating... {localUpdateProgress}%
             </Typography>
           </div>
         )}
       </DialogContent>
-      <DialogActions className="dialog-actions">
-        <Button onClick={onClose} disabled={isUpdating} className="cancel-button">
+      <DialogActions className={styles.dialogActions}>
+        <Button onClick={onClose} disabled={isUpdating} className={styles.cancelButton}>
           Cancel
         </Button>
-        <div className="save-button-container">
+        <div className={styles.saveButtonContainer}>
           <Button
             onClick={() => onUpdate(editedFile)}
             disabled={isUpdating || !isValidName}
             variant="contained"
             startIcon={<SaveIcon />}
-            className="save-button"
+            className={styles.saveButton}
           >
             Save Changes
           </Button>
           {isUpdating && (
-            <CircularProgress size={24} className="save-progress" />
+            <CircularProgress size={24} className={styles.saveProgress} />
           )}
         </div>
       </DialogActions>
@@ -901,7 +901,7 @@ const Documents = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
-      className="document-card-container"
+      className={styles.documentCardContainer}
     >
       <Card 
         className={styles.documentCard}
@@ -923,14 +923,14 @@ const Documents = () => {
             console.error(`Failed to load preview for file ${fileId}`);
           }}
         />
-        <CardContent className="card-content">
-          <Typography variant="subtitle1" className="document-name">
+        <CardContent className={styles.cardContent}>
+          <Typography variant="subtitle1" className={styles.documentName}>
             {doc.name}
           </Typography>
-          <Typography variant="body2" className="document-size">
+          <Typography variant="body2" className={styles.documentSize}>
             {formatFileSize(doc.size)}
           </Typography>
-          <div className="document-tags">
+          <div className={styles.documentTags}>
             <Chip
               label={doc.category}
               size="small"
@@ -952,7 +952,7 @@ const Documents = () => {
             )}
           </div>
         </CardContent>
-        <CardActions className="card-actions">
+        <CardActions className={styles.cardActions}>
           <Tooltip title={doc.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
             <IconButton
               onClick={(e) => {
@@ -972,7 +972,7 @@ const Documents = () => {
                 handleDownload(doc.id, doc.name);
               }}
               size="small"
-              className="download-button"
+              className={styles.downloadButton}
             >
               <DownloadIcon />
             </IconButton>
@@ -984,7 +984,7 @@ const Documents = () => {
                 handleDeleteDocument(doc.id);
               }}
               size="small"
-              className="delete-button"
+              className={styles.deleteButton}
             >
               <DeleteIcon />
             </IconButton>
@@ -1019,7 +1019,7 @@ const Documents = () => {
                 variant="contained"
                 startIcon={<UploadIcon />}
                 onClick={() => updateState({ isUploadDialogOpen: true })}
-                className="upload-button"
+                className={styles.uploadButton}
               >
                 Upload
               </Button>
@@ -1041,7 +1041,7 @@ const Documents = () => {
             <Tabs
               value={state.tabValue}
               onChange={(_, newValue) => updateState({ tabValue: newValue })}
-              className="document-tabs"
+              className={styles.documentTabs}
               variant={isMobile ? "fullWidth" : "standard"}
             >
               <Tab label="All Documents" />
@@ -1068,8 +1068,8 @@ const Documents = () => {
                 <Select
                   value={state.sortBy}
                   onChange={(e) => updateState({ sortBy: e.target.value })}
-                  className="sort-select"
-                  startAdornment={<SortIcon className="select-icon" />}
+                  className={styles.sortSelect}
+                  startAdornment={<SortIcon className={styles.selectIcon} />}
                 >
                   <MenuItem value="name">Name (A-Z)</MenuItem>
                   <MenuItem value="-name">Name (Z-A)</MenuItem>
@@ -1083,8 +1083,8 @@ const Documents = () => {
                 <Select
                   value={state.filterBy}
                   onChange={(e) => updateState({ filterBy: e.target.value })}
-                  className="filter-select"
-                  startAdornment={<FilterIcon className="select-icon" />}
+                  className={styles.filterSelect}
+                  startAdornment={<FilterIcon className={styles.selectIcon} />}
                 >
                   <MenuItem value="all">All Types</MenuItem>
                   <MenuItem value="document">Documents</MenuItem>
@@ -1095,7 +1095,7 @@ const Documents = () => {
             </div>
           </div>
 
-          <div className="documents-content">
+          <div className={styles.documentsContent}>
             {isLoadingDocuments ? (
               <div className={styles.loadingState}>
                 <CircularProgress />
@@ -1103,14 +1103,14 @@ const Documents = () => {
             ) : filteredAndSortedDocuments.length === 0 ? (
               <div className={styles.emptyState}>
                 <FolderIcon className={styles.emptyIcon} />
-                <Typography variant="h6" className="empty-title">
+                <Typography variant="h6" className={styles.emptyTitle}>
                   {state.searchTerm
                     ? "No documents match your search"
                     : state.tabValue === 1
                       ? "No favorite documents"
                       : "No documents found"}
                 </Typography>
-                <Typography variant="body2" className="empty-description">
+                <Typography variant="body2" className={styles.emptyDescription}>
                   {state.searchTerm
                     ? "Try adjusting your search criteria"
                     : state.tabValue === 1
@@ -1121,7 +1121,7 @@ const Documents = () => {
                   variant="contained"
                   startIcon={<UploadIcon />}
                   onClick={() => updateState({ isUploadDialogOpen: true })}
-                  className="empty-upload-button"
+                  className={styles.emptyUploadButton}
                 >
                   Upload Files
                 </Button>
@@ -1140,7 +1140,7 @@ const Documents = () => {
             anchorEl={state.menuAnchorEl}
             open={Boolean(state.menuAnchorEl)}
             onClose={() => updateState({ menuAnchorEl: null })}
-            className="context-menu"
+            className={styles.contextMenu}
           >
             <MenuItem 
               onClick={() => {
@@ -1151,42 +1151,42 @@ const Documents = () => {
               }}
             >
               <ListItemIcon>
-                <DownloadIcon className="menu-icon" />
+                <DownloadIcon className={styles.menuIcon} />
               </ListItemIcon>
               <ListItemText>Download</ListItemText>
             </MenuItem>
-            <MenuItem 
-              onClick={() => {
-                handleToggleFavorite(state.selectedFileId);
-                updateState({ menuAnchorEl: null });
-              }}
-            >
-              <ListItemIcon>
-                {documents.find(doc => doc.id === state.selectedFileId)?.isFavorite ? (
-                  <StarIcon className="menu-icon favorite" />
-                ) : (
-                  <StarBorderIcon className="menu-icon" />
-                )}
-              </ListItemIcon>
-              <ListItemText>
-                {documents.find(doc => doc.id === state.selectedFileId)?.isFavorite
-                  ? "Remove from Favorites"
-                  : "Add to Favorites"}
-              </ListItemText>
-            </MenuItem>
-            <Divider />
             <MenuItem
-              onClick={() => {
-                handleDeleteDocument(state.selectedFileId);
-                updateState({ menuAnchorEl: null });
-              }}
-              className="delete-menu-item"
-            >
-              <ListItemIcon>
-                <DeleteIcon className="menu-icon delete" />
-              </ListItemIcon>
-              <ListItemText>Delete</ListItemText>
-            </MenuItem>
+  onClick={() => {
+    handleToggleFavorite(state.selectedFileId);
+    updateState({ menuAnchorEl: null });
+  }}
+>
+  <ListItemIcon>
+    {documents.find(doc => doc.id === state.selectedFileId)?.isFavorite ? (
+      <StarIcon className={`${styles.menuIcon} ${styles.favorite}`} />
+    ) : (
+      <StarBorderIcon className={styles.menuIcon} />
+    )}
+  </ListItemIcon>
+  <ListItemText>
+    {documents.find(doc => doc.id === state.selectedFileId)?.isFavorite
+      ? "Remove from Favorites"
+      : "Add to Favorites"}
+  </ListItemText>
+</MenuItem>
+<Divider />
+<MenuItem
+  onClick={() => {
+    handleDeleteDocument(state.selectedFileId);
+    updateState({ menuAnchorEl: null });
+  }}
+  className={styles.deleteMenuItem}
+>
+  <ListItemIcon>
+    <DeleteIcon className={`${styles.menuIcon} ${styles.delete}`} />
+  </ListItemIcon>
+  <ListItemText>Delete</ListItemText>
+</MenuItem>
           </Menu>
 
           {/* Upload Dialog */}
@@ -1228,7 +1228,7 @@ const Documents = () => {
               snackbar: { ...state.snackbar, open: false }
             })}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            className="snackbar"
+            className={styles.snackbar}
           >
             <Alert
               onClose={() => updateState({
@@ -1236,7 +1236,7 @@ const Documents = () => {
               })}
               severity={state.snackbar.severity}
               variant="filled"
-              className="alert"
+              className={styles.alert}
             >
               {state.snackbar.message}
             </Alert>

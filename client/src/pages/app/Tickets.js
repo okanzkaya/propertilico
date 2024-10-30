@@ -307,7 +307,7 @@ const Tickets = () => {
             </Grid>
             <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" gutterBottom className="section-title">
+              <Typography variant="h6" gutterBottom className={styles.sectionTitle}>
                 Notes
               </Typography>
               <List className={styles.notesList}>
@@ -326,7 +326,7 @@ const Tickets = () => {
                 startIcon={<AddIcon />}
                 onClick={() => setDialogType('addNote')}
                 variant="outlined"
-                className="add-note-button"
+                className={styles.addNoteButton}
               >
                 Add Note
               </Button>
@@ -348,7 +348,7 @@ const Tickets = () => {
                 onChange={handleInputChange}
                 error={!!formErrors.title}
                 helperText={formErrors.title}
-                className="form-field"
+                className={styles.formField}
               />
             </Grid>
             <Grid item xs={12}>
@@ -362,7 +362,7 @@ const Tickets = () => {
                 onChange={handleInputChange}
                 error={!!formErrors.description}
                 helperText={formErrors.description}
-                className="form-field"
+                className={styles.formField}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -403,7 +403,7 @@ const Tickets = () => {
                 fullWidth
                 value={formData.assignee}
                 onChange={handleInputChange}
-                className="form-field"
+                className={styles.formField}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -415,7 +415,7 @@ const Tickets = () => {
                 value={formData.dueDate}
                 onChange={handleInputChange}
                 InputLabelProps={{ shrink: true }}
-                className="form-field"
+                className={styles.formField}
               />
             </Grid>
           </Grid>
@@ -423,7 +423,7 @@ const Tickets = () => {
 
       case 'delete':
         return (
-          <Typography className="dialog-message">
+          <Typography className={styles.dialogMessage}>
             Are you sure you want to delete this ticket? This action cannot be undone.
           </Typography>
         );
@@ -461,7 +461,7 @@ const Tickets = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h5" component="div" className="page-title">
+          <Typography variant="h5" component="div" className={styles.pageTitle}>
             Ticket Management
           </Typography>
           <Button
@@ -481,10 +481,10 @@ const Tickets = () => {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
       >
-        <Box className="drawer-content">
+        <Box className={styles.drawerContent}>
           <List>
             <ListItem>
-              <ListItemText primary="Ticket Dashboard" className="drawer-title" />
+              <ListItemText primary="Ticket Dashboard" className={styles.drawerTitle} />
             </ListItem>
             <Divider />
             {TABS.map((tab, index) => (
@@ -503,8 +503,8 @@ const Tickets = () => {
         </Box>
       </Drawer>
 
-      <Box className="content-wrapper">
-        <Grid container spacing={3} className="filters-container">
+      <Box className={styles.contentWrapper}>
+        <Grid container spacing={3} className={styles.filtersContainer}>
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
@@ -518,7 +518,7 @@ const Tickets = () => {
                 ),
               }}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-field"
+              className={styles.searchField}
             />
           </Grid>
           <Grid item xs={12} md={4}>
@@ -603,9 +603,9 @@ const Tickets = () => {
           onClose={handleCloseDialog}
           fullWidth
           maxWidth="md"
-          className="custom-dialog"
+          className={styles.customDialog}
         >
-          <DialogTitle className="dialog-header">
+          <DialogTitle className={styles.dialogHeader}>
             {dialogType === 'add'
               ? 'Create New Ticket'
               : dialogType === 'edit'
@@ -625,7 +625,7 @@ const Tickets = () => {
           <DialogContent dividers>
             {renderDialogContent()}
           </DialogContent>
-          <DialogActions className="dialog-actions">
+          <DialogActions className={styles.dialogActions}>
             <Button 
               onClick={handleCloseDialog}
               color="primary"
@@ -693,7 +693,7 @@ const Tickets = () => {
           <Alert
             onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
             severity={snackbar.severity}
-            className="snackbar-alert"
+            className={styles.snackbarAlert}
             elevation={6}
             variant="filled"
           >

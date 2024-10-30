@@ -216,10 +216,10 @@ const BlogList = () => {
               {sortOption === 'newest' ? 'Newest' : 'Oldest'}
             </button>
             {showCreateButton && (
-              <button className="button primary" onClick={handleCreateBlog}>
-                <FaPlus /> Create New Blog
-              </button>
-            )}
+  <button className={`${styles.button} ${styles.primary}`} onClick={handleCreateBlog}>
+    <FaPlus /> Create New Blog
+  </button>
+)}
           </div>
         </div>
 

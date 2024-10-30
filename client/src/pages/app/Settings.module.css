@@ -1,36 +1,36 @@
 /* Main container styles */
-.settings-page {
+.settingsPage {
     padding: 1rem;
     min-height: 100vh;
   }
   
   @media (min-width: 600px) {
-    .settings-page {
+    .settingsPage {
       padding: 2rem;
     }
   }
   
-  .page-title {
+  .pageTitle {
     font-weight: bold;
     margin-bottom: 1.5rem;
   }
   
   /* Card styles */
-  .sidebar-card {
+  .sidebarCard {
     padding: 1rem;
     box-shadow: var(--card-shadow);
     border-radius: 12px;
     height: 100%;
   }
   
-  .content-card {
+  .contentCard {
     padding: 1.5rem;
     box-shadow: var(--card-shadow);
     border-radius: 12px;
   }
   
   /* Tab button styles */
-  .tab-button {
+  .tabButton {
     justify-content: flex-start;
     padding: 0.75rem 1rem;
     margin-bottom: 0.5rem;
@@ -38,79 +38,79 @@
     transition: all 0.2s ease;
   }
   
-  .tab-button.active {
+  .tabButton.active {
     background-color: var(--action-selected);
     color: var(--primary-main);
   }
   
-  .tab-button:hover {
+  .tabButton:hover {
     background-color: var(--action-hover);
   }
   
   /* Section title styles */
-  .section-title {
+  .sectionTitle {
     display: flex;
     align-items: center;
     margin-bottom: 1rem;
   }
   
-  .section-title h6 {
+  .sectionTitle h6 {
     margin-left: 0.5rem;
   }
   
-  .section-title button {
+  .sectionTitle button {
     margin-left: 0.5rem;
   }
   
   /* Profile section styles */
-  .preferences-container {
+  .preferencesContainer {
     width: 100%;
   }
   
-  .avatar-container {
+  .avatarContainer {
     display: flex;
     justify-content: center;
     margin-bottom: 1.5rem;
   }
   
-  .profile-avatar {
+  .profileAvatar {
     width: 120px !important;
     height: 120px !important;
     border: 2px solid var(--primary-main);
   }
   
-  .camera-button {
+  .cameraButton {
     position: absolute;
     bottom: 0;
     right: 0;
     background-color: var(--primary-main);
     color: white;
   }
-  .camera-button-wrapper {
+  .cameraButtonWrapper {
     position: absolute;
     bottom: 0;
     right: 0;
     cursor: pointer;
   }
-  .avatar-wrapper {
+  .avatarWrapper {
     position: relative;
     display: inline-block;
   }
-  .camera-button:hover {
+  .cameraButton:hover {
     background-color: var(--primary-dark);
   }
   
   /* Form styles */
-  .form-container {
+  .formContainer {
     margin-top: 1.5rem;
   }
   
-  .form-field {
+  .formField {
     margin-bottom: 1rem;
   }
   
   /* Loading container */
-  .loading-container {
+  .loadingContainer {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -118,11 +118,11 @@
   }
   
   /* Dialog styles */
-  .dialog-content {
+  .dialogContent {
     padding: 1rem;
   }
   
-  .dialog-actions {
+  .dialogActions {
     padding: 1rem;
     display: flex;
     justify-content: flex-end;
@@ -130,36 +130,36 @@
   }
   
   /* Custom switch styles */
-  .custom-switch {
+  .customSwitch {
     margin: 0.5rem 0;
   }
   
   /* Responsive grid adjustments */
   @media (max-width: 600px) {
-    .grid-container {
+    .gridContainer {
       margin-top: 1rem;
     }
     
-    .form-field {
+    .formField {
       margin-bottom: 0.75rem;
     }
   }
-  .camera-icon-button {
+  .cameraIconButton {
     background-color: var(--primary-main) !important;
     color: white !important;
     padding: 8px !important;
     transition: background-color 0.3s ease !important;
   }
-  .camera-icon-button:hover {
+  .cameraIconButton:hover {
     background-color: var(--primary-dark) !important;
   }
   /* Animation classes */
-  .fade-enter {
+  .fadeEnter {
     opacity: 0;
     transform: translateY(20px);
   }
   
-  .fade-enter-active {
+  .fadeEnterActive {
     opacity: 1;
     transform: translateY(0);
     transition: opacity 500ms, transform 500ms;

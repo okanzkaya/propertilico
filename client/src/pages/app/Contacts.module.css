@@ -1,16 +1,16 @@
-.contacts-container {
+.contactsContainer {
     padding: 24px;
     background: var(--background-default);
     min-height: 100vh;
   }
   
-  .page-title {
+  .pageTitle {
     color: var(--primary-main);
     font-weight: bold;
     margin-bottom: 16px;
   }
   
-  .controls-container {
+  .controlsContainer {
     margin-bottom: 24px;
     display: flex;
     justify-content: space-between;
@@ -18,30 +18,30 @@
     gap: 16px;
   }
   
-  .search-field {
+  .searchField {
     flex-grow: 1;
     max-width: 300px;
   }
   
-  .filters-container {
+  .filtersContainer {
     display: flex;
     gap: 16px;
   }
   
-  .add-button {
+  .addButton {
     box-shadow: var(--shadow-3);
     transition: transform 0.2s ease-in-out;
   }
   
-  .add-button:hover {
+  .addButton:hover {
     transform: scale(1.05);
   }
   
-  .view-tabs {
+  .viewTabs {
     margin-bottom: 16px;
   }
   
-  .contact-card {
+  .contactCard {
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -50,12 +50,12 @@
     background: var(--background-paper);
   }
   
-  .contact-card:hover {
+  .contactCard:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-10);
   }
   
-  .contact-avatar {
+  .contactAvatar {
     width: 96px;
     height: 96px;
     margin: auto;
@@ -64,7 +64,7 @@
     box-shadow: var(--shadow-3);
   }
   
-  .contact-chips {
+  .contactChips {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
@@ -72,95 +72,95 @@
     margin-top: 16px;
   }
   
-  .contact-actions {
+  .contactActions {
     justify-content: center;
     margin-top: auto;
   }
   
-  .contact-list-item {
+  .contactListItem {
     padding: 16px;
     border-bottom: 1px solid var(--divider);
     cursor: pointer;
   }
   
-  .contact-list-item:last-child {
+  .contactListItem:last-child {
     border-bottom: none;
   }
   
-  .contact-details {
+  .contactDetails {
     padding: 16px;
     background-color: var(--background-paper);
   }
   
-  .loading-container {
+  .loadingContainer {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 50vh;
   }
   
-  .pagination-container {
+  .paginationContainer {
     display: flex;
     justify-content: center;
     margin-top: 32px;
   }
   
-  .avatar-upload-container {
+  .avatarUploadContainer {
     display: flex;
     justify-content: center;
     margin-bottom: 16px;
   }
   
-  .upload-avatar {
+  .uploadAvatar {
     width: 100px !important;
     height: 100px !important;
     cursor: pointer;
     transition: opacity 0.2s ease-in-out;
   }
   
-  .upload-avatar:hover {
+  .uploadAvatar:hover {
     opacity: 0.8;
   }
   
-  .upload-text {
+  .uploadText {
     margin-top: 8px;
     color: var(--text-secondary);
   }
   
-  .dialog-close-button {
+  .dialogCloseButton {
     position: absolute !important;
     right: 8px;
     top: 8px;
   }
   
-  .contact-details-container {
+  .contactDetailsContainer {
     display: flex;
     flex-direction: column;
     align-items: center;
     margin-bottom: 16px;
   }
   
-  .contact-details-avatar {
+  .contactDetailsAvatar {
     width: 100px !important;
     height: 100px !important;
     margin-bottom: 16px;
   }
   
   @media (max-width: 600px) {
-    .controls-container {
+    .controlsContainer {
       flex-direction: column;
     }
   
-    .search-field {
+    .searchField {
       max-width: 100%;
     }
   
-    .filters-container {
+    .filtersContainer {
       width: 100%;
       justify-content: space-between;
     }
   
-    .contact-avatar {
+    .contactAvatar {
       width: 72px;
       height: 72px;
     }

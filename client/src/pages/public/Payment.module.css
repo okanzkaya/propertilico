@@ -1,4 +1,4 @@
-.payment-container {
+.paymentContainer {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -8,7 +8,7 @@
     padding: 20px;
   }
   
-  .payment-box {
+  .paymentBox {
     background-color: white;
     padding: 40px;
     border-radius: 15px;
@@ -30,7 +30,7 @@
     color: #666;
   }
   
-  .payment-input {
+  .paymentInput {
     width: 100%;
     padding: 12px;
     margin-bottom: 10px;
@@ -39,7 +39,7 @@
     font-size: 1em;
   }
   
-  .payment-button {
+  .paymentButton {
     width: 100%;
     padding: 12px;
     background-color: #007BFF;
@@ -51,14 +51,14 @@
     transition: background-color 0.3s, transform 0.3s;
   }
   
-  .payment-button:hover {
+  .paymentButton:hover {
     background-color: #0056b3;
     transform: scale(1.05);
   }
   
   /* Responsive Design */
   @media (max-width: 768px) {
-    .payment-box {
+    .paymentBox {
       padding: 20px;
     }
   
@@ -66,8 +66,8 @@
       font-size: 2em;
     }
   
-    .payment-input,
-    .payment-button {
+    .paymentInput,
+    .paymentButton {
       padding: 10px;
     }
   }

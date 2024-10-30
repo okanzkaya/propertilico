@@ -1,12 +1,12 @@
 /* Base wrapper styles */
-.page-wrapper {
+.pageWrapper {
   padding: 32px;
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
 }
 
 /* Property card styles */
-.property-card {
+.propertyCard {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -18,28 +18,28 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.property-card:hover {
+.propertyCard:hover {
   transform: translateY(-8px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
-.property-image-container {
+.propertyImageContainer {
   position: relative;
   overflow: hidden;
 }
 
-.property-image {
+.propertyImage {
   width: 100%;
   height: 280px;
   object-fit: cover;
   transition: transform 0.5s ease;
 }
 
-.property-card:hover .property-image {
+.propertyCard:hover .propertyImage {
   transform: scale(1.05);
 }
 
-.property-content {
+.propertyContent {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -47,14 +47,14 @@
   gap: 12px;
 }
 
-.property-title {
+.propertyTitle {
   font-size: 1.5rem;
   font-weight: 700;
   color: #2C3E50;
   letter-spacing: -0.5px;
 }
 
-.property-price {
+.propertyPrice {
   font-size: 1.75rem;
   font-weight: 800;
   background: linear-gradient(135deg, #3498DB, #2980B9);
@@ -63,7 +63,7 @@
   margin: 8px 0;
 }
 
-.property-features {
+.propertyFeatures {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
@@ -71,7 +71,7 @@
 }
 
 /* List view styles */
-.list-item {
+.listItem {
   margin-bottom: 20px;
   border: none;
   border-radius: 16px;
@@ -83,12 +83,12 @@
   cursor: pointer;
 }
 
-.list-item:hover {
+.listItem:hover {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
   transform: translateY(-4px);
 }
 
-.list-item-image {
+.listItemImage {
   margin-right: 24px;
   width: 200px;
   height: 200px;
@@ -97,19 +97,19 @@
   border-radius: 12px;
 }
 
-.list-item-image img {
+.listItemImage img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.5s ease;
 }
 
-.list-item:hover .list-item-image img {
+.listItem:hover .listItemImage img {
   transform: scale(1.05);
 }
 
 /* Map container styles */
-.map-container {
+.mapContainer {
   height: 700px;
   width: 100%;
   border-radius: 24px;
@@ -120,7 +120,7 @@
 }
 
 /* Search and filters container */
-.search-filters-container {
+.searchFiltersContainer {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 20px;
@@ -130,12 +130,12 @@
   transition: box-shadow 0.3s ease;
 }
 
-.search-filters-container:hover {
+.searchFiltersContainer:hover {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
 /* Add property button styles */
-.add-property-button {
+.addPropertyButton {
   position: fixed;
   bottom: 32px;
   right: 32px;
@@ -147,13 +147,13 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.add-property-button:hover {
+.addPropertyButton:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 40px rgba(52, 152, 219, 0.35);
 }
 
 /* Loading spinner container */
-.loading-container {
+.loadingContainer {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -164,7 +164,7 @@
 }
 
 /* Pagination styles */
-.pagination-container {
+.paginationContainer {
   display: flex;
   justify-content: center;
   margin: 40px 0;
@@ -176,7 +176,7 @@
 }
 
 /* Image modal styles */
-.image-modal img {
+.imageModal img {
   max-width: 100%;
   max-height: 90vh;
   object-fit: contain;
@@ -184,7 +184,7 @@
 }
 
 /* Quick view modal enhancements */
-.quick-view-image {
+.quickViewImage {
   position: relative;
   width: 100%;
   padding-top: 75%;
@@ -192,7 +192,7 @@
   overflow: hidden;
 }
 
-.quick-view-image img {
+.quickViewImage img {
   position: absolute;
   top: 0;
   left: 0;
@@ -202,18 +202,18 @@
   transition: transform 0.5s ease;
 }
 
-.quick-view-image:hover img {
+.quickViewImage:hover img {
   transform: scale(1.05);
 }
 
 /* Property features chips */
-.MuiChip-root {
+.MuiChipRoot {
   border-radius: 12px;
   font-weight: 500;
   transition: all 0.3s ease;
 }
 
-.MuiChip-root:hover {
+.MuiChipRoot:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -240,49 +240,49 @@
 
 /* Responsive adjustments */
 @media (max-width: 960px) {
-  .page-wrapper {
+  .pageWrapper {
     padding: 16px;
   }
 
-  .property-card {
+  .propertyCard {
     border-radius: 16px;
   }
 
-  .property-image {
+  .propertyImage {
     height: 240px;
   }
 
-  .list-item-image {
+  .listItemImage {
     width: 150px;
     height: 150px;
   }
 
-  .add-property-button {
+  .addPropertyButton {
     bottom: 24px;
     right: 24px;
   }
 }
 
 @media (max-width: 600px) {
-  .property-image {
+  .propertyImage {
     height: 200px;
   }
 
-  .list-item-image {
+  .listItemImage {
     width: 120px;
     height: 120px;
     margin-right: 16px;
   }
 
-  .property-content {
+  .propertyContent {
     padding: 16px;
   }
 
-  .property-title {
+  .propertyTitle {
     font-size: 1.25rem;
   }
 
-  .property-price {
+  .propertyPrice {
     font-size: 1.5rem;
   }
 }
