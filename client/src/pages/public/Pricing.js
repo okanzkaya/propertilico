@@ -1,3 +1,4 @@
+import styles from './Pricing.module.css';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -46,10 +47,10 @@ const Pricing = () => {
   ];
 
   return (
-    <div className="pricing-wrapper">
-      <div className="pricing-container">
+    <div className={styles.pricingWrapper}>
+      <div className={styles.pricingContainer}>
         <motion.h1 
-          className="pricing-title"
+          className={styles.pricingTitle}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -58,7 +59,7 @@ const Pricing = () => {
         </motion.h1>
         
         <motion.p 
-          className="pricing-subtitle"
+          className={styles.pricingSubtitle}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -66,69 +67,69 @@ const Pricing = () => {
           Choose the perfect plan for your property management needs
         </motion.p>
 
-        <div className="pricing-toggle">
+        <div className={styles.pricingToggle}>
           <button 
-            className={isMonthly ? 'active' : ''}
+            className={isMonthly ? styles.active : ''}
             onClick={() => setIsMonthly(true)}
           >
             Monthly
           </button>
           <button 
-            className={!isMonthly ? 'active' : ''}
+            className={!isMonthly ? styles.active : ''}
             onClick={() => setIsMonthly(false)}
           >
-            Yearly <span className="discount-badge">30% off</span>
+            Yearly <span className={styles.discountBadge}>30% off</span>
           </button>
         </div>
 
-        <div className="pricing-cards">
+        <div className={styles.pricingCards}>
           {plans.map((plan, index) => (
             <motion.div 
               key={plan.name}
-              className={`pricing-card ${plan.isPopular ? 'popular' : ''}`}
+              className={`pricing-card ${plan.isPopular ? styles.popular : ''}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
             >
               {plan.isPopular && (
-                <div className="popular-tag">
+                <div className={styles.popularTag}>
                   <FaCrown />
                   Most Popular
                 </div>
               )}
               {!isMonthly && (
-                <div className="discount-tag">
+                <div className={styles.discountTag}>
                   Save {plan.discount}%
                 </div>
               )}
               
-              <h2 className="plan-name">{plan.name}</h2>
+              <h2 className={styles.planName}>{plan.name}</h2>
               
-              <div className="plan-price">
-                <span className="currency">$</span>
-                <span className="amount">
+              <div className={styles.planPrice}>
+                <span className={styles.currency}>$</span>
+                <span className={styles.amount}>
                   {isMonthly 
                     ? plan.monthlyPrice.toFixed(2) 
                     : (plan.yearlyPrice / 12).toFixed(2)}
                 </span>
-                <span className="period">
+                <span className={styles.period}>
                   /month
                 </span>
               </div>
               {!isMonthly && (
-                <div className="yearly-price">
-                  <span className="original-price">${(plan.monthlyPrice * 12).toFixed(2)}</span>
-                  <span className="discounted-price">${plan.yearlyPrice.toFixed(2)} billed yearly</span>
+                <div className={styles.yearlyPrice}>
+                  <span className={styles.originalPrice}>${(plan.monthlyPrice * 12).toFixed(2)}</span>
+                  <span className={styles.discountedPrice}>${plan.yearlyPrice.toFixed(2)} billed yearly</span>
                 </div>
               )}
 
-              <ul className="features-list">
+              <ul className={styles.featuresList}>
                 {plan.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="feature-item">
+                  <li key={featureIndex} className={styles.featureItem}>
                     {feature.included ? (
-                      <FaCheck className="check" />
+                      <FaCheck className={styles.check} />
                     ) : (
-                      <FaTimes className="times" />
+                      <FaTimes className={styles.times} />
                     )}
                     {feature.text}
                   </li>
@@ -136,18 +137,18 @@ const Pricing = () => {
               </ul>
 
               <button 
-                className="start-trial-btn"
+                className={styles.startTrialBtn}
                 onClick={() => navigate('/signup')}
               >
                 {plan.name === 'Standard' ? 'Start Free Trial' : 'Get Started'}
               </button>
               
               {plan.name === 'Standard' ? (
-                <p className="trial-note">
+                <p className={styles.trialNote}>
                   14-day free trial, no credit card required
                 </p>
               ) : (
-                <p className="trial-note">
+                <p className={styles.trialNote}>
                   Instant access to all features
                 </p>
               )}

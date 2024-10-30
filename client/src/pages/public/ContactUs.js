@@ -1,3 +1,4 @@
+import styles from './ContactUs.module.css';
 // src/pages/ContactUs.js
 import React, { useState } from 'react';
 import './ContactUs.css';
@@ -34,17 +35,17 @@ const ContactUs = () => {
   };
 
   return (
-    <div className="contact-container">
-      <h1 className="contact-title">Contact Us</h1>
-      <p className="contact-text">
+    <div className={styles.contactContainer}>
+      <h1 className={styles.contactTitle}>Contact Us</h1>
+      <p className={styles.contactText}>
         If you have any questions or need assistance, please fill out the form below, 
         and we'll get back to you as soon as possible.
       </p>
-      <form className="contact-form" onSubmit={handleSubmit}>
+      <form className={styles.contactForm} onSubmit={handleSubmit}>
         <input
           type="text"
           name="name"
-          className="form-input"
+          className={styles.formInput}
           placeholder="Your Name"
           value={formData.name}
           onChange={handleChange}
@@ -53,7 +54,7 @@ const ContactUs = () => {
         <input
           type="email"
           name="email"
-          className="form-input"
+          className={styles.formInput}
           placeholder="Your Email"
           value={formData.email}
           onChange={handleChange}
@@ -62,13 +63,13 @@ const ContactUs = () => {
         <textarea
           name="message"
           rows="5"
-          className="form-textarea"
+          className={styles.formTextarea}
           placeholder="Your Message"
           value={formData.message}
           onChange={handleChange}
           required
         />
-        <button type="submit" className="submit-button">
+        <button type="submit" className={styles.submitButton}>
           Send Message
         </button>
       </form>

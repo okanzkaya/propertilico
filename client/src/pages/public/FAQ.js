@@ -1,3 +1,4 @@
+import styles from './FAQ.module.css';
 import React, { useState } from 'react';
 import './FAQ.css';
 
@@ -32,16 +33,16 @@ const FAQ = () => {
   };
 
   return (
-    <div className="faq-container">
-      <h1 className="faq-header">Frequently Asked Questions</h1>
-      <p className="faq-description">
+    <div className={styles.faqContainer}>
+      <h1 className={styles.faqHeader}>Frequently Asked Questions</h1>
+      <p className={styles.faqDescription}>
         Find answers to the most common questions about Propertilico.
       </p>
-      <div className="faq-list">
+      <div className={styles.faqList}>
         {faqData.map((item, index) => (
           <div
             key={index}
-            className="faq-item"
+            className={styles.faqItem}
             onClick={() => toggleFAQ(index)}
             role="button"
             tabIndex={0}
@@ -49,8 +50,8 @@ const FAQ = () => {
               if (e.key === 'Enter') toggleFAQ(index);
             }}
           >
-            <h3 className="faq-question">{item.question}</h3>
-            <p className={`faq-answer ${openIndex === index ? 'open' : ''}`}>
+            <h3 className={styles.faqQuestion}>{item.question}</h3>
+            <p className={`faq-answer ${openIndex === index ? styles.open : ''}`}>
               {item.answer}
             </p>
           </div>

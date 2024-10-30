@@ -1,3 +1,4 @@
+import styles from './CompanyInfo.module.css';
 import React from 'react';
 import './CompanyInfo.css';
 
@@ -22,48 +23,48 @@ const CompanyInfo = () => {
   };
 
   return (
-    <div className="company-container">
-      <h1 className="company-title">About Us</h1>
+    <div className={styles.companyContainer}>
+      <h1 className={styles.companyTitle}>About Us</h1>
       
-      <section className="company-section">
-        <h2 className="section-title">Company Overview</h2>
-        <p className="section-text">
+      <section className={styles.companySection}>
+        <h2 className={styles.sectionTitle}>Company Overview</h2>
+        <p className={styles.sectionText}>
           Our company, Propertilico, is dedicated to providing top-notch property management solutions. [Fill in detailed overview here.]
         </p>
       </section>
 
-      <section className="company-section">
-        <h2 className="section-title">Mission</h2>
-        <p className="section-text">
+      <section className={styles.companySection}>
+        <h2 className={styles.sectionTitle}>Mission</h2>
+        <p className={styles.sectionText}>
           Our mission is to [Fill in mission statement here.]
         </p>
       </section>
 
-      <section className="company-section">
-        <h2 className="section-title">Vision</h2>
-        <p className="section-text">
+      <section className={styles.companySection}>
+        <h2 className={styles.sectionTitle}>Vision</h2>
+        <p className={styles.sectionText}>
           Our vision is to [Fill in vision statement here.]
         </p>
       </section>
 
-      <section className="company-section">
-        <h2 className="section-title">Our Team</h2>
+      <section className={styles.companySection}>
+        <h2 className={styles.sectionTitle}>Our Team</h2>
         {teamMembers.map((member, index) => (
-          <div className="team-member" key={index}>
-            <h3 className="member-name">{member.name}</h3>
-            <p className="member-role">{member.role}</p>
-            <p className="section-text">{member.bio}</p>
+          <div className={styles.teamMember} key={index}>
+            <h3 className={styles.memberName}>{member.name}</h3>
+            <p className={styles.memberRole}>{member.role}</p>
+            <p className={styles.sectionText}>{member.bio}</p>
           </div>
         ))}
       </section>
 
-      <section className="company-section">
-        <h2 className="section-title">Contact Information</h2>
-        <div className="contact-info">
-          <p className="section-text">You can reach us at:</p>
-          <p className="section-text">Email: {contactInfo.email}</p>
-          <p className="section-text">Phone: {contactInfo.phone}</p>
-          <p className="section-text">Address: {contactInfo.address}</p>
+      <section className={styles.companySection}>
+        <h2 className={styles.sectionTitle}>Contact Information</h2>
+        <div className={styles.contactInfo}>
+          <p className={styles.sectionText}>You can reach us at:</p>
+          <p className={styles.sectionText}>Email: {contactInfo.email}</p>
+          <p className={styles.sectionText}>Phone: {contactInfo.phone}</p>
+          <p className={styles.sectionText}>Address: {contactInfo.address}</p>
         </div>
       </section>
     </div>

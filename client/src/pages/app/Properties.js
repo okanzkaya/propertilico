@@ -1,3 +1,4 @@
+import styles from './Properties.module.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography, Grid, Box, Card, CardContent, Button, TextField,
@@ -152,9 +153,9 @@ const PropertyImageCarousel = ({ images, propertyName, onImageClick, enableZoom 
 
   return (
     <>
-      <div className="property-image-container" style={{ position: 'relative', width: '100%', height: '250px' }}>
+      <div className={styles.propertyImageContainer} style={{ position: 'relative', width: '100%', height: '250px' }}>
       <img
-        className="property-image"
+        className={styles.propertyImage}
         src={imageUrl}
         alt={propertyName}
         onClick={(e) => {
@@ -461,7 +462,7 @@ const PropertyCard = ({
 
   return (
     <Card 
-      className="property-card" 
+      className={styles.propertyCard} 
       onClick={handleCardClick}
       sx={{ 
         height: '100%', 
@@ -479,14 +480,14 @@ const PropertyCard = ({
         onImageClick={() => onViewDetails(property)}
         enableZoom={false}
       />
-    <CardContent className="property-content" sx={{ flexGrow: 1 }}>
-      <Typography variant="h6" className="property-title">
+    <CardContent className={styles.propertyContent} sx={{ flexGrow: 1 }}>
+      <Typography variant="h6" className={styles.propertyTitle}>
         {property.name}
       </Typography>
-      <Typography variant="h5" className="property-price" color="primary">
+      <Typography variant="h5" className={styles.propertyPrice} color="primary">
         ${property.rentAmount?.toLocaleString()} / month
       </Typography>
-      <Box className="property-features" sx={{ my: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      <Box className={styles.propertyFeatures} sx={{ my: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Chip icon={<BedroomParentIcon />} label={`${property.bedrooms || 0} Beds`} size="small" />
         <Chip icon={<BathtubIcon />} label={`${property.bathrooms || 0} Baths`} size="small" />
         <Chip icon={<SquareFootIcon />} label={`${property.area || 0} sqft`} size="small" />
@@ -1321,7 +1322,7 @@ const Properties = () => {
   const renderProperties = () => {
     if (loading) {
       return (
-        <Box className="loading-container">
+        <Box className={styles.loadingContainer}>
           <CircularProgress />
         </Box>
       );
@@ -1359,11 +1360,11 @@ const Properties = () => {
             {properties.map((property) => (
               <ListItem
                 key={property.id}
-                className="list-item"
+                className={styles.listItem}
                 onClick={() => handlePropertyDetails(property)}
               >
                 <Box sx={{ display: 'flex', width: '100%' }}>
-                  <Box className="list-item-image">
+                  <Box className={styles.listItemImage}>
                     <img
                       src={property.images?.[0] ? 
                         `${process.env.REACT_APP_API_URL}/uploads/properties/${property.images[0].path}` :
@@ -1421,7 +1422,7 @@ const Properties = () => {
         );
       case 'map':
         return (
-          <Box className="map-container">
+          <Box className={styles.mapContainer}>
             <MapContainer
               center={[0, 0]}
               zoom={2}
@@ -1462,12 +1463,12 @@ const Properties = () => {
   };
 
   return (
-    <div className="page-wrapper">
+    <div className={styles.pageWrapper}>
       <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, textAlign: "center" }}>
         Property Listings
       </Typography>
       
-      <Paper className="search-filters-container" sx={{ p: 2, mb: 3 }}>
+      <Paper className={styles.searchFiltersContainer} sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={6} md={3}>
             <TextField
@@ -1533,7 +1534,7 @@ const Properties = () => {
       {renderProperties()}
 
       {totalPages > 1 && (
-        <Box className="pagination-container">
+        <Box className={styles.paginationContainer}>
           <Pagination
             count={totalPages}
             page={currentPage}
@@ -1548,7 +1549,7 @@ const Properties = () => {
         variant="contained"
         color="primary"
         startIcon={<AddIcon />}
-        className="add-property-button"
+        className={styles.addPropertyButton}
         onClick={() => {
           setEditingProperty(null);
           setIsAddPropertyModalOpen(true);

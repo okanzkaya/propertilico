@@ -1,3 +1,4 @@
+import styles from './Taxes.module.css';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   Typography, Grid, Box, Button, TextField, Table, TableBody, TableCell,
@@ -201,9 +202,9 @@ const Taxes = () => {
 
   // Render functions (components moved to separate files for better organization)
   const renderMobileView = () => (
-    <div className="mobile-view">
+    <div className={styles.mobileView}>
       {paginatedTaxes.map((tax) => (
-        <Card key={tax.id} className="mobile-card">
+        <Card key={tax.id} className={styles.mobileCard}>
           <CardContent>
             <Typography variant="subtitle1">{tax.name}</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -213,11 +214,11 @@ const Taxes = () => {
               Effective: {formatDate(tax.effectiveDate)}
             </Typography>
             {isExpiringSoon(tax.expirationDate) && (
-              <Alert severity="warning" icon={<WarningIcon />} className="expiration-alert">
+              <Alert severity="warning" icon={<WarningIcon />} className={styles.expirationAlert}>
                 Expiring on {formatDate(tax.expirationDate)}
               </Alert>
             )}
-            <div className="action-buttons">
+            <div className={styles.actionButtons}>
               <IconButton size="small" onClick={() => { setTax(tax); setEditingId(tax.id); setOpenDialogs(prev => ({ ...prev, addEdit: true })) }}>
                 <EditIcon fontSize="small" />
               </IconButton>
@@ -242,7 +243,7 @@ const Taxes = () => {
   if (isError) return <Alert severity="error">{error.message}</Alert>;
 
   return (
-    <Box className="taxes-container">
+    <Box className={styles.taxesContainer}>
       <Typography variant="h4" gutterBottom>Tax Management</Typography>
       
       {/* Main content grid */}
@@ -252,15 +253,15 @@ const Taxes = () => {
           <Card>
             <CardContent>
               {/* Header actions */}
-              <div className="header-actions">
+              <div className={styles.headerActions}>
                 <Typography variant="h6">Manage Taxes</Typography>
-                <div className="header-buttons">
+                <div className={styles.headerButtons}>
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={() => { resetTaxForm(); setOpenDialogs(prev => ({ ...prev, addEdit: true })) }}
                     size="small"
-                    className="add-button"
+                    className={styles.addButton}
                   >
                     Add New Tax
                   </Button>
@@ -276,20 +277,20 @@ const Taxes = () => {
               </div>
 
               {/* Filters */}
-              <div className="filters-container">
+              <div className={styles.filtersContainer}>
                 <TextField
                   label="Search Taxes"
                   value={filters.search}
                   onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                   variant="outlined"
                   size="small"
-                  className="search-field"
+                  className={styles.searchField}
                   InputProps={{
                     startAdornment: <SearchIcon color="action" fontSize="small" />
                   }}
                 />
-                <div className="filter-selects">
-                  <FormControl variant="outlined" size="small" className="filter-select">
+                <div className={styles.filterSelects}>
+                  <FormControl variant="outlined" size="small" className={styles.filterSelect}>
                     <InputLabel>Status</InputLabel>
                     <Select
                       value={filters.status}
@@ -301,7 +302,7 @@ const Taxes = () => {
                       <MenuItem value="inactive">Inactive</MenuItem>
                     </Select>
                   </FormControl>
-                  <FormControl variant="outlined" size="small" className="filter-select">
+                  <FormControl variant="outlined" size="small" className={styles.filterSelect}>
                     <InputLabel>Type</InputLabel>
                     <Select
                       value={filters.type}
@@ -319,7 +320,7 @@ const Taxes = () => {
 
               {/* Tax list */}
               {isMobile ? renderMobileView() : (
-                <TableContainer component={Paper} className="table-container">
+                <TableContainer component={Paper} className={styles.tableContainer}>
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
@@ -345,7 +346,7 @@ const Taxes = () => {
                             />
                           </TableCell>
                           <TableCell>{formatDate(tax.effectiveDate)}</TableCell>
-                          <TableCell className="action-cell">
+                          <TableCell className={styles.actionCell}>
                             <Tooltip title="Edit">
                               <IconButton
                                 size="small"
@@ -439,16 +440,16 @@ const Taxes = () => {
                   startIcon={<CalculateIcon />}
                   onClick={handleCalculateTax}
                   fullWidth
-                  className="calculator-button"
+                  className={styles.calculatorButton}
                   size="small"
                 >
                   Calculate Tax
                 </Button>
   
-                <div className="chart-container">
+                <div className={styles.chartContainer}>
                   <Typography variant="h6" gutterBottom align="center">Tax Distribution</Typography>
                   {taxDistributionData.length > 0 ? (
-                    <div className="pie-chart">
+                    <div className={styles.pieChart}>
                       <Pie
                         data={{
                           labels: taxDistributionData.map(item => item.name),
@@ -598,14 +599,14 @@ const Taxes = () => {
             <DialogContentText>
               Upload a JSON file containing tax data to import. The file should contain an array of tax objects.
             </DialogContentText>
-            <Button onClick={() => setOpenDialogs(prev => ({ ...prev, importHelp: true }))} className="help-button">
+            <Button onClick={() => setOpenDialogs(prev => ({ ...prev, importHelp: true }))} className={styles.helpButton}>
               View Import Format
             </Button>
             <input
               type="file"
               accept=".json"
               onChange={(e) => setImportFile(e.target.files[0])}
-              className="file-input"
+              className={styles.fileInput}
             />
           </DialogContent>
           <DialogActions>
@@ -621,7 +622,7 @@ const Taxes = () => {
             <DialogContentText>
               The JSON file should contain an array of tax objects with the following structure:
             </DialogContentText>
-            <pre className="json-example">
+            <pre className={styles.jsonExample}>
               {JSON.stringify([{
                 name: "Example Tax",
                 rate: 5.5,
@@ -644,7 +645,7 @@ const Taxes = () => {
           <DialogTitle>Tax Details</DialogTitle>
           <DialogContent>
             {selectedTaxDetails && (
-              <div className="tax-details">
+              <div className={styles.taxDetails}>
                 <Typography><strong>Name:</strong> {selectedTaxDetails.name}</Typography>
                 <Typography><strong>Type:</strong> {selectedTaxDetails.type}</Typography>
                 <Typography><strong>Category:</strong> {selectedTaxDetails.category}</Typography>
@@ -666,7 +667,7 @@ const Taxes = () => {
           <DialogTitle>Tax Calculation Result</DialogTitle>
           <DialogContent>
             {calculationResult && (
-              <div className="calculation-result">
+              <div className={styles.calculationResult}>
                 <Typography><strong>Tax Name:</strong> {calculationResult.taxName}</Typography>
                 <Typography><strong>Property Value:</strong> ${calculationResult.propertyValue}</Typography>
                 <Typography><strong>Tax Rate:</strong> {calculationResult.taxRate}%</Typography>
@@ -688,7 +689,7 @@ const Taxes = () => {
           <Alert
             onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
             severity={snackbar.severity}
-            className="snackbar-alert"
+            className={styles.snackbarAlert}
           >
             {snackbar.message}
           </Alert>

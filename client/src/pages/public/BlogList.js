@@ -1,3 +1,4 @@
+import styles from './BlogList.module.css';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaPlus, 
@@ -58,11 +59,11 @@ const BlogImage = ({ src, alt }) => {
   }, [src]);
 
   return (
-    <div className="post-image-wrapper">
-      {isLoading && <div className="image-placeholder" />}
+    <div className={styles.postImageWrapper}>
+      {isLoading && <div className={styles.imagePlaceholder} />}
       {!isLoading && (
         <img
-          className="post-image"
+          className={styles.postImage}
           src={imageSrc}
           alt={alt}
           onError={(e) => {
@@ -170,8 +171,8 @@ const BlogList = () => {
 
   if (isLoading) {
     return (
-      <div className="blog-list-container">
-        <div className="loading-spinner" />
+      <div className={styles.blogListContainer}>
+        <div className={styles.loadingSpinner} />
       </div>
     );
   }
@@ -189,29 +190,29 @@ const BlogList = () => {
       </Helmet>
 
       <motion.div
-        className="blog-list-container"
+        className={styles.blogListContainer}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <header className="header">
-          <h1 className="title">Property Management Insights</h1>
-          <p className="subtitle">Expert tips, trends, and strategies to excel in property management</p>
+        <header className={styles.header}>
+          <h1 className={styles.title}>Property Management Insights</h1>
+          <p className={styles.subtitle}>Expert tips, trends, and strategies to excel in property management</p>
         </header>
 
-        <div className="controls-container">
-          <div className="search-bar-container">
+        <div className={styles.controlsContainer}>
+          <div className={styles.searchBarContainer}>
             <input
               type="text"
-              className="search-bar"
+              className={styles.searchBar}
               placeholder="Search blog posts..."
               onChange={handleSearchChange}
               aria-label="Search blog posts"
             />
-            <FaSearch className="search-icon" aria-hidden="true" />
+            <FaSearch className={styles.searchIcon} aria-hidden="true" />
           </div>
-          <div className="button-group">
-            <button className="button" onClick={toggleSortOption}>
+          <div className={styles.buttonGroup}>
+            <button className={styles.button} onClick={toggleSortOption}>
               {sortOption === 'newest' ? <FaSortAmountDown /> : <FaSortAmountUp />}
               {sortOption === 'newest' ? 'Newest' : 'Oldest'}
             </button>
@@ -224,16 +225,16 @@ const BlogList = () => {
         </div>
 
         {error ? (
-          <div className="error-message" role="alert">{error}</div>
+          <div className={styles.errorMessage} role="alert">{error}</div>
         ) : posts.length === 0 ? (
-          <div className="no-results">No blog posts found matching your criteria.</div>
+          <div className={styles.noResults}>No blog posts found matching your criteria.</div>
         ) : (
-          <div className="posts-grid">
+          <div className={styles.postsGrid}>
             <AnimatePresence>
               {posts.map((post, index) => (
                 <motion.article
                   key={post.id}
-                  className="post-card"
+                  className={styles.postCard}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
@@ -243,40 +244,40 @@ const BlogList = () => {
                     src={post.imageUrl}
                     alt={post.title}
                   />
-                  <div className="post-content">
-                    <Link to={`/blog/${post.id}`} className="post-title">
+                  <div className={styles.postContent}>
+                    <Link to={`/blog/${post.id}`} className={styles.postTitle}>
                       {post.title}
                     </Link>
-                    <div className="post-meta">
-                      <span className="meta-item">
+                    <div className={styles.postMeta}>
+                      <span className={styles.metaItem}>
                         <FaUser />
                         {post.author?.name || "Anonymous"}
                       </span>
-                      <span className="meta-item">
+                      <span className={styles.metaItem}>
                         <FaClock />
                         {formatDate(post.createdAt)}
                       </span>
-                      <span className="meta-item">
+                      <span className={styles.metaItem}>
                         <FaEye />
                         {post.viewCount || 0} views
                       </span>
                     </div>
-                    <p className="post-excerpt">{post.excerpt}</p>
-                    <div className="tag-list">
+                    <p className={styles.postExcerpt}>{post.excerpt}</p>
+                    <div className={styles.tagList}>
                       {post.tags?.map((tag, index) => (
                         <Link
                           key={`${post.id}-${tag}-${index}`}
                           to={`/blog/tag/${tag}`}
-                          className="tag"
+                          className={styles.tag}
                         >
                           {tag}
                         </Link>
                       ))}
                     </div>
                     {showCreateButton && (
-                      <div className="action-buttons">
+                      <div className={styles.actionButtons}>
                         <button 
-                          className="action-button"
+                          className={styles.actionButton}
                           onClick={(e) => {
                             e.preventDefault();
                             handleEditBlog(post.id);
@@ -286,7 +287,7 @@ const BlogList = () => {
                           <FaEdit />
                         </button>
                         <button 
-                          className="action-button"
+                          className={styles.actionButton}
                           onClick={(e) => handleDeleteBlog(post.id, e)}
                           aria-label="Delete blog post"
                         >
@@ -302,9 +303,9 @@ const BlogList = () => {
         )}
 
         {totalPages > 1 && (
-          <div className="pagination">
+          <div className={styles.pagination}>
             <button
-              className="button"
+              className={styles.button}
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
             >
@@ -312,7 +313,7 @@ const BlogList = () => {
             </button>
             <span>Page {currentPage} of {totalPages}</span>
             <button
-              className="button"
+              className={styles.button}
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
             >

@@ -38,7 +38,7 @@ const StarRating = ({ value, onChange }) => {
 
   return (
     <Box 
-      className="star-rating"
+      className={styles.starRating}
       sx={{ 
         display: 'flex',
         alignItems: 'center',
@@ -208,18 +208,18 @@ const FeedbackPage = () => {
   };
 
   return (
-    <div className="page-wrapper">
-      <Typography variant="h4" className="page-title">
+    <div className={styles.pageWrapper}>
+      <Typography variant="h4" className={styles.pageTitle}>
         Send Feedback
       </Typography>
 
-      {error && <Alert severity="error" className="error-alert">{error}</Alert>}
+      {error && <Alert severity="error" className={styles.errorAlert}>{error}</Alert>}
 
       <Grid container spacing={3} justifyContent="center">
         <Grid item xs={12} md={8} lg={6}>
           <Fade in={true} timeout={1000}>
-            <div className="feedback-card">
-              <div className="section-title">
+            <div className={styles.feedbackCard}>
+              <div className={styles.sectionTitle}>
                 <Tooltip title="Send Feedback">
                   <Avatar className="feedback-icon">
                     <FeedbackIcon />
@@ -228,8 +228,8 @@ const FeedbackPage = () => {
                 <span>Share Your Insights</span>
               </div>
 
-              <div className="custom-form-control">
-                <label className="input-label">Type of Feedback</label>
+              <div className={styles.customFormControl}>
+                <label className={styles.inputLabel}>Type of Feedback</label>
                 <Select
                   name="feedbackType"
                   value={feedback.feedbackType}
@@ -237,7 +237,7 @@ const FeedbackPage = () => {
                   required
                   fullWidth
                   displayEmpty
-                  className="select-field"
+                  className={styles.selectField}
                   error={Boolean(error && !feedback.feedbackType)}
                 >
                   <MenuItem value="" disabled>Select feedback type</MenuItem>
@@ -248,8 +248,8 @@ const FeedbackPage = () => {
                 </Select>
               </div>
 
-              <div className="custom-form-control">
-                <label className="input-label">Message</label>
+              <div className={styles.customFormControl}>
+                <label className={styles.inputLabel}>Message</label>
                 <TextField
                   multiline
                   rows={4}
@@ -260,23 +260,23 @@ const FeedbackPage = () => {
                   placeholder="Please provide detailed feedback (minimum 10 characters)..."
                   required
                   fullWidth
-                  className="text-field"
+                  className={styles.textField}
                   error={Boolean(error && feedback.message.length < 10)}
                   helperText={feedback.message.length < 10 ? "Message must be at least 10 characters long" : ""}
                 />
               </div>
 
-              <div className="custom-form-control">
-                <label className="input-label">Rating (Optional)</label>
+              <div className={styles.customFormControl}>
+                <label className={styles.inputLabel}>Rating (Optional)</label>
                 <StarRating 
                   value={feedback.rating} 
                   onChange={handleRatingChange} 
                 />
               </div>
 
-              <div className="custom-form-control">
-                <label className="input-label">Attachment (Max 50MB)</label>
-                <div className="dropzone-area" {...getRootProps()}>
+              <div className={styles.customFormControl}>
+                <label className={styles.inputLabel}>Attachment (Max 50MB)</label>
+                <div className={styles.dropzoneArea} {...getRootProps()}>
                   <input {...getInputProps()} />
                   <Typography>
                     {isDragActive
@@ -285,13 +285,13 @@ const FeedbackPage = () => {
                   </Typography>
                 </div>
                 {feedback.attachment && (
-                  <List className="file-list">
-                    <ListItem className="file-list-item">
-                      <div className="list-item-text">
-                        <div className="list-item-text-primary">
+                  <List className={styles.fileList}>
+                    <ListItem className={styles.fileListItem}>
+                      <div className={styles.listItemText}>
+                        <div className={styles.listItemTextPrimary}>
                           {feedback.attachment.name}
                         </div>
-                        <div className="list-item-text-secondary">
+                        <div className={styles.listItemTextSecondary}>
                           {`${(feedback.attachment.size / 1024 / 1024).toFixed(2)} MB`}
                         </div>
                       </div>
@@ -312,7 +312,7 @@ const FeedbackPage = () => {
               </div>
 
               <button
-                className={`custom-button ${isSubmitting ? 'submitting' : ''}`}
+                className={`custom-button ${isSubmitting ? styles.submitting : ''}`}
                 onClick={handleSubmit}
                 disabled={isSubmitting || !canSubmit}
               >

@@ -1,3 +1,4 @@
+import styles from './Reports.module.css';
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Typography, Grid, Box, Card, CardContent, Button, TextField,

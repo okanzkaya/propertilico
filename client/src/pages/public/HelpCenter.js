@@ -1,3 +1,4 @@
+import styles from './HelpCenter.module.css';
 import React from 'react';
 import './HelpCenter.css';
 
@@ -16,17 +17,17 @@ const HelpCenter = () => {
   ];
 
   return (
-    <div className="help-container">
-      <h1 className="help-title">Help Center</h1>
-      <p className="help-text">
+    <div className={styles.helpContainer}>
+      <h1 className={styles.helpTitle}>Help Center</h1>
+      <p className={styles.helpText}>
         If you need assistance, please feel free to reach out to us through any of the following methods:
       </p>
-      <div className="contact-methods">
+      <div className={styles.contactMethods}>
         {contactMethods.map((method, index) => (
-          <div key={index} className="contact-method">
+          <div key={index} className={styles.contactMethod}>
             <a
               href={method.href}
-              className="contact-link"
+              className={styles.contactLink}
               {...(method.isExternal && {
                 target: "_blank",
                 rel: "noopener noreferrer"

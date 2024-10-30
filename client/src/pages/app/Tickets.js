@@ -1,3 +1,4 @@
+import styles from './Tickets.module.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Typography, Grid, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -233,14 +234,14 @@ const Tickets = () => {
   const renderTicketCard = useCallback((ticket) => (
     <Grid item xs={12} sm={6} md={4} key={ticket.id}>
       <Fade in={true} timeout={500}>
-        <Paper className="ticket-card" onClick={() => handleOpenDialog('view', ticket)}>
-          <Box className="card-header">
-            <Typography variant="h6" noWrap className="card-title">
+        <Paper className={styles.ticketCard} onClick={() => handleOpenDialog('view', ticket)}>
+          <Box className={styles.cardHeader}>
+            <Typography variant="h6" noWrap className={styles.cardTitle}>
               {ticket.title}
             </Typography>
           </Box>
-          <Box className="card-content">
-            <Typography variant="body2" color="textSecondary" className="card-description">
+          <Box className={styles.cardContent}>
+            <Typography variant="body2" color="textSecondary" className={styles.cardDescription}>
               {ticket.description}
             </Typography>
             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -250,10 +251,10 @@ const Tickets = () => {
               </Tooltip>
             </Box>
           </Box>
-          <Box className="card-footer">
+          <Box className={styles.cardFooter}>
             <Tooltip title="Assignee">
               <Box display="flex" alignItems="center">
-                <Avatar className="assignee-avatar">
+                <Avatar className={styles.assigneeAvatar}>
                   <PersonIcon fontSize="small" />
                 </Avatar>
                 <Typography variant="body2">{ticket.assignee || 'Unassigned'}</Typography>
@@ -261,15 +262,15 @@ const Tickets = () => {
             </Tooltip>
             <Tooltip title="Due Date">
               <Box display="flex" alignItems="center">
-                <AccessTimeIcon fontSize="small" className="due-date-icon" />
+                <AccessTimeIcon fontSize="small" className={styles.dueDateIcon} />
                 <Typography
                   variant="body2"
-                  className={isTicketExpired(ticket.dueDate) ? 'expired-date' : ''}
+                  className={isTicketExpired(ticket.dueDate) ? styles.expiredDate : ''}
                 >
                   {ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : 'Not set'}
                 </Typography>
                 {isTicketExpired(ticket.dueDate) && (
-                  <WarningIcon color="error" fontSize="small" className="warning-icon" />
+                  <WarningIcon color="error" fontSize="small" className={styles.warningIcon} />
                 )}
               </Box>
             </Tooltip>
@@ -285,7 +286,7 @@ const Tickets = () => {
         return selectedTicket ? (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h5" gutterBottom className="dialog-title">
+              <Typography variant="h5" gutterBottom className={styles.dialogTitle}>
                 {selectedTicket.title}
               </Typography>
               <Typography variant="body1" paragraph>
@@ -310,9 +311,9 @@ const Tickets = () => {
               <Typography variant="h6" gutterBottom className="section-title">
                 Notes
               </Typography>
-              <List className="notes-list">
+              <List className={styles.notesList}>
                 {selectedTicket.notes?.map((note, index) => (
-                  <ListItem key={index} className="note-item">
+                  <ListItem key={index} className={styles.noteItem}>
                     <ListItemText
                       primary={new Date(note.createdAt).toLocaleString()}
                       secondary={note.content}
@@ -439,7 +440,7 @@ const Tickets = () => {
             rows={4}
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
-            className="note-input"
+            className={styles.noteInput}
           />
         );
 
@@ -449,7 +450,7 @@ const Tickets = () => {
   }, [dialogType, selectedTicket, formData, formErrors, handleInputChange, noteContent, renderStatusChip, renderPriorityIcon]);
 
   return (
-    <Box className="page-wrapper">
+    <Box className={styles.pageWrapper}>
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
           <IconButton
@@ -469,7 +470,7 @@ const Tickets = () => {
             color="secondary"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog('add')}
-            className="add-button"
+            className={styles.addButton}
           >
             New Ticket
           </Button>
@@ -569,7 +570,7 @@ const Tickets = () => {
           textColor="primary"
           centered={!isMobile}
           variant={isMobile ? "scrollable" : "standard"}
-          className="custom-tabs"
+          className={styles.customTabs}
         >
           {TABS.map((tab) => (
             <Tab
@@ -577,17 +578,17 @@ const Tickets = () => {
               label={tab.label}
               icon={tab.icon}
               iconPosition="start"
-              className="custom-tab"
+              className={styles.customTab}
             />
           ))}
         </Tabs>
 
         {loading ? (
-          <Box className="loading-container">
+          <Box className={styles.loadingContainer}>
             <CircularProgress />
           </Box>
         ) : filteredTickets.length === 0 ? (
-          <Paper elevation={3} className="empty-state">
+          <Paper elevation={3} className={styles.emptyState}>
             <Typography variant="h6" color="textSecondary">
               No tickets found. Try adjusting your filters or create a new ticket.
             </Typography>
@@ -617,7 +618,7 @@ const Tickets = () => {
                     : 'Confirm Delete'}
             <IconButton
               onClick={handleCloseDialog}
-              className="dialog-close-button"
+              className={styles.dialogCloseButton}
             >
               <CloseIcon />
             </IconButton>
@@ -630,7 +631,7 @@ const Tickets = () => {
               onClick={handleCloseDialog}
               color="primary"
               variant="outlined"
-              className="action-button"
+              className={styles.actionButton}
             >
               Cancel
             </Button>
@@ -639,7 +640,7 @@ const Tickets = () => {
                 onClick={handleSubmit}
                 color="primary"
                 variant="contained"
-                className="action-button"
+                className={styles.actionButton}
               >
                 {dialogType === 'add' ? 'Create Ticket' : 'Save Changes'}
               </Button>
@@ -648,7 +649,7 @@ const Tickets = () => {
                 onClick={handleDeleteTicket}
                 color="error"
                 variant="contained"
-                className="action-button"
+                className={styles.actionButton}
               >
                 Delete
               </Button>
@@ -657,7 +658,7 @@ const Tickets = () => {
                 onClick={handleAddNote}
                 color="primary"
                 variant="contained"
-                className="action-button"
+                className={styles.actionButton}
               >
                 Add Note
               </Button>
@@ -667,7 +668,7 @@ const Tickets = () => {
                   onClick={() => handleOpenDialog('edit', selectedTicket)}
                   color="primary"
                   variant="contained"
-                  className="action-button"
+                  className={styles.actionButton}
                 >
                   Edit Ticket
                 </Button>
@@ -675,7 +676,7 @@ const Tickets = () => {
                   onClick={() => handleOpenDialog('delete', selectedTicket)}
                   color="error"
                   variant="contained"
-                  className="action-button"
+                  className={styles.actionButton}
                 >
                   Delete Ticket
                 </Button>

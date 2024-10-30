@@ -1,3 +1,4 @@
+import styles from './SignIn.module.css';
 import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -123,12 +124,12 @@ const SignIn = () => {
   };
 
   return (
-    <div className="signin-container">
-      <Paper className="signin-box" elevation={3}>
-        <Typography variant="h4" gutterBottom className="signin-title">
+    <div className={styles.signinContainer}>
+      <Paper className={styles.signinBox} elevation={3}>
+        <Typography variant="h4" gutterBottom className={styles.signinTitle}>
           Sign In
         </Typography>
-        <form onSubmit={handleSubmit} noValidate className="signin-form">
+        <form onSubmit={handleSubmit} noValidate className={styles.signinForm}>
           <TextField
             name="email"
             label="Email"
@@ -142,7 +143,7 @@ const SignIn = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <EmailIcon className="input-icon" />
+                  <EmailIcon className={styles.inputIcon} />
                 </InputAdornment>
               ),
             }}
@@ -160,7 +161,7 @@ const SignIn = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <LockIcon className="input-icon" />
+                  <LockIcon className={styles.inputIcon} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -175,7 +176,7 @@ const SignIn = () => {
               ),
             }}
           />
-          <Box className="form-controls">
+          <Box className={styles.formControls}>
             <FormControlLabel
               control={
                 <Checkbox 
@@ -187,12 +188,12 @@ const SignIn = () => {
               }
               label="Remember Me"
             />
-            <Link to="/forgot-password" className="forgot-password">
+            <Link to="/forgot-password" className={styles.forgotPassword}>
               Forgot Password?
             </Link>
           </Box>
           {errors.general && (
-            <Typography variant="body2" className="error-message">
+            <Typography variant="body2" className={styles.errorMessage}>
               <ErrorIcon fontSize="small" />
               {errors.general}
             </Typography>
@@ -202,7 +203,7 @@ const SignIn = () => {
             variant="contained"
             fullWidth
             disabled={isLoading}
-            className="submit-button"
+            className={styles.submitButton}
           >
             {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
           </Button>
@@ -213,11 +214,11 @@ const SignIn = () => {
           startIcon={<GoogleIcon />}
           onClick={handleGoogleSignIn}
           disabled
-          className="google-button"
+          className={styles.googleButton}
         >
           Sign in with Google (Coming Soon)
         </Button>
-        <Typography variant="body2" className="signup-link">
+        <Typography variant="body2" className={styles.signupLink}>
           Don't have an account?{' '}
           <Link to="/get-started">Sign up</Link>
         </Typography>
@@ -231,7 +232,7 @@ const SignIn = () => {
         <Alert 
           onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
           severity={snackbar.severity}
-          className="alert"
+          className={styles.alert}
         >
           {snackbar.message}
         </Alert>

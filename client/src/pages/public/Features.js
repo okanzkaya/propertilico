@@ -1,3 +1,4 @@
+import styles from './Features.module.css';
 import React from 'react';
 import { Box, Typography, Grid, Container, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
@@ -25,12 +26,12 @@ const features = [
 const FeatureItem = ({ feature, index }) => (
   <Grid item xs={12} sm={6} md={4} lg={3}>
     <motion.div
-      className="feature-card"
+      className={styles.featureCard}
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
     >
-      <div className="icon-wrapper">{feature.icon}</div>
+      <div className={styles.iconWrapper}>{feature.icon}</div>
       <Typography variant="h6" component="h3" gutterBottom fontWeight="bold" color="primary">
         {feature.title}
       </Typography>
@@ -58,7 +59,7 @@ const Features = () => {
           component="h1"
           align="center"
           gutterBottom
-          className="features-title"
+          className={styles.featuresTitle}
           sx={{ color: theme.palette.primary.main }}
         >
           Revolutionize Your Property Management
@@ -67,7 +68,7 @@ const Features = () => {
           variant="h5"
           align="center"
           paragraph
-          className="features-subtitle"
+          className={styles.featuresSubtitle}
           sx={{ color: theme.palette.text.secondary }}
         >
           Unlock the full potential of your properties with our cutting-edge features

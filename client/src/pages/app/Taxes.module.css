@@ -1,0 +1,294 @@
+.taxes-container {
+    padding: 24px;
+  }
+  
+  .header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .header-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .add-button {
+    margin-right: 8px;
+  }
+  
+  .filters-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 16px;
+  }
+  
+  .search-field {
+    width: 30%;
+  }
+  
+  .filter-selects {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .filter-select {
+    min-width: 120px;
+  }
+  
+  .table-container {
+    max-height: 400px;
+    overflow: auto;
+  }
+  
+  .action-cell {
+    white-space: nowrap;
+    display: flex;
+    gap: 4px;
+  }
+  
+  .mobile-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .mobile-card {
+    margin-bottom: 16px;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  
+  .expiration-alert {
+    margin-top: 8px;
+  }
+  
+  .chart-container {
+    margin-top: 24px;
+    text-align: center;
+  }
+  
+  .pie-chart {
+    height: 200px;
+    margin-top: 16px;
+  }
+  
+  .help-button {
+    margin-top: 8px;
+  }
+  
+  .file-input {
+    margin-top: 16px;
+    width: 100%;
+  }
+  
+  .json-example {
+    background-color: #f5f5f5;
+    padding: 16px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+  
+  .tax-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .calculation-result {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .snackbar-alert {
+    width: 100%;
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 600px) {
+    .taxes-container {
+      padding: 16px;
+    }
+  
+    .header-actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+    }
+  
+    .header-buttons {
+      flex-direction: column;
+    }
+  
+    .add-button {
+      margin-right: 0;
+      margin-bottom: 8px;
+    }
+  
+    .filters-container {
+      flex-direction: column;
+    }
+  
+    .search-field {
+      width: 100%;
+    }
+  
+    .filter-selects {
+      flex-direction: column;
+      width: 100%;
+    }
+  
+    .filter-select {
+      width: 100%;
+    }
+  
+    .chart-container {
+      margin-top: 16px;
+    }
+  
+    .pie-chart {
+      height: 250px;
+    }
+  }
+  
+  /* Dialog styles */
+  .MuiDialog-paper {
+    min-width: 320px;
+  }
+  
+  /* Custom scrollbar */
+  .table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .table-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  
+  .table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+  
+  /* Animation for status changes */
+  .MuiChip-root {
+    transition: all 0.3s ease;
+  }
+  
+  /* Hover effects */
+  .action-cell .MuiIconButton-root:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Form field spacing */
+  .MuiFormControl-root {
+    margin: 8px 0;
+  }
+  
+  /* Button styling */
+  .calculator-button {
+    margin-top: 16px;
+  }
+  
+  /* Chart legend styling */
+  .chart-container .recharts-default-legend {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+  }
+  
+  /* Status chip colors */
+  .MuiChip-root.MuiChip-colorSuccess {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .MuiChip-root.MuiChip-colorDefault {
+    background-color: #f5f5f5;
+    color: #616161;
+  }
+  
+  /* Alert styling */
+  .expiration-alert.MuiAlert-root {
+    margin: 8px 0;
+    border-radius: 4px;
+  }
+  
+  /* Table header styling */
+  .MuiTableHead-root .MuiTableCell-root {
+    background-color: #f5f5f5;
+    font-weight: 600;
+  }
+  
+  /* Dialog content spacing */
+  .MuiDialogContent-root {
+    padding: 16px 24px;
+  }
+  
+  /* File input styling */
+  input[type="file"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    margin-top: 16px;
+  }
+  
+  /* Tooltip styling */
+  .MuiTooltip-tooltip {
+    font-size: 12px;
+  }
+  
+  /* Progress bar styling */
+  .MuiLinearProgress-root {
+    margin: 16px 0;
+  }
+  
+  /* Card content padding */
+  .MuiCardContent-root {
+    padding: 16px;
+  }
+  
+  /* Date picker input styling */
+  input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+  }
+  
+  /* Select dropdown styling */
+  .MuiSelect-select {
+    padding: 8px 32px 8px 12px;
+  }
+  
+  /* Dialog transition */
+  .MuiDialog-paper {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  /* Mobile card hover effect */
+  @media (hover: hover) {
+    .mobile-card:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+      transition: all 0.3s ease;
+    }
+  }

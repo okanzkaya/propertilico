@@ -1,3 +1,4 @@
+import styles from './SignUp.module.css';
 import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -140,16 +141,16 @@ const SignUp = () => {
   );
 
   return (
-    <div className="signup-container">
-      <Paper className="signup-box" elevation={3}>
-        <Typography variant="h4" gutterBottom className="signup-title">
+    <div className={styles.signupContainer}>
+      <Paper className={styles.signupBox} elevation={3}>
+        <Typography variant="h4" gutterBottom className={styles.signupTitle}>
           Sign Up
         </Typography>
-        <Typography variant="body1" gutterBottom className="signup-subtitle">
+        <Typography variant="body1" gutterBottom className={styles.signupSubtitle}>
           Join Propertilico and start managing your properties efficiently
         </Typography>
         
-        <form onSubmit={handleSubmit} className="signup-form">
+        <form onSubmit={handleSubmit} className={styles.signupForm}>
           {renderTextField('name', 'Full Name', 'text', Person)}
           {renderTextField('email', 'Email', 'email', Email)}
           {renderTextField('password', 'Password', 'password', Lock)}
@@ -165,7 +166,7 @@ const SignUp = () => {
               />
             }
             label={
-              <Typography variant="body2" className="terms-text">
+              <Typography variant="body2" className={styles.termsText}>
                 I agree to the{' '}
                 <Link href="#" onClick={(e) => { e.preventDefault(); setShowTerms(true); }}>
                   Terms and Conditions
@@ -185,13 +186,13 @@ const SignUp = () => {
             variant="contained"
             fullWidth
             disabled={isLoading}
-            className="signup-button"
+            className={styles.signupButton}
           >
             {isLoading ? <CircularProgress size={24} /> : 'Sign Up'}
           </Button>
         </form>
 
-        <Typography variant="body2" className="signup-link">
+        <Typography variant="body2" className={styles.signupLink}>
           Already have an account?{' '}
           <Link to="/signin">Sign in</Link>
         </Typography>

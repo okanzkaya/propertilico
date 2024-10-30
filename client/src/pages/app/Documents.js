@@ -1,3 +1,4 @@
+import styles from './Documents.module.css';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Typography,
@@ -215,7 +216,7 @@ useEffect(() => {
 }, [file?.id, file?.category, onLoadError]);
 
   const renderPlaceholder = () => (
-    <div className="preview-placeholder">
+    <div className={styles.previewPlaceholder}>
       {file.category === 'document' ? (
         <DescriptionIcon className="placeholder-icon" />
       ) : file.category === 'video' ? (
@@ -234,19 +235,19 @@ useEffect(() => {
 
   if (previewState.loading) {
     return (
-      <div className="preview-container">
+      <div className={styles.previewContainer}>
         <CircularProgress size={24} />
       </div>
     );
   }
 
   return (
-    <div className="preview-container">
+    <div className={styles.previewContainer}>
       {previewState.url && !previewState.error && file.category === 'image' ? (
         <img
           src={previewState.url}
           alt={file.name}
-          className="preview-image"
+          className={styles.previewImage}
           onError={() => {
             setPreviewState(prev => ({
               ...prev,
@@ -300,9 +301,9 @@ const UploadDialog = React.memo(({
       onClose={!isUploading ? onClose : undefined}
       maxWidth="sm"
       fullWidth
-      className="upload-dialog"
+      className={styles.uploadDialog}
     >
-      <DialogTitle className="dialog-title">
+      <DialogTitle className={styles.dialogTitle}>
         Upload Files
         {!isUploading && (
           <IconButton
@@ -318,7 +319,7 @@ const UploadDialog = React.memo(({
       <DialogContent>
         <div
           {...getRootProps()}
-          className={`dropzone ${isDragActive ? 'active' : ''} ${isDragReject ? 'reject' : ''}`}
+          className={`dropzone ${isDragActive ? styles.active : ''} ${isDragReject ? 'reject' : ''}`}
         >
           <input {...getInputProps()} />
           <CloudUploadOutlined className="upload-icon" />
@@ -465,7 +466,7 @@ const FileDetailsDialog = React.memo(({
       fullWidth
       className="file-details-dialog"
     >
-      <DialogTitle className="dialog-title">
+      <DialogTitle className={styles.dialogTitle}>
         <div className="dialog-title-content">
           <Typography variant="h6">File Details</Typography>
           {!isUpdating && (
@@ -904,7 +905,7 @@ const Documents = () => {
       className="document-card-container"
     >
       <Card 
-        className="document-card"
+        className={styles.documentCard}
         onClick={() => updateState({
           selectedFile: doc,
           isFileDetailsOpen: true
@@ -939,7 +940,7 @@ const Documents = () => {
                 doc.category === 'image' ? 'secondary' :
                 doc.category === 'video' ? 'error' : 'default'
               }
-              className="category-chip"
+              className={styles.categoryChip}
             />
             {doc.isFavorite && (
               <Chip
@@ -947,7 +948,7 @@ const Documents = () => {
                 size="small"
                 color="warning"
                 icon={<StarIcon />}
-                className="favorite-chip"
+                className={styles.favoriteChip}
               />
             )}
           </div>
@@ -960,7 +961,7 @@ const Documents = () => {
                 handleToggleFavorite(doc.id);
               }}
               size="small"
-              className={`favorite-button ${doc.isFavorite ? 'active' : ''}`}
+              className={`favorite-button ${doc.isFavorite ? styles.active : ''}`}
             >
               {doc.isFavorite ? <StarIcon /> : <StarBorderIcon />}
             </IconButton>
@@ -1008,11 +1009,11 @@ const Documents = () => {
         });
       }}
     >
-      <div className="documents-page">
-        <div className="documents-container">
-          <div className="documents-header">
-            <div className="header-title">
-              <Typography variant="h4" className="title-text">
+      <div className={styles.documentsPage}>
+        <div className={styles.documentsContainer}>
+          <div className={styles.documentsHeader}>
+            <div className={styles.headerTitle}>
+              <Typography variant="h4" className={styles.titleText}>
                 Documents
               </Typography>
               <Button
@@ -1026,14 +1027,14 @@ const Documents = () => {
             </div>
 
             {storageData && (
-              <div className="storage-info">
+              <div className={styles.storageInfo}>
                 <Typography variant="subtitle2">
                   Storage Used: {formatFileSize(storageData.used)} of {formatFileSize(storageData.limit)}
                 </Typography>
                 <LinearProgress
                   variant="determinate"
                   value={Math.min(((storageData.used / storageData.limit) || 0) * 100, 100)}
-                  className="storage-progress"
+                  className={styles.storageProgress}
                 />
               </div>
             )}
@@ -1048,13 +1049,13 @@ const Documents = () => {
               <Tab label="Favorites" />
             </Tabs>
 
-            <div className="search-filter-section">
+            <div className={styles.searchFilterSection}>
               <TextField
                 fullWidth
                 placeholder="Search documents..."
                 value={state.searchTerm}
                 onChange={(e) => updateState({ searchTerm: e.target.value })}
-                className="search-field"
+                className={styles.searchField}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -1097,12 +1098,12 @@ const Documents = () => {
 
           <div className="documents-content">
             {isLoadingDocuments ? (
-              <div className="loading-state">
+              <div className={styles.loadingState}>
                 <CircularProgress />
               </div>
             ) : filteredAndSortedDocuments.length === 0 ? (
-              <div className="empty-state">
-                <FolderIcon className="empty-icon" />
+              <div className={styles.emptyState}>
+                <FolderIcon className={styles.emptyIcon} />
                 <Typography variant="h6" className="empty-title">
                   {state.searchTerm
                     ? "No documents match your search"
@@ -1127,7 +1128,7 @@ const Documents = () => {
                 </Button>
               </div>
             ) : (
-              <div className="documents-grid">
+              <div className={styles.documentsGrid}>
                 <AnimatePresence mode="sync">
                   {filteredAndSortedDocuments.map(renderDocumentCard)}
                 </AnimatePresence>

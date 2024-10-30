@@ -60,7 +60,9 @@
     "yup": "^1.4.0"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "chalk": "^5.3.0",
+    "glob": "^11.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -69,7 +71,9 @@
     "eject": "react-scripts eject",
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "lint": "eslint src/**/*.{js,jsx}",
-    "lint:fix": "eslint src/**/*.{js,jsx} --fix"
+    "lint:fix": "eslint src/**/*.{js,jsx} --fix",
+    "migrate:css": "node scripts/migrateToCssModules.mjs",
+    "migrate:css:dry": "node scripts/migrateToCssModules.mjs --dry-run"
   },
   "eslintConfig": {
     "extends": [

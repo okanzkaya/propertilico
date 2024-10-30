@@ -1,3 +1,4 @@
+import styles from './Home.module.css';
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -106,12 +107,12 @@ const faqs = [
 ];
 
 const GridBox = ({ icon: Icon, title, description }) => (
-  <div className="grid-box" role="article">
-    <div className="grid-icon-wrapper">
-      <Icon className="grid-icon" aria-hidden="true" />
+  <div className={styles.gridBox} role="article">
+    <div className={styles.gridIconWrapper}>
+      <Icon className={styles.gridIcon} aria-hidden="true" />
     </div>
-    <h3 className="grid-title">{title}</h3>
-    <p className="grid-description">{description}</p>
+    <h3 className={styles.gridTitle}>{title}</h3>
+    <p className={styles.gridDescription}>{description}</p>
   </div>
 );
 
@@ -199,15 +200,15 @@ const Home = () => {
       </Helmet>
 
       <main id="main-content">
-        <section className="hero-section" aria-labelledby="hero-title">
-          <div className="hero-container">
-            <div className="hero-content">
+        <section className={styles.heroSection} aria-labelledby="hero-title">
+          <div className={styles.heroContainer}>
+            <div className={styles.heroContent}>
               <motion.h1 
                 id="hero-title"
                 initial={{ opacity: 0, y: 50 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ duration: 0.5 }}
-                className="heading"
+                className={styles.heading}
               >
                 Transform Your Property Management
               </motion.h1>
@@ -215,12 +216,12 @@ const Home = () => {
                 initial={{ opacity: 0, y: 50 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="sub-heading"
+                className={styles.subHeading}
               >
                 Streamline operations, boost efficiency, and maximize returns with our AI-powered platform.
               </motion.p>
               <motion.button 
-                className="cta-button-new"
+                className={styles.ctaButtonNew}
                 whileHover={{ scale: 1.05 }} 
                 whileTap={{ scale: 0.95 }} 
                 onClick={() => navigate('/get-started')}
@@ -228,9 +229,9 @@ const Home = () => {
               >
                 Start Free Trial
               </motion.button>
-              <ul className="benefit-list">
+              <ul className={styles.benefitList}>
                 {benefits.map((benefit, index) => (
-                  <li key={index} className="benefit-item">
+                  <li key={index} className={styles.benefitItem}>
                     <FaCheck aria-hidden="true" /> 
                     <span>{benefit}</span>
                   </li>
@@ -238,7 +239,7 @@ const Home = () => {
               </ul>
             </div>
             <motion.div
-              className="hero-grid"
+              className={styles.heroGrid}
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
@@ -267,21 +268,21 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="features-section" aria-labelledby="features-title">
-          <div className="container">
+        <section className={styles.featuresSection} aria-labelledby="features-title">
+          <div className={styles.container}>
             <h2 id="features-title" className="section-title text-center">Powerful Features</h2>
-            <div className="feature-grid-new">
+            <div className={styles.featureGridNew}>
               {features.map((feature, index) => (
                 <motion.div 
                   key={index}
-                  className="feature-card"
+                  className={styles.featureCard}
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   role="article"
                   aria-labelledby={`feature-title-${index}`}
                 >
-                  <div className="feature-icon" aria-hidden="true">
+                  <div className={styles.featureIcon} aria-hidden="true">
                     <feature.icon />
                   </div>
                   <h3 id={`feature-title-${index}`}>{feature.title}</h3>
@@ -292,30 +293,30 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="testimonial-section" aria-labelledby="testimonials-title">
-          <div className="container">
+        <section className={styles.testimonialSection} aria-labelledby="testimonials-title">
+          <div className={styles.container}>
             <h2 id="testimonials-title" className="section-title text-center">What Our Clients Say</h2>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTestimonial}
-                className="testimonial-card"
+                className={styles.testimonialCard}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="testimonial-content">
-                  <div className="testimonial-icon">
+                <div className={styles.testimonialContent}>
+                  <div className={styles.testimonialIcon}>
                     <FaUser aria-hidden="true" />
                   </div>
                   <div className="testimonial-text">
                     <h3>{testimonials[activeTestimonial].name}</h3>
-                    <p className="testimonial-title">
+                    <p className={styles.testimonialTitle}>
                       {testimonials[activeTestimonial].title} at {testimonials[activeTestimonial].company}
                     </p>
-                    <div className="testimonial-rating" aria-label={`Rated ${testimonials[activeTestimonial].rating} out of 5 stars`}>
+                    <div className={styles.testimonialRating} aria-label={`Rated ${testimonials[activeTestimonial].rating} out of 5 stars`}>
                       {[...Array(testimonials[activeTestimonial].rating)].map((_, i) => (
-                        <FaStar key={i} className="star-icon" aria-hidden="true" />
+                        <FaStar key={i} className={styles.starIcon} aria-hidden="true" />
                       ))}
                     </div>
                     <blockquote>
@@ -328,7 +329,7 @@ const Home = () => {
                 </div>
               </motion.div>
             </AnimatePresence>
-            <div className="testimonial-navigation">
+            <div className={styles.testimonialNavigation}>
               <button 
                 className="nav-button prev"
                 onClick={prevTestimonial}
@@ -349,17 +350,17 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="faq-section" aria-labelledby="faq-title">
-          <div className="container">
+        <section className={styles.faqSection} aria-labelledby="faq-title">
+          <div className={styles.container}>
             <h2 id="faq-title" className="section-title text-center">Frequently Asked Questions</h2>
-            <div className="faq-grid">
+            <div className={styles.faqGrid}>
               {faqs.map((faq, index) => (
                 <div 
                   key={index} 
-                  className="faq-item"
+                  className={styles.faqItem}
                 >
                   <button 
-                    className="faq-question"
+                    className={styles.faqQuestion}
                     onClick={() => toggleFAQ(index)}
                     aria-expanded={openFAQ === index}
                     aria-controls={`faq-answer-${index}`}
@@ -375,7 +376,7 @@ const Home = () => {
                     {openFAQ === index && (
                       <motion.div
                         id={`faq-answer-${index}`}
-                        className="faq-answer"
+                        className={styles.faqAnswer}
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
@@ -391,40 +392,40 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="cta-section-new" aria-labelledby="cta-title">
-          <div className="container">
+        <section className={styles.ctaSectionNew} aria-labelledby="cta-title">
+          <div className={styles.container}>
             <motion.div 
-              className="cta-wrapper"
+              className={styles.ctaWrapper}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <h2 id="cta-title" className="cta-heading">Ready to Transform Your Property Management?</h2>
-              <p className="cta-description">
+              <h2 id="cta-title" className={styles.ctaHeading}>Ready to Transform Your Property Management?</h2>
+              <p className={styles.ctaDescription}>
                 Join thousands of property managers who have already streamlined their operations.
               </p>
-              <div className="cta-button-container">
+              <div className={styles.ctaButtonContainer}>
                 <motion.button
-                  className="cta-button-new"
+                  className={styles.ctaButtonNew}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate('/get-started')}
                 >
                   Start Free Trial
                 </motion.button>
-                <p className="cta-note">No credit card required • 14-day free trial • Full featured</p>
+                <p className={styles.ctaNote}>No credit card required • 14-day free trial • Full featured</p>
               </div>
             </motion.div>
           </div>
         </section>
 
-        <section className="trust-section" aria-labelledby="trust-title" ref={trustRef}>
-          <div className="container">
+        <section className={styles.trustSection} aria-labelledby="trust-title" ref={trustRef}>
+          <div className={styles.container}>
             <h2 id="trust-title" className="section-title text-center">Trusted by Industry Leaders</h2>
-            <div className="trust-metrics">
-              <div className="metric-item">
-                <FaRegBuilding className="metric-icon" />
+            <div className={styles.trustMetrics}>
+              <div className={styles.metricItem}>
+                <FaRegBuilding className={styles.metricIcon} />
                 {inView && (
                   <CountUp
                     start={0}
@@ -432,41 +433,41 @@ const Home = () => {
                     duration={2.5}
                     separator=""
                     suffix="k+"
-                    className="metric-number"
+                    className={styles.metricNumber}
                   />
                 )}
-                <span className="metric-label">Properties Managed</span>
+                <span className={styles.metricLabel}>Properties Managed</span>
               </div>
-              <div className="metric-item">
-                <FaSmile className="metric-icon" />
+              <div className={styles.metricItem}>
+                <FaSmile className={styles.metricIcon} />
                 {inView && (
                   <CountUp
                     start={0}
                     end={98}
                     duration={2.5}
                     suffix="%"
-                    className="metric-number"
+                    className={styles.metricNumber}
                   />
                 )}
-                <span className="metric-label">Customer Satisfaction</span>
+                <span className={styles.metricLabel}>Customer Satisfaction</span>
               </div>
-              <div className="metric-item">
-                <FaPiggyBank className="metric-icon" />
+              <div className={styles.metricItem}>
+                <FaPiggyBank className={styles.metricIcon} />
                 {inView && (
                   <CountUp
                     start={0}
                     end={30}
                     duration={2.5}
                     suffix="%"
-                    className="metric-number"
+                    className={styles.metricNumber}
                   />
                 )}
-                <span className="metric-label">Average Cost Reduction</span>
+                <span className={styles.metricLabel}>Average Cost Reduction</span>
               </div>
-              <div className="metric-item">
-                <FaClock className="metric-icon" />
-                <span className="metric-number">24/7</span>
-                <span className="metric-label">Customer Support</span>
+              <div className={styles.metricItem}>
+                <FaClock className={styles.metricIcon} />
+                <span className={styles.metricNumber}>24/7</span>
+                <span className={styles.metricLabel}>Customer Support</span>
               </div>
             </div>
           </div>

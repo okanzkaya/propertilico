@@ -1,3 +1,4 @@
+import styles from './Overview.module.css';
 import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery } from 'react-query';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -462,8 +463,8 @@ const Dashboard = () => {
     if (!tasksToRender?.length) return null;
     
     return tasksToRender.map((task) => (
-      <ListItem key={task.id} className="task-item">
-        <Box className="task-content">
+      <ListItem key={task.id} className={styles.taskItem}>
+        <Box className={styles.taskContent}>
           <Box display="flex" alignItems="center" flexGrow={1}>
             <Checkbox
               checked={task.status === 'Completed'}
@@ -472,15 +473,15 @@ const Dashboard = () => {
             <ListItemText
               primary={task.task}
               secondary={task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : ''}
-              className={task.status === 'Completed' ? 'completed-task' : ''}
+              className={task.status === 'Completed' ? styles.completedTask : ''}
             />
           </Box>
-          <Box className="task-actions">
+          <Box className={styles.taskActions}>
             <Chip
               label={task.status}
               color={task.status === 'Completed' ? 'success' : 'warning'}
               size="small"
-              className="status-chip"
+              className={styles.statusChip}
             />
             <IconButton size="small" onClick={() => handleDeleteTask(task.id)}>
               <Icons.Delete fontSize="small" />
@@ -494,15 +495,15 @@ const Dashboard = () => {
   const renderStats = useCallback(() => (
     stats.map((stat, index) => (
       <Grid item xs={12} sm={6} md={3} key={index}>
-        <Card className="stat-card">
-          <Box className="stat-content">
-            <Box className="stat-info">
-              <Typography variant="subtitle2" className="stat-title">{stat.title}</Typography>
-              <Typography variant="h4" className="stat-value">{stat.value}</Typography>
+        <Card className={styles.statCard}>
+          <Box className={styles.statContent}>
+            <Box className={styles.statInfo}>
+              <Typography variant="subtitle2" className={styles.statTitle}>{stat.title}</Typography>
+              <Typography variant="h4" className={styles.statValue}>{stat.value}</Typography>
             </Box>
-            <Avatar className="stat-icon" sx={{ bgcolor: stat.color }}>{stat.icon}</Avatar>
+            <Avatar className={styles.statIcon} sx={{ bgcolor: stat.color }}>{stat.icon}</Avatar>
           </Box>
-          <Box className="stat-trend">
+          <Box className={styles.statTrend}>
             {stat.trend === 'up' ? (
               <Icons.ArrowUpward sx={{ color: 'var(--success-color)' }} fontSize="small" />
             ) : (
@@ -524,7 +525,7 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <Box className="loading-container">
+      <Box className={styles.loadingContainer}>
         <CircularProgress />
       </Box>
     );
@@ -532,17 +533,17 @@ const Dashboard = () => {
 
   if (hasError) {
     return (
-      <Box className="error-container">
+      <Box className={styles.errorContainer}>
         <Alert severity="error">An error occurred while fetching data. Please try again later.</Alert>
       </Box>
     );
   }
 
   return (
-    <Box className="dashboard-container">
+    <Box className={styles.dashboardContainer}>
       {/* Header */}
-      <Box className="dashboard-header">
-        <Typography variant="h4" className="dashboard-title">Dashboard</Typography>
+      <Box className={styles.dashboardHeader}>
+        <Typography variant="h4" className={styles.dashboardTitle}>Dashboard</Typography>
         <Tooltip title="Open Tickets">
           <IconButton
             color="inherit"
@@ -561,8 +562,8 @@ const Dashboard = () => {
 
         {/* Financial Overview */}
         <Grid item xs={12} md={8}>
-          <Card className="chart-card">
-            <Box className="chart-header">
+          <Card className={styles.chartCard}>
+            <Box className={styles.chartHeader}>
               <Typography variant="h6">Financial Overview</Typography>
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <InputLabel>Time Range</InputLabel>
@@ -579,7 +580,7 @@ const Dashboard = () => {
                 </Select>
               </FormControl>
             </Box>
-            <Box className="chart-container">
+            <Box className={styles.chartContainer}>
               <Line data={chartData} options={CHART_OPTIONS} />
             </Box>
           </Card>
@@ -587,14 +588,14 @@ const Dashboard = () => {
 
         {/* Occupancy Rate */}
         <Grid item xs={12} md={4}>
-          <Card className="chart-card">
-            <Box className="chart-header">
+          <Card className={styles.chartCard}>
+            <Box className={styles.chartHeader}>
               <Typography variant="h6">Occupancy Rate</Typography>
               <Typography variant="h4" className="success-text">
                 {occupancyRate}%
               </Typography>
             </Box>
-            <Box className="chart-container">
+            <Box className={styles.chartContainer}>
               <Doughnut
                 data={occupancyChartData}
                 options={{
@@ -608,12 +609,12 @@ const Dashboard = () => {
 
         {/* Property Map */}
         <Grid item xs={12}>
-          <Card className="chart-card">
+          <Card className={styles.chartCard}>
             <Typography variant="h6" gutterBottom>Property Locations</Typography>
             {properties?.length && mapBounds ? (
               <MapContainer
                 bounds={mapBounds}
-                className="map-container"
+                className={styles.mapContainer}
                 zoomControl={true}
                 attributionControl={true}
               >
@@ -653,8 +654,8 @@ const Dashboard = () => {
 
         {/* Tasks */}
         <Grid item xs={12} md={6}>
-          <Card className="chart-card">
-            <Box className="chart-header">
+          <Card className={styles.chartCard}>
+            <Box className={styles.chartHeader}>
               <Typography variant="h6">Tasks</Typography>
               <Tooltip title="View All Tasks">
                 <IconButton
@@ -665,7 +666,7 @@ const Dashboard = () => {
                 </IconButton>
               </Tooltip>
             </Box>
-            <Box className="add-task-form">
+            <Box className={styles.addTaskForm}>
               <TextField
                 label="New Task"
                 variant="outlined"
@@ -674,7 +675,7 @@ const Dashboard = () => {
                 onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
                 fullWidth
                 size="small"
-                className="task-input"
+                className={styles.taskInput}
               />
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
@@ -682,7 +683,7 @@ const Dashboard = () => {
                   value={newTaskDueDate}
                   onChange={setNewTaskDueDate}
                   renderInput={(params) => (
-                    <TextField {...params} size="small" className="date-picker" />
+                    <TextField {...params} size="small" className={styles.datePicker} />
                   )}
                 />
               </LocalizationProvider>
@@ -690,7 +691,7 @@ const Dashboard = () => {
                 <Icons.Add />
               </IconButton>
             </Box>
-            <List className="task-list">
+            <List className={styles.taskList}>
               {renderTasks(tasks?.slice(0, 5))}
             </List>
             {tasks?.length > 5 && (
@@ -708,13 +709,13 @@ const Dashboard = () => {
 
         {/* Recent Activities */}
         <Grid item xs={12} md={6}>
-          <Card className="chart-card">
+          <Card className={styles.chartCard}>
             <Typography variant="h6" gutterBottom>Recent Activities</Typography>
             <List>
               {recentActivities.map((activity, index) => (
-                <ListItem key={index} className="activity-item">
+                <ListItem key={index} className={styles.activityItem}>
                   <ListItemAvatar>
-                    <Avatar className="activity-icon">
+                    <Avatar className={styles.activityIcon}>
                       {activity.icon}
                     </Avatar>
                   </ListItemAvatar>
@@ -736,8 +737,8 @@ const Dashboard = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogContent className="dialog-content">
-          <Box className="dialog-header">
+        <DialogContent className={styles.dialogContent}>
+          <Box className={styles.dialogHeader}>
             <Typography variant="h6">Open Tickets</Typography>
             <IconButton 
               onClick={() => setDialogsOpen(prev => ({ ...prev, tickets: false }))}
@@ -749,7 +750,7 @@ const Dashboard = () => {
             {tickets?.filter(ticket => ticket.status === 'Open')
               .slice(0, 5)
               .map((ticket) => (
-                <ListItem key={ticket.id} className="ticket-item">
+                <ListItem key={ticket.id} className={styles.ticketItem}>
                   <ListItemAvatar>
                     <Avatar sx={{
                       bgcolor: ticket.priority === 'High'
@@ -767,7 +768,7 @@ const Dashboard = () => {
                     label={ticket.status}
                     color={ticket.status === 'Open' ? 'error' : 'warning'}
                     size="small"
-                    className="status-chip"
+                    className={styles.statusChip}
                   />
                 </ListItem>
             ))}
@@ -781,8 +782,8 @@ const Dashboard = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogContent className="dialog-content">
-          <Box className="dialog-header">
+        <DialogContent className={styles.dialogContent}>
+          <Box className={styles.dialogHeader}>
             <Typography variant="h6">All Tasks</Typography>
             <IconButton 
               onClick={() => setDialogsOpen(prev => ({ ...prev, allTasks: false }))}
@@ -790,7 +791,7 @@ const Dashboard = () => {
               <Icons.Close />
             </IconButton>
           </Box>
-          <List className="dialog-list">
+          <List className={styles.dialogList}>
             {renderTasks(tasks)}
           </List>
         </DialogContent>

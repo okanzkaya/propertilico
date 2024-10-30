@@ -1,3 +1,4 @@
+import styles from './Settings.module.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -35,14 +36,14 @@ const TabButton = ({ icon, label, active, onClick }) => (
     startIcon={icon}
     onClick={onClick}
     fullWidth
-    className={`tab-button ${active ? 'active' : ''}`}
+    className={`tab-button ${active ? styles.active : ''}`}
   >
     {label}
   </Button>
 );
 
 const SectionTitle = ({ icon, title, tooltipText }) => (
-  <Box className="section-title">
+  <Box className={styles.sectionTitle}>
     {icon}
     <Typography variant="h6" fontWeight="bold">
       {title}
@@ -86,22 +87,22 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
   ];
 
   return (
-    <div className="preferences-container">
+    <div className={styles.preferencesContainer}>
       <SectionTitle
         icon={<PersonIcon />}
         title="User Preferences"
         tooltipText="Manage your personal preferences"
       />
-      <div className="avatar-container">
-        <div className="avatar-wrapper">
+      <div className={styles.avatarContainer}>
+        <div className={styles.avatarWrapper}>
           <Avatar
             src={avatarPreview || (settings.profilePicture && `${process.env.REACT_APP_API_URL}${settings.profilePicture}`)}
-            className="profile-avatar"
+            className={styles.profileAvatar}
           />
-          <label htmlFor="profile-picture-input" className="camera-button-wrapper">
+          <label htmlFor="profile-picture-input" className={styles.cameraButtonWrapper}>
             <IconButton 
               component="span"
-              className="camera-icon-button"
+              className={styles.cameraIconButton}
               size="small"
             >
               <CameraIcon />
@@ -125,11 +126,11 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
             value={settings.username}
             onChange={handleChange}
             fullWidth
-            className="form-field"
+            className={styles.formField}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth className="form-field">
+          <FormControl fullWidth className={styles.formField}>
             <InputLabel>Language</InputLabel>
             <Select
               name="language"
@@ -152,11 +153,11 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
                 target: { name: 'timeZone', value: newValue ? newValue.value : '' }
               });
             }}
-            renderInput={(params) => <TextField {...params} label="Time Zone" className="form-field" />}
+            renderInput={(params) => <TextField {...params} label="Time Zone" className={styles.formField} />}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth className="form-field">
+          <FormControl fullWidth className={styles.formField}>
             <InputLabel>Currency</InputLabel>
             <Select
               name="currency"
@@ -170,7 +171,7 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth className="form-field">
+          <FormControl fullWidth className={styles.formField}>
             <InputLabel>Date Format</InputLabel>
             <Select
               name="dateFormat"
@@ -184,7 +185,7 @@ const UserPreferences = ({ settings, handleChange, handleProfilePictureChange, h
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth className="form-field">
+          <FormControl fullWidth className={styles.formField}>
             <InputLabel>Measurement Unit</InputLabel>
             <Select
               name="measurementUnit"
@@ -265,7 +266,7 @@ const AppearanceSettings = ({ settings, handleChange }) => (
       title="Appearance"
       tooltipText="Customize your app appearance"
     />
-    <FormControl fullWidth className="form-field">
+    <FormControl fullWidth className={styles.formField}>
       <InputLabel>Theme</InputLabel>
       <Select
         name="theme"
@@ -276,7 +277,7 @@ const AppearanceSettings = ({ settings, handleChange }) => (
         <MenuItem value="dark">Dark</MenuItem>
       </Select>
     </FormControl>
-    <FormControl fullWidth className="form-field">
+    <FormControl fullWidth className={styles.formField}>
       <InputLabel>Font Size</InputLabel>
       <Select
         name="fontSize"
@@ -606,13 +607,13 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
   }), [settings, handleChange, handleProfilePictureChange, handleSave, user.email, avatarPreview]);
 
   return (
-    <Box className="settings-page">
-      <Typography variant="h4" className="page-title">
+    <Box className={styles.settingsPage}>
+      <Typography variant="h4" className={styles.pageTitle}>
         Settings
       </Typography>
       <Grid container spacing={3}>
         <Grid item xs={12} md={3}>
-          <Card className="sidebar-card">
+          <Card className={styles.sidebarCard}>
             {Object.keys(tabContent).map((tab) => (
               <TabButton
                 key={tab}
@@ -625,9 +626,9 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
           </Card>
         </Grid>
         <Grid item xs={12} md={9}>
-          <Card className="content-card">
+          <Card className={styles.contentCard}>
             {loading ? (
-              <Box className="loading-container">
+              <Box className={styles.loadingContainer}>
                 <CircularProgress />
               </Box>
             ) : (
@@ -649,7 +650,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
         className="dialog-container"
       >
         <DialogTitle>Change Email Address</DialogTitle>
-        <DialogContent className="dialog-content">
+        <DialogContent className={styles.dialogContent}>
           <Typography variant="body2" color="text.secondary" className="dialog-description">
             You can only change your email address once every 24 hours. Are you sure you want to proceed?
           </Typography>
@@ -673,7 +674,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             className="dialog-field"
           />
         </DialogContent>
-        <DialogActions className="dialog-actions">
+        <DialogActions className={styles.dialogActions}>
           <Button onClick={() => setDialogState(prev => ({ ...prev, email: { ...prev.email, open: false } }))}>
             Cancel
           </Button>
@@ -689,7 +690,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
         className="dialog-container"
       >
         <DialogTitle>Change Password</DialogTitle>
-        <DialogContent className="dialog-content">
+        <DialogContent className={styles.dialogContent}>
           <Typography variant="body2" color="text.secondary" className="dialog-description">
             You can only change your password once every 30 minutes. Are you sure you want to proceed?
           </Typography>
@@ -760,7 +761,7 @@ const SettingsPage = ({ toggleTheme, fontSize, changeFontSize, themeMode }) => {
             }}
           />
         </DialogContent>
-        <DialogActions className="dialog-actions">
+        <DialogActions className={styles.dialogActions}>
           <Button onClick={() => setDialogState(prev => ({ ...prev, password: { ...prev.password, open: false } }))}>
             Cancel
           </Button>

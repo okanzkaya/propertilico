@@ -1,3 +1,4 @@
+import styles from './BlogPost.module.css';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -51,7 +52,7 @@ const LazyImage = ({ src, alt, className }) => {
           setError(true);
           e.target.src = '/default-blog-image.png';
         }}
-        className={isLoaded ? 'loaded' : ''}
+        className={isLoaded ? styles.loaded : ''}
         loading="lazy"
       />
     </div>
@@ -224,16 +225,16 @@ const BlogPost = () => {
 
   if (isLoading) {
     return (
-      <div className="post-container">
-        <div className="loading-spinner" />
+      <div className={styles.postContainer}>
+        <div className={styles.loadingSpinner} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="post-container">
-        <div className="error-message">{error}</div>
+      <div className={styles.postContainer}>
+        <div className={styles.errorMessage}>{error}</div>
       </div>
     );
   }
@@ -278,12 +279,12 @@ const BlogPost = () => {
       </Helmet>
 
       <motion.div
-        className="post-container"
+        className={styles.postContainer}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Link to="/blog" className="back-button">
+        <Link to="/blog" className={styles.backButton}>
           <FaArrowLeft /> Back to Blog List
         </Link>
 
@@ -291,69 +292,69 @@ const BlogPost = () => {
           <LazyImage 
             src={getImageUrl(post.imageUrl)} 
             alt={post.title}
-            className="header-image"
+            className={styles.headerImage}
           />
         )}
 
-        <h1 className="post-title">{post.title}</h1>
+        <h1 className={styles.postTitle}>{post.title}</h1>
 
-        <div className="meta-data">
-          <div className="meta-item">
+        <div className={styles.metaData}>
+          <div className={styles.metaItem}>
             <FaUser />
             <span>{post.author?.name || "Anonymous"}</span>
           </div>
-          <div className="meta-item">
+          <div className={styles.metaItem}>
             <FaCalendarAlt />
             <time dateTime={post.createdAt}>{formatDate(post.createdAt)}</time>
           </div>
-          <div className="meta-item">
+          <div className={styles.metaItem}>
             <FaClock />
             <span>{readTime} min read</span>
           </div>
-          <div className="meta-item">
+          <div className={styles.metaItem}>
             <FaEye />
             <span>{post.viewCount || 0} views</span>
           </div>
         </div>
 
-        <div className="tag-list">
+        <div className={styles.tagList}>
           {post.tags?.map(tag => (
-            <Link key={tag} to={`/blog/tag/${tag}`} className="tag">
+            <Link key={tag} to={`/blog/tag/${tag}`} className={styles.tag}>
               {tag}
             </Link>
           ))}
         </div>
 
-        <div className="action-button-group">
+        <div className={styles.actionButtonGroup}>
           {user?.isBlogger && (
             <>
               <button 
                 onClick={handleEdit} 
-                className="action-button" 
+                className={styles.actionButton} 
                 style={{ background: '#4CAF50', color: '#fff' }}
               >
                 <FaEdit /> Edit Post
               </button>
               <button 
                 onClick={handleDelete} 
-                className="action-button" 
+                className={styles.actionButton} 
                 style={{ background: '#f44336', color: '#fff' }}
               >
                 <FaTrash /> Delete Post
               </button>
             </>
           )}
-          <button onClick={toggleBookmark} className="action-button">
+          <button onClick={toggleBookmark} className={styles.actionButton}>
             {isBookmarked ? <FaBookmark /> : <FaRegBookmark />} 
             {isBookmarked ? 'Bookmarked' : 'Bookmark'}
           </button>
-          <button onClick={() => handleShare('print')} className="action-button">
+          <button onClick={() => handleShare('print')} className={styles.actionButton}>
             <FaPrint /> Print
           </button>
         </div>
 
         {tableOfContents.length > 0 && (
-          <nav className="table-of-contents">
+          <nav className={styles.tableOfContents}>
             <h4>Table of Contents</h4>
             <ul>
               {tableOfContents.map(heading => (
@@ -369,92 +370,92 @@ const BlogPost = () => {
         )}
 
         <div 
-          className="post-content"
+          className={styles.postContent}
           ref={contentRef}
           dangerouslySetInnerHTML={{ __html: sanitizedContent }} 
         />
 
-        <div className="author-section">
+        <div className={styles.authorSection}>
           <img 
             src={post.author?.avatar || '/default-avatar.jpg'} 
             alt={post.author?.name || "Anonymous"}
-            className="author-avatar"
+            className={styles.authorAvatar}
             loading="lazy"
           />
-          <div className="author-info">
-            <h3 className="author-name">{post.author?.name || "Anonymous"}</h3>
-            <p className="author-bio">
+          <div className={styles.authorInfo}>
+            <h3 className={styles.authorName}>{post.author?.name || "Anonymous"}</h3>
+            <p className={styles.authorBio}>
               {post.author?.bloggerDescription || "Property Management Expert"}
             </p>
           </div>
         </div>
 
-        <div className="share-section">
-          <h3 className="share-title">Share this article</h3>
-          <div className="share-buttons">
+        <div className={styles.shareSection}>
+          <h3 className={styles.shareTitle}>Share this article</h3>
+          <div className={styles.shareButtons}>
             <button 
               onClick={() => handleShare('facebook')} 
-              className="action-button"
+              className={styles.actionButton}
               style={{ background: '#1877f2', color: '#fff' }}
             >
               <FaFacebookF /> Facebook
             </button>
             <button 
               onClick={() => handleShare('twitter')} 
-              className="action-button"
+              className={styles.actionButton}
               style={{ background: '#1da1f2', color: '#fff' }}
             >
               <FaTwitter /> Twitter
             </button>
             <button 
               onClick={() => handleShare('linkedin')} 
-              className="action-button"
+              className={styles.actionButton}
               style={{ background: '#0077b5', color: '#fff' }}
             >
               <FaLinkedinIn /> LinkedIn
             </button>
             <button 
               onClick={() => handleShare('whatsapp')} 
-              className="action-button"
+              className={styles.actionButton}
               style={{ background: '#25d366', color: '#fff' }}
             >
               <FaWhatsapp /> WhatsApp
             </button>
             <button 
               onClick={() => handleShare('reddit')} 
-              className="action-button"
+              className={styles.actionButton}
               style={{ background: '#ff4500', color: '#fff' }}
             >
               <FaRedditAlien /> Reddit
             </button>
             <button 
               onClick={() => handleShare('email')} 
-              className="action-button"
+              className={styles.actionButton}
               style={{ background: '#333333', color: '#fff' }}
             >
               <FaEnvelope /> Email
             </button>
-            <button onClick={() => handleShare('copy')} className="action-button">
+            <button onClick={() => handleShare('copy')} className={styles.actionButton}>
               <FaCopy /> Copy Link
             </button>
           </div>
         </div>
 
         {relatedPosts.length > 0 && (
-          <section className="related-posts">
-            <h2 className="related-posts-title">Related Articles</h2>
-            <div className="related-posts-grid">
+          <section className={styles.relatedPosts}>
+            <h2 className={styles.relatedPostsTitle}>Related Articles</h2>
+            <div className={styles.relatedPostsGrid}>
               {relatedPosts.map(relatedPost => (
                 <Link 
                   key={relatedPost.id} 
                   to={`/blog/${relatedPost.id}`} 
-                  className="related-post-card"
+                  className={styles.relatedPostCard}
                 >
                   {relatedPost.imageUrl && (
                     <LazyImage 
                       src={getImageUrl(relatedPost.imageUrl)} 
                       alt={relatedPost.title}
-                      className="header-image"
+                      className={styles.headerImage}
                     />
                   )}
                   <div className="related-post-content">
@@ -472,7 +473,7 @@ const BlogPost = () => {
         <AnimatePresence>
           {notification && (
             <motion.div
-              className="notification"
+              className={styles.notification}
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}

@@ -1,3 +1,4 @@
+import styles from './Contacts.module.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, CardActions, Avatar, IconButton,
@@ -31,16 +32,16 @@ const ContactDetailsDialog = ({ open, onClose, contact, handleOpenDialog }) => {
         <IconButton
           aria-label="close"
           onClick={onClose}
-          className="dialog-close-button"
+          className={styles.dialogCloseButton}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       <DialogContent>
-        <Box className="contact-details-container">
+        <Box className={styles.contactDetailsContainer}>
           <Avatar
             src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''}
-            className="contact-details-avatar"
+            className={styles.contactDetailsAvatar}
           />
           <Typography variant="h5">{contact.name}</Typography>
           <Typography variant="subtitle1" color="textSecondary">{contact.role}</Typography>
@@ -241,24 +242,24 @@ END:VCARD`;
 
   const renderContactCard = useCallback((contact) => (
     <Grid item xs={12} sm={6} md={4} lg={3} key={contact.id}>
-      <Card className="contact-card" onClick={() => handleOpenDetailsDialog(contact)}>
+      <Card className={styles.contactCard} onClick={() => handleOpenDetailsDialog(contact)}>
         <CardContent>
           <Avatar 
             src={contact.avatar ? `${process.env.REACT_APP_API_URL}/${contact.avatar}` : ''} 
             alt={contact.name}
-            className="contact-avatar"
+            className={styles.contactAvatar}
           />
           <Typography variant="h6" align="center" gutterBottom>{contact.name}</Typography>
           <Typography variant="subtitle1" align="center" color="textSecondary" gutterBottom>
             {contact.role}
           </Typography>
-          <Box className="contact-chips">
+          <Box className={styles.contactChips}>
             <Chip icon={<PhoneIcon />} label={contact.phone} size="small" />
             <Chip icon={<EmailIcon />} label={contact.email} size="small" />
             <Chip icon={<WorkIcon />} label={contact.role} size="small" />
           </Box>
         </CardContent>
-        <CardActions className="contact-actions">
+        <CardActions className={styles.contactActions}>
           <IconButton onClick={(e) => { 
             e.stopPropagation(); 
             handleOpenDialog(contact); 
@@ -282,7 +283,7 @@ END:VCARD`;
       {paginatedContacts.map((contact) => (
         <Box key={contact.id}>
           <Box
-            className="contact-list-item"
+            className={styles.contactListItem}
             onClick={() => setExpandedContact(expandedContact === contact.id ? null : contact.id)}
           >
             <Grid container alignItems="center" spacing={2}>
@@ -317,7 +318,7 @@ END:VCARD`;
             </Grid>
           </Box>
           <Collapse in={expandedContact === contact.id}>
-            <Box className="contact-details">
+            <Box className={styles.contactDetails}>
               <Typography variant="body2"><strong>Email:</strong> {contact.email}</Typography>
               <Typography variant="body2"><strong>Phone:</strong> {contact.phone}</Typography>
               <Typography variant="body2">
@@ -335,19 +336,19 @@ END:VCARD`;
 
   if (loading) {
     return (
-      <Box className="loading-container">
+      <Box className={styles.loadingContainer}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box className="contacts-container">
-      <Typography variant="h4" gutterBottom className="page-title">
+    <Box className={styles.contactsContainer}>
+      <Typography variant="h4" gutterBottom className={styles.pageTitle}>
         Contacts
       </Typography>
       
-      <Box className="controls-container">
+      <Box className={styles.controlsContainer}>
         <TextField
           variant="outlined"
           placeholder="Search contacts..."
@@ -363,10 +364,10 @@ END:VCARD`;
               </InputAdornment>
             ),
           }}
-          className="search-field"
+          className={styles.searchField}
         />
         
-        <Box className="filters-container">
+        <Box className={styles.filtersContainer}>
           <FormControl variant="outlined" size="small">
             <InputLabel>Sort By</InputLabel>
             <Select
@@ -403,7 +404,7 @@ END:VCARD`;
               color="primary" 
               size="medium" 
               onClick={() => handleOpenDialog()} 
-              className="add-button"
+              className={styles.addButton}
             >
               <AddIcon />
             </Fab>
@@ -414,7 +415,7 @@ END:VCARD`;
       <Tabs 
         value={viewMode} 
         onChange={(_, newValue) => setViewMode(newValue)} 
-        className="view-tabs"
+        className={styles.viewTabs}
       >
         <Tab label="Grid View" value="grid" />
         <Tab label="List View" value="list" />
@@ -429,7 +430,7 @@ END:VCARD`;
       )}
 
       {pageCount > 1 && (
-        <Box className="pagination-container">
+        <Box className={styles.paginationContainer}>
           <Pagination
             count={pageCount}
             page={page}
@@ -447,7 +448,7 @@ END:VCARD`;
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2}>
-              <Grid item xs={12} className="avatar-upload-container">
+              <Grid item xs={12} className={styles.avatarUploadContainer}>
                 <input
                   accept="image/*"
                   style={{ display: 'none' }}
@@ -458,9 +459,9 @@ END:VCARD`;
                 <label htmlFor="avatar-file-input">
                   <Avatar
                     src={avatarPreview || (currentContact && `${process.env.REACT_APP_API_URL}/${currentContact.avatar}`)}
-                    className="upload-avatar"
+                    className={styles.uploadAvatar}
                   />
-                  <Typography variant="caption" display="block" align="center" className="upload-text">
+                  <Typography variant="caption" display="block" align="center" className={styles.uploadText}>
                     Click to upload avatar
                   </Typography>
                 </label>

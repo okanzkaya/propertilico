@@ -1,3 +1,4 @@
+import styles from './MyPlan.module.css';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { userApi } from '../../api';
 import { useUser } from '../../context/UserContext';
@@ -139,7 +140,7 @@ const MyPlan = () => {
   }, [state.dialogAction, handleSubscriptionAction, handleCloseDialog]);
 
   const renderSubscriptionDetails = useMemo(() => (
-    <Box className="gradient-box">
+    <Box className={styles.gradientBox}>
       <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ mb: 3 }}>
         Your {state.planName} Plan
       </Typography>
@@ -191,7 +192,7 @@ const MyPlan = () => {
     ];
 
     return (
-      <Box className="subscription-actions">
+      <Box className={styles.subscriptionActions}>
         <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'text.primary', fontWeight: 'bold' }}>
           Manage Subscription (Admin Only)
         </Typography>
@@ -238,9 +239,9 @@ const MyPlan = () => {
         <Grid container spacing={3}>
           {features.map((feature, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card className="feature-card">
-                <CardContent className="feature-content">
-                  <Avatar className="feature-icon" sx={{ bgcolor: 'primary.main' }}>
+              <Card className={styles.featureCard}>
+                <CardContent className={styles.featureContent}>
+                  <Avatar className={styles.featureIcon} sx={{ bgcolor: 'primary.main' }}>
                     {React.cloneElement(feature.icon, { fontSize: 'large' })}
                   </Avatar>
                   <Typography variant="h6" component="div" gutterBottom>
@@ -268,7 +269,7 @@ const MyPlan = () => {
     }
 
     return (
-      <Paper className="styled-paper">
+      <Paper className={styles.styledPaper}>
         {state.subscription ? (
           <>
             {renderSubscriptionDetails}
@@ -287,7 +288,7 @@ const MyPlan = () => {
               </>
             ) : (
               <Button
-                className="view-pricing-button"
+                className={styles.viewPricingButton}
                 variant="contained"
                 color="primary"
                 fullWidth
@@ -319,7 +320,7 @@ const MyPlan = () => {
           <Alert
             onClose={() => setState(prev => ({ ...prev, message: null }))}
             severity={state.message?.severity}
-            className="alert"
+            className={styles.alert}
           >
             {state.message?.text}
           </Alert>
@@ -329,7 +330,7 @@ const MyPlan = () => {
           onClose={handleCloseDialog}
           aria-labelledby="alert-dialog-title"
           aria-describedby="alert-dialog-description"
-          className="dialog"
+          className={styles.dialog}
         >
           <DialogTitle id="alert-dialog-title">
             {state.dialogAction === 'extending' ? 'Extend Subscription' : 

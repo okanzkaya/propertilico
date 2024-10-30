@@ -1,0 +1,197 @@
+/* Base page wrapper styles */
+.page-wrapper {
+    padding: 2rem;
+    background-color: var(--background-default);
+    min-height: 100vh;
+  }
+  
+  @media (max-width: 600px) {
+    .page-wrapper {
+      padding: 1rem;
+    }
+  }
+  
+  /* Feedback card styles */
+  .feedback-card {
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background-color: var(--background-paper);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .feedback-card:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+  }
+  
+  /* Section title styles */
+  .section-title {
+    margin-bottom: 1.5rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-main);
+  }
+  
+  /* Form control styles */
+  .custom-form-control {
+    margin-bottom: 1.5rem;
+    width: 100%;
+  }
+  
+  /* Input label styles */
+  .input-label {
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+  }
+  
+  /* Custom button styles */
+  .custom-button {
+    margin-top: 1rem;
+    width: 200px;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .custom-button:hover {
+    transform: scale(1.05);
+  }
+  
+  /* Custom rating styles */
+  .custom-rating {
+    font-size: 2rem;
+    color: var(--primary-main);
+  }
+  
+  /* Dropzone area styles */
+  .dropzone-area {
+    border: 2px dashed var(--primary-main);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .dropzone-area:hover {
+    background-color: var(--action-hover);
+  }
+  
+  /* List item text styles */
+  .list-item-text {
+    font-family: inherit;
+  }
+  
+  .list-item-text-primary {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  
+  .list-item-text-secondary {
+    color: var(--text-secondary);
+  }
+  
+  /* Page title styles */
+  .page-title {
+    font-weight: bold;
+    text-align: center;
+    color: var(--primary-main);
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Alert styles */
+  .error-alert {
+    margin-bottom: 1rem;
+  }
+  
+  /* Fade animation */
+  .fade-enter {
+    opacity: 0;
+  }
+  
+  .fade-enter-active {
+    opacity: 1;
+    transition: opacity 1000ms ease-in;
+  }
+  
+  /* Form field styles */
+  .text-field {
+    width: 100%;
+    font-family: inherit;
+  }
+  
+  .select-field {
+    width: 100%;
+    font-family: inherit;
+  }
+  
+  /* File list styles */
+  .file-list {
+    margin-top: 1rem;
+  }
+  
+  .file-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    background-color: var(--background-paper);
+  }
+  
+  /* CSS Variables - Add these to your :root */
+  :root {
+    --primary-main: #1976d2;
+    --background-default: #f5f5f5;
+    --background-paper: #ffffff;
+    --text-primary: rgba(0, 0, 0, 0.87);
+    --text-secondary: rgba(0, 0, 0, 0.6);
+    --action-hover: rgba(0, 0, 0, 0.04);
+  }
+  /* Star Rating styles */
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-rating .MuiIconButton-root {
+  padding: 4px;
+  transition: transform 0.2s ease-in-out;
+}
+
+.star-rating .MuiIconButton-root:hover {
+  transform: scale(1.2);
+}
+
+/* Custom button additional styles */
+.custom-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background-color: var(--primary-main);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.custom-button:disabled {
+  background-color: rgba(0, 0, 0, 0.12);
+  cursor: not-allowed;
+}
+
+.custom-button.submitting {
+  opacity: 0.7;
+}
+
+.custom-button .MuiCircularProgress-root {
+  margin-right: 8px;
+}

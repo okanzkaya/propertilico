@@ -1,3 +1,4 @@
+import styles from './BlogEditor.module.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -220,32 +221,32 @@ const BlogEditor = () => {
   if (!user?.isBlogger) {
     return (
       <motion.div
-        className="editor-container"
+        className={styles.editorContainer}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="error-message">You do not have permission to access this page.</div>
+        <div className={styles.errorMessage}>You do not have permission to access this page.</div>
       </motion.div>
     );
   }
 
   return (
     <motion.div
-      className="editor-container"
+      className={styles.editorContainer}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <h2>{id ? 'Edit Blog Post' : 'Create New Blog Post'}</h2>
-      <p className="info-text">
+      <p className={styles.infoText}>
         <FaInfoCircle /> Fill out the form below to create your blog post. All fields marked with * are required.
       </p>
 
-      <form className="blog-form" onSubmit={handleSubmit}>
-        <div className="form-section">
-          <label className="form-label">Cover Image</label>
-          <label className="image-upload-button">
+      <form className={styles.blogForm} onSubmit={handleSubmit}>
+        <div className={styles.formSection}>
+          <label className={styles.formLabel}>Cover Image</label>
+          <label className={styles.imageUploadButton}>
             <FaImage /> {imageFile ? 'Change Cover Image' : 'Upload Cover Image'}
             <input
               type="file"
@@ -254,17 +255,17 @@ const BlogEditor = () => {
               disabled={isSubmitting}
             />
           </label>
-          <p className="info-text">Recommended size: 1200x630px, Maximum size: 5MB</p>
+          <p className={styles.infoText}>Recommended size: 1200x630px, Maximum size: 5MB</p>
           {(imagePreview || blog.imageUrl) && (
-            <div className="image-preview">
+            <div className={styles.imagePreview}>
               <img
-                className="preview-image"
+                className={styles.previewImage}
                 src={imagePreview || blog.imageUrl}
                 alt="Cover preview"
               />
               <button
                 type="button"
-                className="remove-image-button"
+                className={styles.removeImageButton}
                 onClick={removeImage}
                 aria-label="Remove image"
               >
@@ -274,10 +275,10 @@ const BlogEditor = () => {
           )}
         </div>
 
-        <div className="form-section">
-          <label className="form-label">Title *</label>
+        <div className={styles.formSection}>
+          <label className={styles.formLabel}>Title *</label>
           <input
-            className={`input ${validationDetails.title.valid ? '' : 'invalid'}`}
+            className={`input ${validationDetails.title.valid ? '' : styles.invalid}`}
             type="text"
             name="title"
             value={blog.title}
@@ -286,15 +287,15 @@ const BlogEditor = () => {
             required
             aria-label="Blog title"
           />
-          <span className={`character-count ${validationDetails.title.valid ? 'valid' : 'invalid'}`}>
+          <span className={`character-count ${validationDetails.title.valid ? styles.valid : styles.invalid}`}>
             {blog.title.length} / {CHAR_LIMITS.title}+ characters
           </span>
         </div>
 
-        <div className="form-section">
-          <label className="form-label">Content *</label>
+        <div className={styles.formSection}>
+          <label className={styles.formLabel}>Content *</label>
           <textarea
-            className={`textarea ${validationDetails.content.valid ? '' : 'invalid'}`}
+            className={`textarea ${validationDetails.content.valid ? '' : styles.invalid}`}
             name="content"
             value={blog.content}
             onChange={handleChange}
@@ -302,15 +303,15 @@ const BlogEditor = () => {
             required
             aria-label="Blog content"
           />
-          <span className={`character-count ${validationDetails.content.valid ? 'valid' : 'invalid'}`}>
+          <span className={`character-count ${validationDetails.content.valid ? styles.valid : styles.invalid}`}>
             {blog.content.length} / {CHAR_LIMITS.content}+ characters
           </span>
         </div>
 
-        <div className="form-section">
-          <label className="form-label">Excerpt *</label>
+        <div className={styles.formSection}>
+          <label className={styles.formLabel}>Excerpt *</label>
           <input
-            className={`input ${validationDetails.excerpt.valid ? '' : 'invalid'}`}
+            className={`input ${validationDetails.excerpt.valid ? '' : styles.invalid}`}
             type="text"
             name="excerpt"
             value={blog.excerpt}
@@ -319,15 +320,15 @@ const BlogEditor = () => {
             required
             aria-label="Blog excerpt"
           />
-          <span className={`character-count ${validationDetails.excerpt.valid ? 'valid' : 'invalid'}`}>
+          <span className={`character-count ${validationDetails.excerpt.valid ? styles.valid : styles.invalid}`}>
             {blog.excerpt.length} / {CHAR_LIMITS.excerpt.min}-{CHAR_LIMITS.excerpt.max} characters
           </span>
         </div>
 
-        <div className="form-section">
-          <label className="form-label">Tags</label>
+        <div className={styles.formSection}>
+          <label className={styles.formLabel}>Tags</label>
           <input
-            className="input"
+            className={styles.input}
             type="text"
             name="tags"
             value={blog.tags}
@@ -335,20 +336,20 @@ const BlogEditor = () => {
             placeholder="Enter tags separated by commas (e.g., property, management, tips)"
             aria-label="Blog tags"
           />
-          <p className="info-text">
+          <p className={styles.infoText}>
             <FaInfoCircle /> Separate tags with commas. Good tags help readers find your content.
           </p>
         </div>
 
         <button
-          className={`button ${isSubmitting ? 'disabled' : ''}`}
+          className={`button ${isSubmitting ? styles.disabled : ''}`}
           type="submit"
           disabled={isSubmitting}
           aria-label={isSubmitting ? 'Saving blog post...' : 'Save blog post'}
         >
           {isSubmitting ? (
             <>
-              <FaSpinner className="spinner" /> Saving...
+              <FaSpinner className={styles.spinner} /> Saving...
             </>
           ) : (
             'Save Blog Post'
@@ -356,10 +357,10 @@ const BlogEditor = () => {
         </button>
 
         {error && (
-          <div className="error-message" role="alert">
+          <div className={styles.errorMessage} role="alert">
             {error}
             {validationDetails && (
-              <ul className="error-details">
+              <ul className={styles.errorDetails}>
                 {Object.entries(validationDetails)
                   .filter(([_, value]) => !value.valid)
                   .map(([field, value]) => (
@@ -371,7 +372,7 @@ const BlogEditor = () => {
         )}
 
         {successMessage && (
-          <div className="success-message" role="status">
+          <div className={styles.successMessage} role="status">
             {successMessage}
           </div>
         )}

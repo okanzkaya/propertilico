@@ -1,8 +1,6 @@
-// App.js
 import React, { useState, useMemo, lazy, Suspense, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { CssBaseline, Box, CircularProgress, GlobalStyles } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { CssBaseline, Box, CircularProgress } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
@@ -15,134 +13,7 @@ import AuthenticatedRoute from './components/public/AuthenticatedRoute';
 import { createAppTheme } from './theme';
 import { useUser } from './context/UserContext';
 import FontSizeWrapper from './components/app/FontSizeWrapper';
-import './App.css';
-
-// Global styles to ensure consistent component sizing
-const globalStyles = {
-  '.MuiButton-root': {
-    minHeight: '40px',
-    minWidth: '120px',
-    fontSize: '0.875rem',
-    padding: '8px 16px',
-  },
-  '.action-button': {
-    minHeight: '40px !important',
-    minWidth: '120px !important',
-    padding: '8px 16px !important',
-    fontSize: '0.875rem !important',
-    display: 'inline-flex !important',
-    alignItems: 'center !important',
-    justifyContent: 'center !important',
-  },
-  '.plan-card': {
-    height: 'auto !important',
-    minHeight: '600px !important',
-    maxHeight: '800px !important',
-    display: 'flex !important',
-    flexDirection: 'column !important',
-  },
-  '.feature-list': {
-    margin: '0 !important',
-    padding: '0 !important',
-    listStyle: 'none !important',
-  },
-  '.feature': {
-    margin: '8px 0 !important',
-    padding: '8px !important',
-    display: 'flex !important',
-    alignItems: 'center !important',
-    gap: '8px !important',
-  }
-};
-
-const LayoutRoot = styled('div')(({ theme }) => ({
-  display: 'flex',
-  minHeight: '100vh',
-  opacity: 0,
-  transition: 'opacity 0.3s ease',
-  '&.ready': {
-    opacity: 1
-  },
-  backgroundColor: theme.palette.background.default
-}));
-
-const MainContent = styled(Box)(({ theme }) => ({
-  flexGrow: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  minHeight: '100vh',
-  marginLeft: 0,
-  marginTop: 60,
-  padding: theme.spacing(3),
-  position: 'relative',
-  transition: 'all 0.3s ease',
-  overflow: 'visible',
-  width: 'calc(100% - 250px)',
-  maxWidth: '100%',
-
-  // Base styles for critical components
-  '& .MuiButton-root': {
-    minHeight: '40px',
-    minWidth: '120px',
-    fontSize: '0.875rem',
-    padding: '8px 16px',
-  },
-
-  '& .action-button': {
-    minHeight: '40px',
-    padding: '8px 16px',
-    fontSize: '0.875rem',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Plan card styles
-  '& .plan-card': {
-    height: 'auto',
-    minHeight: '600px',
-    maxHeight: '800px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-
-  // Feature list styles
-  '& .feature-list': {
-    margin: 0,
-    padding: 0,
-    '& .feature': {
-      margin: '8px 0',
-      padding: '8px',
-      gap: '8px',
-    }
-  },
-
-  // Subscription action styles
-  '& .subscription-actions': {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    padding: '24px',
-    
-    '& .action-button': {
-      margin: '4px',
-      flex: 1,
-    }
-  },
-
-  // Responsive styles
-  [theme.breakpoints.down('md')]: {
-    marginLeft: 0,
-    width: '100%',
-    padding: theme.spacing(2),
-    marginTop: 65,
-  },
-
-  [theme.breakpoints.down('sm')]: {
-    marginTop: 60,
-    padding: theme.spacing(1),
-  }
-}));
+import styles from './Layout.module.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -156,7 +27,7 @@ const queryClient = new QueryClient({
 
 const lazyLoad = (path) => lazy(() => import(`./pages/${path}`));
 
-// Route configurations (unchanged)
+// Route configurations
 const publicRoutes = [
   { path: "/", element: lazyLoad('public/Home') },
   { path: "/features", element: lazyLoad('public/Features') },
@@ -188,13 +59,13 @@ const AdminFeedbackDashboard = lazyLoad('app/AdminFeedbackDashboard');
 const BlogEditor = lazyLoad('public/BlogEditor');
 
 const LoadingFallback = () => (
-  <Box className="loading-fallback">
+  <Box className={styles.loadingFallback}>
     <CircularProgress />
   </Box>
 );
 
 const ErrorFallback = ({ error }) => (
-  <Box className="error-fallback">
+  <Box className={styles.errorFallback}>
     <h1>Oops! Something went wrong.</h1>
     <pre>{error.message}</pre>
   </Box>
@@ -210,16 +81,13 @@ const App = () => {
   const [fontSize, setFontSize] = useState(() => user?.fontSize || localStorage.getItem('fontSize') || 'medium');
 
   useEffect(() => {
-    // Remove any server-side generated styles
     const jssStyles = document.querySelector('#jss-server-side');
-    if (jssStyles && jssStyles.parentElement) {
+    if (jssStyles?.parentElement) {
       jssStyles.parentElement.removeChild(jssStyles);
     }
 
     fetchUser();
-    const timer = setTimeout(() => {
-      setLayoutReady(true);
-    }, 50);
+    const timer = setTimeout(() => setLayoutReady(true), 50);
     return () => clearTimeout(timer);
   }, [fetchUser]);
 
@@ -247,6 +115,7 @@ const App = () => {
     createAppTheme(themeMode.app, fontSize),
     [themeMode.app, fontSize]
   );
+  
   const publicTheme = useMemo(() =>
     createAppTheme(themeMode.public, 'medium'),
     [themeMode.public]
@@ -267,7 +136,6 @@ const App = () => {
           }}
         >
           <BrowserRouter>
-            <GlobalStyles styles={globalStyles} />
             <AppContent
               appTheme={appTheme}
               publicTheme={publicTheme}
@@ -290,9 +158,7 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
   const [contentReady, setContentReady] = useState(false);
 
   useEffect(() => {
-    const timer = requestAnimationFrame(() => {
-      setContentReady(true);
-    });
+    const timer = requestAnimationFrame(() => setContentReady(true));
     return () => cancelAnimationFrame(timer);
   }, []);
 
@@ -302,80 +168,109 @@ const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, 
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
         {publicRoutes.map(({ path, element: Element }) => (
-          <Route key={path} path={path} element={
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-              <Element />
-            </PublicLayout>
-          } />
+          <Route
+            key={path}
+            path={path}
+            element={
+              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
+                <Element />
+              </PublicLayout>
+            }
+          />
         ))}
-        <Route path="/signin" element={
-          <AuthenticatedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
-              <SignIn />
-            </PublicLayout>
-          </AuthenticatedRoute>
-        } />
-        <Route path="/get-started" element={
-          <AuthenticatedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
-              <SignUp />
-            </PublicLayout>
-          </AuthenticatedRoute>
-        } />
-        <Route path="/my-plan" element={
-          <ProtectedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-              <MyPlan />
-            </PublicLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/create-blog" element={
-          <ProtectedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-              <BlogEditor />
-            </PublicLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/edit-blog/:id" element={
-          <ProtectedRoute>
-            <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-              <BlogEditor />
-            </PublicLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/app/*" element={
-          <ProtectedRoute>
-            <FontSizeWrapper fontSize={fontSize}>
-              <AppLayout
-                theme={appTheme}
-                toggleTheme={() => toggleTheme('app')}
-                themeMode={themeMode.app}
-                fontSize={fontSize}
-                changeFontSize={changeFontSize}
-                showReCaptcha={false}
-              >
-                <Routes>
-                  <Route index element={<Navigate to="/app/dashboard" replace />} />
-                  {appRoutes.map(({ path, element: Element }) => (
-                    <Route key={path} path={path} element={
-                      hasActiveSubscription ? (
-                        <Element
-                          toggleTheme={() => toggleTheme('app')}
-                          fontSize={fontSize}
-                          changeFontSize={changeFontSize}
-                          themeMode={themeMode.app}
-                        />
-                      ) : (
-                        <Navigate to="/my-plan" replace />
-                      )
-                    } />
-                  ))}
-                  <Route path="admin-feedback" element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/" replace />} />
-                </Routes>
-              </AppLayout>
-            </FontSizeWrapper>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/signin"
+          element={
+            <AuthenticatedRoute>
+              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
+                <SignIn />
+              </PublicLayout>
+            </AuthenticatedRoute>
+          }
+        />
+        <Route
+          path="/get-started"
+          element={
+            <AuthenticatedRoute>
+              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
+                <SignUp />
+              </PublicLayout>
+            </AuthenticatedRoute>
+          }
+        />
+        <Route
+          path="/my-plan"
+          element={
+            <ProtectedRoute>
+              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
+                <MyPlan />
+              </PublicLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/create-blog"
+          element={
+            <ProtectedRoute>
+              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
+                <BlogEditor />
+              </PublicLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/edit-blog/:id"
+          element={
+            <ProtectedRoute>
+              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
+                <BlogEditor />
+              </PublicLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/app/*"
+          element={
+            <ProtectedRoute>
+              <FontSizeWrapper fontSize={fontSize}>
+                <AppLayout
+                  theme={appTheme}
+                  toggleTheme={() => toggleTheme('app')}
+                  themeMode={themeMode.app}
+                  fontSize={fontSize}
+                  changeFontSize={changeFontSize}
+                  showReCaptcha={false}
+                >
+                  <Routes>
+                    <Route index element={<Navigate to="/app/dashboard" replace />} />
+                    {appRoutes.map(({ path, element: Element }) => (
+                      <Route
+                        key={path}
+                        path={path}
+                        element={
+                          hasActiveSubscription ? (
+                            <Element
+                              toggleTheme={() => toggleTheme('app')}
+                              fontSize={fontSize}
+                              changeFontSize={changeFontSize}
+                              themeMode={themeMode.app}
+                            />
+                          ) : (
+                            <Navigate to="/my-plan" replace />
+                          )
+                        }
+                      />
+                    ))}
+                    <Route
+                      path="admin-feedback"
+                      element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/" replace />}
+                    />
+                  </Routes>
+                </AppLayout>
+              </FontSizeWrapper>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
@@ -387,9 +282,7 @@ const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }
   const [layoutReady, setLayoutReady] = useState(false);
 
   useEffect(() => {
-    const timer = requestAnimationFrame(() => {
-      setLayoutReady(true);
-    });
+    const timer = requestAnimationFrame(() => setLayoutReady(true));
     return () => cancelAnimationFrame(timer);
   }, []);
 
@@ -400,9 +293,9 @@ const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box className={`public-layout ${layoutReady ? 'ready' : ''}`}>
-      <PublicHeader toggleTheme={toggleTheme} />
-        <Box component="main" className="public-main">
+      <Box className={`${styles.publicLayout} ${layoutReady ? styles.ready : ''}`}>
+        <PublicHeader toggleTheme={toggleTheme} />
+        <Box component="main" className={styles.publicMain}>
           {children}
         </Box>
         <PublicFooter />
@@ -421,9 +314,7 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
   const [layoutReady, setLayoutReady] = useState(false);
 
   useEffect(() => {
-    const timer = requestAnimationFrame(() => {
-      setLayoutReady(true);
-    });
+    const timer = requestAnimationFrame(() => setLayoutReady(true));
     return () => cancelAnimationFrame(timer);
   }, []);
 
@@ -434,14 +325,14 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LayoutRoot className={layoutReady ? 'ready' : ''}>
+      <div className={`${styles.layoutRoot} ${layoutReady ? styles.ready : ''}`}>
         <Sidebar themeMode={themeMode} toggleTheme={toggleTheme} />
-        <MainContent component="main">
+        <main className={styles.mainContent}>
           <FontSizeWrapper fontSize={fontSize}>
             {children}
           </FontSizeWrapper>
-        </MainContent>
-      </LayoutRoot>
+        </main>
+      </div>
       {!showReCaptcha && (
         <style>{`
           .grecaptcha-badge { visibility: hidden !important; }

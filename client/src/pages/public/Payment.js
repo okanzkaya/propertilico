@@ -1,3 +1,4 @@
+import styles from './Payment.module.css';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Payment.css';
@@ -15,27 +16,27 @@ function Payment() {
   };
 
   return (
-    <div className="payment-container">
-      <div className="payment-box">
-        <h1 className="header">Payment</h1>
-        <p className="description">Enter your payment details to start your subscription.</p>
+    <div className={styles.paymentContainer}>
+      <div className={styles.paymentBox}>
+        <h1 className={styles.header}>Payment</h1>
+        <p className={styles.description}>Enter your payment details to start your subscription.</p>
         <form onSubmit={handleSubmit}>
           <input 
             type="text" 
             placeholder="Card Number" 
-            className="payment-input"
+            className={styles.paymentInput}
           />
           <input 
             type="text" 
             placeholder="Expiry Date" 
-            className="payment-input"
+            className={styles.paymentInput}
           />
           <input 
             type="text" 
             placeholder="CVC" 
-            className="payment-input"
+            className={styles.paymentInput}
           />
-          <button type="submit" className="payment-button">
+          <button type="submit" className={styles.paymentButton}>
             Pay Now
           </button>
         </form>

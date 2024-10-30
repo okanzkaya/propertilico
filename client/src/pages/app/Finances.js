@@ -1,3 +1,4 @@
+import styles from './Finances.module.css';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Typography,
@@ -361,15 +362,15 @@ const StatsCard = React.memo(({ title, value, trend, trendValue, icon: Icon, col
     <Zoom in style={{ transitionDelay: `${delay}ms` }}>
       <Card className={`stats-card stats-card-${color}`}>
         <CardContent>
-          <Box className="stats-card-header">
+          <Box className={styles.statsCardHeader}>
             <Box className={`stats-card-icon ${color}`}>
               <Icon />
             </Box>
-            <Typography variant="h6" className="stats-card-title">
+            <Typography variant="h6" className={styles.statsCardTitle}>
               {title}
             </Typography>
           </Box>
-          <Typography variant="h3" className="stats-card-value">
+          <Typography variant="h3" className={styles.statsCardValue}>
             {value}
           </Typography>
           <Fade in timeout={800}>
@@ -394,12 +395,12 @@ const ChartCard = React.memo(({ title, subtitle, chart: Chart, data, type = 'bar
   const theme = useTheme();
 
   return (
-    <Card className="chart-card">
+    <Card className={styles.chartCard}>
       <CardHeader
         title={title}
         subheader={subtitle}
         action={action}
-        className="chart-header"
+        className={styles.chartHeader}
       />
       <CardContent>
         <Box height={height}>
@@ -443,17 +444,17 @@ const TransactionRow = React.memo(({
 
   return (
     <Fade in timeout={300} style={{ transitionDelay: `${index * 50}ms` }}>
-      <TableRow hover className="transaction-row">
+      <TableRow hover className={styles.transactionRow}>
         <TableCell>
-          <Box className="transaction-date">
-            <Typography variant="body2" className="date-main">
+          <Box className={styles.transactionDate}>
+            <Typography variant="body2" className={styles.dateMain}>
               {formatDate(transaction.date)}
             </Typography>
           </Box>
         </TableCell>
         <TableCell>
-          <Box className="transaction-info">
-            <Typography variant="body2" className="transaction-description">
+          <Box className={styles.transactionInfo}>
+            <Typography variant="body2" className={styles.transactionDescription}>
               {transaction.description}
             </Typography>
             <Typography variant="caption" color="textSecondary">
@@ -474,14 +475,14 @@ const TransactionRow = React.memo(({
             label={transaction.type}
             color={transaction.type === 'income' ? 'success' : 'error'}
             size="small"
-            className="status-chip"
+            className={styles.statusChip}
           />
         </TableCell>
         <TableCell align="right">
           <IconButton
             size="small"
             onClick={handleMenuClick}
-            className="action-button"
+            className={styles.actionButton}
           >
             <MoreVertIcon />
           </IconButton>
@@ -552,7 +553,7 @@ const TransactionsTable = React.memo(({
   };
 
   return (
-    <Card className="transactions-card">
+    <Card className={styles.transactionsCard}>
       <CardHeader
         title={
           <Box className="table-header">
@@ -565,7 +566,7 @@ const TransactionsTable = React.memo(({
           </Box>
         }
         action={
-          <Box className="table-actions">
+          <Box className={styles.tableActions}>
             <TextField
               size="small"
               placeholder="Search transactions..."
@@ -573,7 +574,7 @@ const TransactionsTable = React.memo(({
               onChange={(e) => onSearchChange(e.target.value)}
               InputProps={{startAdornment: <SearchIcon fontSize="small" color="action" />,
               }}
-              className="search-field"
+              className={styles.searchField}
             />
             {!compact && (
               <>
@@ -581,7 +582,7 @@ const TransactionsTable = React.memo(({
                   variant="outlined"
                   startIcon={<FilterIcon />}
                   onClick={handleFilterClick}
-                  className="filter-button"
+                  className={styles.filterButton}
                 >
                   Filter
                 </Button>
@@ -589,7 +590,7 @@ const TransactionsTable = React.memo(({
                   variant="outlined"
                   startIcon={<SortIcon />}
                   onClick={handleSortClick}
-                  className="sort-button"
+                  className={styles.sortButton}
                 >
                   Sort
                 </Button>
@@ -745,10 +746,10 @@ const TransactionModal = React.memo(({
       className="transaction-modal"
     >
       <form onSubmit={handleSubmit}>
-        <DialogTitle className="modal-title">
+        <DialogTitle className={styles.modalTitle}>
           {transaction ? 'Edit Transaction' : 'Add New Transaction'}
         </DialogTitle>
-        <DialogContent className="modal-content">
+        <DialogContent className={styles.modalContent}>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
@@ -823,7 +824,7 @@ const TransactionModal = React.memo(({
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions className="modal-actions">
+        <DialogActions className={styles.modalActions}>
           <Button onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
@@ -1126,7 +1127,7 @@ const Finances = () => {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <Box className="loading-container">
+        <Box className={styles.loadingContainer}>
           <CircularProgress />
         </Box>
       );
@@ -1147,14 +1148,14 @@ const Finances = () => {
   };
 
   return (
-    <div className="finances-wrapper">
-      <Box className="finances-header">
-        <Box className="header-content">
+    <div className={styles.financesWrapper}>
+      <Box className={styles.financesHeader}>
+        <Box className={styles.headerContent}>
           <Box>
-            <Typography variant="h4" className="page-title">
+            <Typography variant="h4" className={styles.pageTitle}>
               Financial Management
             </Typography>
-            <Typography variant="body1" color="textSecondary" className="subtitle">
+            <Typography variant="body1" color="textSecondary" className={styles.subtitle}>
               Track, analyze, and manage your property finances
             </Typography>
           </Box>
@@ -1162,7 +1163,7 @@ const Finances = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleModalOpen()}
-            className="add-transaction-button"
+            className={styles.addTransactionButton}
           >
             Add Transaction
           </Button>
@@ -1171,23 +1172,23 @@ const Finances = () => {
 
       {error && renderError()}
 
-      <Paper className="tabs-container">
+      <Paper className={styles.tabsContainer}>
         <Tabs
           value={tabValue}
           onChange={(_, newValue) => setTabValue(newValue)}
           variant={isMobile ? "scrollable" : "fullWidth"}
           scrollButtons="auto"
-          className="finance-tabs"
+          className={styles.financeTabs}
         >
           <Tab
             icon={<BarChartIcon />}
             label="Overview"
-            className="finance-tab"
+            className={styles.financeTab}
           />
           <Tab
             icon={<TimelineIcon />}
             label="Transactions"
-            className="finance-tab"
+            className={styles.financeTab}
           />
         </Tabs>
       </Paper>
