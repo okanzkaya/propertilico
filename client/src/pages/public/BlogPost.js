@@ -1,6 +1,6 @@
 // BlogPost.js
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import DOMPurify from 'dompurify';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,6 +45,7 @@ const getImageUrl = (imageUrl) => {
 };
 
 const BlogPost = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useUser();
   const [post, setPost] = useState(null);
@@ -149,6 +150,9 @@ const BlogPost = () => {
     } catch (err) {
       showToast('Failed to share. Please try again.');
     }
+  };
+  const handleBackNavigation = () => {
+      navigate('/blog');
   };
 
   const toggleBookmark = useCallback(() => {
@@ -289,10 +293,13 @@ const BlogPost = () => {
         </div>
 
         <main className={styles.main}>
-          <Link to="/blog" className={styles.backButton}>
-            <ChevronLeft />
-            <span>Back to Articles</span>
-          </Link>
+        <button 
+  onClick={handleBackNavigation}
+  className={styles.backButton}
+  aria-label="Go back"
+>
+  <ChevronLeft size={24} />
+</button>
 
           <article className={styles.article}>
             <header className={styles.header}>

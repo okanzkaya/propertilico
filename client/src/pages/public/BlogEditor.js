@@ -1,6 +1,11 @@
+// BlogEditor.js
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { ChevronLeft } from 'lucide-react';
 import axios from 'axios';
+import { useUser } from '../../context/UserContext';
 import styles from './BlogEditor.module.css';
 
 const VALIDATION_RULES = {
@@ -32,6 +37,14 @@ const BlogEditor = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useUser();
+
+  // Check permissions
+  useEffect(() => {
+    if (!user?.isBlogger && !user?.isAdmin) {
+      navigate('/blog');
+    }
+  }, [user, navigate]);
 
   const validateField = (name, value) => {
     const rules = VALIDATION_RULES[name];
@@ -64,6 +77,79 @@ const BlogEditor = () => {
         ...prev,
         [name]: validationResult
       }));
+    }
+  };
+
+  const handleImageUpload = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/uploads`,
+        formData,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      return response.data.url;
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      throw error;
+    }
+  };
+
+  const editorConfiguration = {
+    toolbar: [
+      'heading',
+      '|',
+      'bold',
+      'italic',
+      'link',
+      'bulletedList',
+      'numberedList',
+      '|',
+      'outdent',
+      'indent',
+      '|',
+      'imageUpload',
+      'blockQuote',
+      'insertTable',
+      'mediaEmbed',
+      'undo',
+      'redo',
+      '|',
+      'fontFamily',
+      'fontSize',
+      'fontColor',
+      'fontBackgroundColor'
+    ],
+    image: {
+      upload: {
+        types: ['jpeg', 'png', 'gif', 'webp'],
+      }
+    },
+    fontFamily: {
+      options: [
+        'default',
+        'Arial, Helvetica, sans-serif',
+        'Georgia, serif',
+        'Roboto, sans-serif',
+        'Playfair Display, serif'
+      ]
+    },
+    fontSize: {
+      options: [
+        'tiny',
+        'small',
+        'default',
+        'big',
+        'huge'
+      ]
     }
   };
 
@@ -119,7 +205,6 @@ const BlogEditor = () => {
     };
 
     setValidation(newValidation);
-
     return Object.values(newValidation).every(field => field.isValid);
   };
 
@@ -174,8 +259,21 @@ const BlogEditor = () => {
     }
   };
 
+  // Navigate back
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
   return (
     <div className={styles.editorContainer}>
+      <button 
+        onClick={handleGoBack}
+        className={styles.backButton}
+        aria-label="Go back"
+      >
+        <ChevronLeft size={24} />
+      </button>
+
       <h1 className={styles.editorTitle}>
         {id ? 'Edit Blog Post' : 'Create New Blog Post'}
       </h1>
@@ -241,14 +339,30 @@ const BlogEditor = () => {
 
         <div className={styles.formGroup}>
           <label htmlFor="content">Content *</label>
-          <textarea
-            id="content"
-            name="content"
-            value={blog.content}
-            onChange={handleInputChange}
-            placeholder="Write your blog content here..."
-            className={`${styles.textarea} ${!validation.content.isValid ? styles.inputError : ''}`}
-            required
+          <CKEditor
+            editor={ClassicEditor}
+            config={editorConfiguration}
+            data={blog.content}
+            onChange={(event, editor) => {
+              const data = editor.getData();
+              setBlog(prev => ({ ...prev, content: data }));
+              const validationResult = validateField('content', data);
+              setValidation(prev => ({
+                ...prev,
+                content: validationResult
+              }));
+            }}
+            onReady={editor => {
+              editor.plugins.get('FileRepository').createUploadAdapter = loader => {
+                return {
+                  upload: async () => {
+                    const file = await loader.file;
+                    const url = await handleImageUpload(file);
+                    return { default: url };
+                  }
+                };
+              };
+            }}
           />
           {!validation.content.isValid && (
             <span className={styles.errorText}>{validation.content.message}</span>
