@@ -1,4 +1,3 @@
-// BlogEditor.js
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
@@ -12,6 +11,12 @@ const VALIDATION_RULES = {
   title: { min: 3, max: 100 },
   content: { min: 100, max: 50000 },
   excerpt: { min: 10, max: 300 }
+};
+
+const processImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `${process.env.REACT_APP_API_URL.replace('/api', '')}${imageUrl}`;
 };
 
 const BlogEditor = () => {
@@ -96,7 +101,7 @@ const BlogEditor = () => {
         }
       );
       
-      return response.data.url;
+      return processImageUrl(response.data.url);
     } catch (error) {
       console.error('Image upload failed:', error);
       throw error;
@@ -121,43 +126,37 @@ const BlogEditor = () => {
       'insertTable',
       'mediaEmbed',
       'undo',
-      'redo',
-      '|',
-      'fontFamily',
-      'fontSize',
-      'fontColor',
-      'fontBackgroundColor'
+      'redo'
     ],
     image: {
       upload: {
-        types: ['jpeg', 'png', 'gif', 'webp'],
-      }
+        types: ['jpeg', 'png', 'gif', 'webp']
+      },
+      toolbar: ['imageStyle:full', 'imageStyle:side', '|', 'imageTextAlternative']
     },
-    fontFamily: {
-      options: [
-        'default',
-        'Arial, Helvetica, sans-serif',
-        'Georgia, serif',
-        'Roboto, sans-serif',
-        'Playfair Display, serif'
-      ]
+    table: {
+      contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
     },
-    fontSize: {
+    mediaEmbed: {
+      previewsInData: true
+    },
+    heading: {
       options: [
-        'tiny',
-        'small',
-        'default',
-        'big',
-        'huge'
+        { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+        { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+        { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+        { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
       ]
     }
   };
 
   const fetchBlog = useCallback(async () => {
     if (!id) return;
+
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`);
       const blogData = response.data.data.blog;
+
       setBlog({
         title: blogData.title,
         content: blogData.content,
@@ -166,10 +165,12 @@ const BlogEditor = () => {
         status: blogData.status || 'published',
         imageUrl: blogData.imageUrl || ''
       });
+
       if (blogData.imageUrl) {
-        setImagePreview(blogData.imageUrl);
+        setImagePreview(processImageUrl(blogData.imageUrl));
       }
     } catch (error) {
+      console.error('Error fetching blog:', error);
       setError('Failed to fetch blog post. Please try again.');
     }
   }, [id]);
@@ -227,7 +228,10 @@ const BlogEditor = () => {
       formData.append('excerpt', blog.excerpt);
       formData.append('status', blog.status);
 
-      const processedTags = blog.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      const processedTags = blog.tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(Boolean);
       formData.append('tags', JSON.stringify(processedTags));
 
       if (imageFile) {
@@ -253,13 +257,13 @@ const BlogEditor = () => {
       setSuccessMessage('Blog post saved successfully!');
       setTimeout(() => navigate('/blog'), 1500);
     } catch (error) {
+      console.error('Error saving blog:', error);
       setError(error.response?.data?.message || 'Failed to save blog post.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Navigate back
   const handleGoBack = () => {
     navigate(-1);
   };

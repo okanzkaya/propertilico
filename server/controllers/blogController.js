@@ -158,8 +158,12 @@ exports.getAllBlogs = async (req, res, next) => {
   }
 };
 
+// In blogController.js, update the getBlogById method:
+
 exports.getBlogById = async (req, res, next) => {
   try {
+    const shouldIncrement = req.query.increment === 'true';
+    
     const blog = await models.Blog.findByPk(req.params.id, {
       include: [{
         model: models.User,
@@ -168,9 +172,16 @@ exports.getBlogById = async (req, res, next) => {
       }]
     });
 
-    if (!blog) return next(new AppError('Blog post not found', 404));
+    if (!blog) {
+      return next(new AppError('Blog post not found', 404));
+    }
 
-    await blog.increment('viewCount', { by: 1 });
+    // Only increment if explicitly requested
+    if (shouldIncrement) {
+      await blog.increment('viewCount', { by: 1 });
+      // Refresh the blog data after increment
+      await blog.reload();
+    }
     
     const processedBlog = blog.get({ plain: true });
     processedBlog.imageUrl = processImageUrl(processedBlog.imageUrl);

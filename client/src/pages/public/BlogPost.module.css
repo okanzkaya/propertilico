@@ -1,4 +1,4 @@
-/* Container and Layout */
+/* Container Layout */
 .container {
   position: relative;
   min-height: 100vh;
@@ -8,7 +8,7 @@
 }
 
 .main {
-  max-width: 1800px;
+  max-width: 1800px;  /* Increased from 1200px */
   margin: 0 auto;
   padding: 2rem;
   position: relative;
@@ -17,13 +17,11 @@
 
 .article {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1100px;  /* Increased from 75ch */
   margin: 0 auto;
   background-color: #ffffff;
   border-radius: 16px;
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   padding: 2.5rem;
   overflow: hidden;
 }
@@ -71,14 +69,10 @@
   background: #2563eb;
 }
 
-.backButton svg {
-  stroke-width: 2.5;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-}
-
 /* Header and Title */
 .header {
   margin-bottom: 2.5rem;
+  width: 100%;
 }
 
 .title {
@@ -89,6 +83,10 @@
   margin-bottom: 1.5rem;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+  max-width: 100%;
 }
 
 /* Meta Information */
@@ -101,6 +99,7 @@
   background: rgba(59, 130, 246, 0.05);
   padding: 1rem;
   border-radius: 12px;
+  width: 100%;
 }
 
 .authorInfo {
@@ -110,6 +109,7 @@
   padding: 0.5rem;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 8px;
+  max-width: 100%;
 }
 
 .avatar {
@@ -117,17 +117,23 @@
   height: 3rem;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .authorMeta {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .authorName {
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
 }
 
 .postMeta {
@@ -136,17 +142,20 @@
   gap: 1rem;
   color: #6b7280;
   font-size: 0.875rem;
+  flex-wrap: wrap;
 }
 
 .metaItem {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  white-space: nowrap;
 }
 
 .icon {
   width: 1rem;
   height: 1rem;
+  flex-shrink: 0;
 }
 
 /* Action Buttons */
@@ -182,10 +191,10 @@
 
 /* Featured Image */
 .featuredImage {
-  margin: 2rem -2.5rem;
-  overflow: hidden;
+  margin: 2rem 0;
   background: linear-gradient(to bottom, rgba(59, 130, 246, 0.05), transparent);
   padding: 1rem 0;
+  width: 100%;
 }
 
 .featuredImage img {
@@ -198,7 +207,7 @@
 }
 
 .featuredImage figcaption {
-  padding: 0.75rem 2rem;
+  padding: 0.75rem 0;
   color: #6b7280;
   font-size: 0.875rem;
   text-align: center;
@@ -209,6 +218,15 @@
   font-size: 1.125rem;
   line-height: 1.8;
   color: #374151;
+  width: 100%;
+  max-width: 900px;  /* Increased for better readability */
+  margin: 0 auto;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.content > * {
+  margin-bottom: 1.5rem;
   max-width: 100%;
 }
 
@@ -222,11 +240,21 @@
   font-weight: 700;
   margin: 2rem 0 1rem;
   line-height: 1.3;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
+.content h1 { font-size: 2em; max-width: 30ch; }
+.content h2 { font-size: 1.75em; max-width: 35ch; }
+.content h3 { font-size: 1.5em; max-width: 40ch; }
+.content h4,
+.content h5,
+.content h6 { font-size: 1.25em; max-width: 45ch; }
+
 .content p {
-  margin: 0 auto 1.5rem;
-  max-width: 75ch;
+  margin: 0 0 1.5rem;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .content img {
@@ -241,6 +269,7 @@
   color: #3b82f6;
   text-decoration: none;
   transition: color 0.2s ease;
+  word-break: break-word;
 }
 
 .content a:hover {
@@ -261,7 +290,10 @@
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
   margin: 2rem 0;
+  font-family: 'Fira Code', monospace;
 }
 
 .content code {
@@ -272,13 +304,34 @@
   font-family: 'Fira Code', monospace;
 }
 
+.content ul,
+.content ol {
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  overflow-x: auto;
+  display: block;
+}
+
+.content th,
+.content td {
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
 /* Tags */
 .tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin: 2rem 0;
-  max-width: 100%;
+  width: 100%;
 }
 
 .tag {
@@ -289,10 +342,10 @@
   text-decoration: none;
   font-size: 0.875rem;
   transition: all 0.2s ease;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
 }
 
 .tag:hover {
@@ -305,6 +358,7 @@
   margin-top: 3rem;
   padding-top: 2rem;
   border-top: 1px solid #e5e7eb;
+  width: 100%;
 }
 
 .authorBio {
@@ -320,6 +374,7 @@
   height: 4rem;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .authorBio h3 {
@@ -336,11 +391,8 @@
 
 /* Related Posts */
 .relatedPosts {
-  margin-top: 4rem;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
+  max-width: 1100px;  /* Match article width */
+  margin: 4rem auto 0;
 }
 
 .relatedPosts h2 {
@@ -398,6 +450,7 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.4;
 }
 
 .relatedContent p {
@@ -408,6 +461,7 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.6;
 }
 
 /* Share Menu */
@@ -610,8 +664,8 @@
     padding: 2rem;
   }
 
-  .featuredImage {
-    margin: 2rem -2rem;
+  .relatedGrid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   }
 }
 
@@ -661,9 +715,16 @@
     bottom: 5rem;
   }
 
-  .relatedGrid {
-    grid-template-columns: 1fr;
+  .content {
+    font-size: 1rem;
   }
+
+  .content h1 { font-size: 1.75em; }
+  .content h2 { font-size: 1.5em; }
+  .content h3 { font-size: 1.25em; }
+  .content h4,
+  .content h5,
+  .content h6 { font-size: 1.1em; }
 }
 
 @media (max-width: 480px) {
@@ -675,14 +736,17 @@
     font-size: clamp(1.25rem, 3vw, 1.75rem);
   }
 
-  .content {
-    font-size: 1rem;
-  }
-
   .postMeta {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+
+  .authorInfo {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
   }
 
   .tag {

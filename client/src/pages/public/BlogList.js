@@ -1,45 +1,131 @@
-import styles from './BlogList.module.css';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaPlus, 
-  FaEdit, FaTrash, FaClock, FaUser, FaEye } from 'react-icons/fa';
-import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useUser } from '../../context/UserContext';
-import { debounce } from 'lodash';
-import { Helmet } from 'react-helmet';
+import styles from "./BlogList.module.css";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  FaSearch,
+  FaSortAmountDown,
+  FaSortAmountUp,
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaClock,
+  FaUser,
+  FaEye,
+} from "react-icons/fa";
+import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import { useUser } from "../../context/UserContext";
+import { debounce } from "lodash";
+import { Helmet } from "react-helmet-async";
 
 const truncateText = (text, maxLength) => {
-  if (!text) return '';
+  if (!text) return "";
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  return text.substring(0, maxLength) + "...";
 };
 
 const getImageUrl = (imageUrl) => {
   if (!imageUrl) {
-    return `${process.env.REACT_APP_API_URL.replace('/api', '')}/public/default-blog-image.png`;
+    return `${process.env.REACT_APP_API_URL.replace(
+      "/api",
+      ""
+    )}/public/default-blog-image.png`;
   }
-  
-  if (imageUrl.startsWith('http')) {
+
+  if (imageUrl.startsWith("http")) {
     return imageUrl;
   }
-  
-  const baseUrl = process.env.REACT_APP_API_URL.replace('/api', '').replace(/\/$/, '');
-  const cleanImagePath = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-  
+
+  const baseUrl = process.env.REACT_APP_API_URL.replace("/api", "").replace(
+    /\/$/,
+    ""
+  );
+  const cleanImagePath = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
+
   return `${baseUrl}${cleanImagePath}`;
+};
+
+const TagList = ({ tags = [], postId }) => {
+  const tagListRef = useRef(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+  const [visibleTags, setVisibleTags] = useState([]);
+
+  useEffect(() => {
+    const calculateVisibleTags = () => {
+      if (!tagListRef.current) return;
+
+      const container = tagListRef.current;
+      const containerHeight = container.clientHeight;
+      const tagElements = container.getElementsByClassName(styles.tag);
+      const lineHeight = 28; // Approximate height of a tag
+      const maxLines = 2;
+      const maxHeight = lineHeight * maxLines;
+
+      let currentLineWidth = 0;
+      let currentLine = 1;
+      let visibleTagsCount = 0;
+      const containerWidth = container.clientWidth;
+
+      Array.from(tagElements).forEach((tag, index) => {
+        const tagWidth = tag.offsetWidth + 8; // 8px for gap
+
+        if (currentLineWidth + tagWidth > containerWidth) {
+          currentLine++;
+          currentLineWidth = tagWidth;
+        } else {
+          currentLineWidth += tagWidth;
+        }
+
+        if (currentLine <= maxLines) {
+          visibleTagsCount = index + 1;
+        }
+      });
+
+      const shouldTruncate = containerHeight > maxHeight;
+      setIsTruncated(shouldTruncate);
+      setVisibleTags(shouldTruncate ? tags.slice(0, visibleTagsCount) : tags);
+    };
+
+    calculateVisibleTags();
+    window.addEventListener("resize", calculateVisibleTags);
+    return () => window.removeEventListener("resize", calculateVisibleTags);
+  }, [tags]);
+
+  return (
+    <div
+      ref={tagListRef}
+      className={`${styles.tagList} ${isTruncated ? styles.truncated : ""}`}
+    >
+      {visibleTags.map((tag, index) => (
+        <Link
+          key={`${postId}-${tag}-${index}`}
+          to={`/blog/tag/${encodeURIComponent(tag)}`}
+          className={styles.tag}
+          title={tag}
+        >
+          {truncateText(tag, 20)}
+        </Link>
+      ))}
+    </div>
+  );
 };
 
 const BlogImage = ({ src, alt }) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [imageSrc, setImageSrc] = useState('');
+  const [imageSrc, setImageSrc] = useState("");
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const img = new Image();
     const imageUrl = getImageUrl(src);
-    
+
     img.onload = () => {
       if (isMounted) {
         setImageSrc(imageUrl);
@@ -50,7 +136,10 @@ const BlogImage = ({ src, alt }) => {
 
     img.onerror = () => {
       if (isMounted) {
-        const defaultImage = `${process.env.REACT_APP_API_URL.replace('/api', '')}/public/default-blog-image.png`;
+        const defaultImage = `${process.env.REACT_APP_API_URL.replace(
+          "/api",
+          ""
+        )}/public/default-blog-image.png`;
         setImageSrc(defaultImage);
         setIsLoading(false);
         setError(true);
@@ -67,12 +156,14 @@ const BlogImage = ({ src, alt }) => {
   }, [src]);
 
   return (
-    <div 
+    <div
       className={styles.postImageWrapper}
       aria-busy={isLoading}
       aria-label={error ? "Failed to load image" : undefined}
     >
-      {isLoading && <div className={styles.imagePlaceholder} role="presentation" />}
+      {isLoading && (
+        <div className={styles.imagePlaceholder} role="presentation" />
+      )}
       {!isLoading && (
         <img
           className={styles.postImage}
@@ -80,10 +171,13 @@ const BlogImage = ({ src, alt }) => {
           alt={alt}
           loading="lazy"
           onError={(e) => {
-            e.target.src = `${process.env.REACT_APP_API_URL.replace('/api', '')}/public/default-blog-image.png`;
+            e.target.src = `${process.env.REACT_APP_API_URL.replace(
+              "/api",
+              ""
+            )}/public/default-blog-image.png`;
             setError(true);
           }}
-          style={{ display: 'block' }}
+          style={{ display: "block" }}
         />
       )}
     </div>
@@ -91,21 +185,21 @@ const BlogImage = ({ src, alt }) => {
 };
 
 const BlogList = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortOption, setSortOption] = useState('newest');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOption, setSortOption] = useState("newest");
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchInputValue, setSearchInputValue] = useState('');
-  
+  const [searchInputValue, setSearchInputValue] = useState("");
+
   const { user, loading: userLoading, isInitialized } = useUser();
   const navigate = useNavigate();
 
   const showCreateButton = useMemo(() => {
-    return isInitialized && !userLoading && user?.isBlogger;
-  }, [isInitialized, userLoading, user?.isBlogger]);
+    return isInitialized && !userLoading && (user?.isBlogger || user?.isAdmin);
+  }, [isInitialized, userLoading, user?.isBlogger, user?.isAdmin]);
 
   const debouncedSearch = useMemo(
     () => debounce((term) => setSearchTerm(term), 300),
@@ -114,29 +208,29 @@ const BlogList = () => {
 
   const fetchPosts = useCallback(async () => {
     if (!isInitialized) return;
-    
+
     setIsLoading(true);
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_URL}/api/blogs`,
         {
-          params: { 
-            page: currentPage, 
-            limit: 10, 
-            search: searchTerm, 
-            sort: sortOption 
-          }
+          params: {
+            page: currentPage,
+            limit: 10,
+            search: searchTerm,
+            sort: sortOption,
+          },
         }
       );
 
-      if (response.data?.status === 'success') {
+      if (response.data?.status === "success") {
         setPosts(response.data.data.blogs);
         setTotalPages(response.data.data.pagination.totalPages);
       }
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch blog posts:', err);
-      setError('Failed to load blog posts. Please try again later.');
+      console.error("Failed to fetch blog posts:", err);
+      setError("Failed to load blog posts. Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +243,7 @@ const BlogList = () => {
   }, [fetchPosts, isInitialized]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
 
   const handleSearchChange = (e) => {
@@ -160,62 +254,60 @@ const BlogList = () => {
   };
 
   const toggleSortOption = () => {
-    setSortOption(prev => prev === 'newest' ? 'oldest' : 'newest');
+    setSortOption((prev) => (prev === "newest" ? "oldest" : "newest"));
     setCurrentPage(1);
   };
 
-  const handleCreateBlog = () => navigate('/create-blog');
+  const handleCreateBlog = () => navigate("/create-blog");
   const handleEditBlog = (id) => navigate(`/edit-blog/${id}`);
 
   const handleDeleteBlog = async (id, e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!window.confirm('Are you sure you want to delete this blog post?')) return;
+
+    if (!window.confirm("Are you sure you want to delete this blog post?"))
+      return;
 
     try {
-      await axios.delete(
-        `${process.env.REACT_APP_API_URL}/api/blogs/${id}`,
-        { 
-          headers: { 
-            Authorization: `Bearer ${localStorage.getItem('token')}` 
-          } 
-        }
-      );
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/blogs/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       await fetchPosts();
     } catch (err) {
-      console.error('Failed to delete blog post:', err);
-      setError('Failed to delete blog post. Please try again later.');
+      console.error("Failed to delete blog post:", err);
+      setError("Failed to delete blog post. Please try again later.");
     }
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const getStructuredData = () => ({
     "@context": "https://schema.org",
     "@type": "Blog",
-    "name": "Property Management Insights",
-    "description": "Expert property management tips, strategies, and insights.",
-    "url": window.location.href,
-    "blogPost": posts.map(post => ({
+    name: "Property Management Insights",
+    description: "Expert property management tips, strategies, and insights.",
+    url: window.location.href,
+    blogPost: posts.map((post) => ({
       "@type": "BlogPosting",
-      "headline": post.title,
-      "description": post.excerpt,
-      "author": {
+      headline: post.title,
+      description: post.excerpt,
+      author: {
         "@type": "Person",
-        "name": post.author?.name || "Anonymous"
+        name: post.author?.name || "Anonymous",
       },
-      "datePublished": post.createdAt,
-      "image": getImageUrl(post.imageUrl),
-      "url": `${window.location.origin}/blog/${post.id}`,
-      "keywords": post.tags?.join(', ')
-    }))
+      datePublished: post.createdAt,
+      image: getImageUrl(post.imageUrl),
+      url: `${window.location.origin}/blog/${post.id}`,
+      keywords: post.tags?.join(", "),
+    })),
   });
 
   if (!isInitialized || userLoading) {
@@ -232,10 +324,22 @@ const BlogList = () => {
     <>
       <Helmet>
         <title>Property Management Blog | Expert Insights & Strategies</title>
-        <meta name="description" content="Discover expert property management tips, strategies, and insights for property managers and landlords." />
-        <meta name="keywords" content="property management, landlord tips, real estate management, property maintenance" />
-        <meta property="og:title" content="Property Management Blog | Expert Insights" />
-        <meta property="og:description" content="Expert property management insights and strategies." />
+        <meta
+          name="description"
+          content="Discover expert property management tips, strategies, and insights for property managers and landlords."
+        />
+        <meta
+          name="keywords"
+          content="property management, landlord tips, real estate management, property maintenance"
+        />
+        <meta
+          property="og:title"
+          content="Property Management Blog | Expert Insights"
+        />
+        <meta
+          property="og:description"
+          content="Expert property management insights and strategies."
+        />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={window.location.href} />
         <link rel="canonical" href={window.location.href} />
@@ -252,7 +356,9 @@ const BlogList = () => {
       >
         <header className={styles.header}>
           <h1 className={styles.title}>Property Management Insights</h1>
-          <p className={styles.subtitle}>Expert tips, trends, and strategies to excel in property management</p>
+          <p className={styles.subtitle}>
+            Expert tips, trends, and strategies to excel in property management
+          </p>
         </header>
 
         <div className={styles.controlsContainer}>
@@ -268,17 +374,23 @@ const BlogList = () => {
             <FaSearch className={styles.searchIcon} aria-hidden="true" />
           </div>
           <div className={styles.buttonGroup}>
-            <button 
-              className={styles.button} 
+            <button
+              className={styles.button}
               onClick={toggleSortOption}
-              aria-label={`Sort by ${sortOption === 'newest' ? 'oldest' : 'newest'} first`}
+              aria-label={`Sort by ${
+                sortOption === "newest" ? "oldest" : "newest"
+              } first`}
             >
-              {sortOption === 'newest' ? <FaSortAmountDown /> : <FaSortAmountUp />}
-              {sortOption === 'newest' ? 'Newest' : 'Oldest'}
+              {sortOption === "newest" ? (
+                <FaSortAmountDown />
+              ) : (
+                <FaSortAmountUp />
+              )}
+              {sortOption === "newest" ? "Newest" : "Oldest"}
             </button>
             {showCreateButton && (
-              <button 
-                className={`${styles.button} ${styles.primary}`} 
+              <button
+                className={`${styles.button} ${styles.primary}`}
                 onClick={handleCreateBlog}
                 aria-label="Create new blog post"
               >
@@ -293,9 +405,13 @@ const BlogList = () => {
             <span className="sr-only">Loading posts...</span>
           </div>
         ) : error ? (
-          <div className={styles.errorMessage} role="alert">{error}</div>
+          <div className={styles.errorMessage} role="alert">
+            {error}
+          </div>
         ) : posts.length === 0 ? (
-          <div className={styles.noResults}>No blog posts found matching your criteria.</div>
+          <div className={styles.noResults}>
+            No blog posts found matching your criteria.
+          </div>
         ) : (
           <div className={styles.postsGrid} role="feed" aria-busy={isLoading}>
             <AnimatePresence mode="popLayout">
@@ -311,24 +427,24 @@ const BlogList = () => {
                   itemType="http://schema.org/BlogPosting"
                 >
                   <meta itemProp="datePublished" content={post.createdAt} />
-                  <meta itemProp="author" content={post.author?.name || "Anonymous"} />
-                  <meta itemProp="description" content={post.excerpt} />
-                  
-                  <BlogImage 
-                    src={post.imageUrl}
-                    alt={post.title}
+                  <meta
+                    itemProp="author"
+                    content={post.author?.name || "Anonymous"}
                   />
-                  
+                  <meta itemProp="description" content={post.excerpt} />
+
+                  <BlogImage src={post.imageUrl} alt={post.title} />
+
                   <div className={styles.postContent}>
-                    <Link 
-                      to={`/blog/${post.id}`} 
+                    <Link
+                      to={`/blog/${post.id}`}
                       className={styles.postTitle}
                       itemProp="name headline"
                       title={post.title}
                     >
                       {post.title}
                     </Link>
-                    
+
                     <div className={styles.postMeta}>
                       <span className={styles.metaItem} itemProp="author">
                         <FaUser aria-hidden="true" />
@@ -336,7 +452,10 @@ const BlogList = () => {
                       </span>
                       <span className={styles.metaItem}>
                         <FaClock aria-hidden="true" />
-                        <time dateTime={post.createdAt} itemProp="datePublished">
+                        <time
+                          dateTime={post.createdAt}
+                          itemProp="datePublished"
+                        >
                           {formatDate(post.createdAt)}
                         </time>
                       </span>
@@ -346,7 +465,7 @@ const BlogList = () => {
                       </span>
                     </div>
 
-                    <p 
+                    <p
                       className={styles.postExcerpt}
                       itemProp="abstract"
                       title={post.excerpt}
@@ -354,22 +473,11 @@ const BlogList = () => {
                       {post.excerpt}
                     </p>
 
-                    <div className={styles.tagList} itemProp="keywords">
-                      {post.tags?.map((tag, index) => (
-                        <Link
-                          key={`${post.id}-${tag}-${index}`}
-                          to={`/blog/tag/${encodeURIComponent(tag)}`}
-                          className={styles.tag}
-                          title={tag}
-                        >
-                          {truncateText(tag, 20)}
-                        </Link>
-                      ))}
-                    </div>
+                    <TagList tags={post.tags} postId={post.id} />
 
                     {showCreateButton && (
                       <div className={styles.actionButtons}>
-                        <button 
+                        <button
                           className={styles.actionButton}
                           onClick={(e) => {
                             e.preventDefault();
@@ -379,7 +487,7 @@ const BlogList = () => {
                         >
                           <FaEdit aria-hidden="true" />
                         </button>
-                        <button 
+                        <button
                           className={styles.actionButton}
                           onClick={(e) => handleDeleteBlog(post.id, e)}
                           aria-label={`Delete blog post: ${post.title}`}
@@ -396,22 +504,23 @@ const BlogList = () => {
         )}
 
         {totalPages > 1 && (
-          <nav 
-            className={styles.pagination}
-            aria-label="Blog posts navigation"
-          >
+          <nav className={styles.pagination} aria-label="Blog posts navigation">
             <button
               className={styles.button}
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               aria-label="Previous page"
             >
               Previous
             </button>
-            <span aria-current="page">Page {currentPage} of {totalPages}</span>
+            <span aria-current="page">
+              Page {currentPage} of {totalPages}
+            </span>
             <button
               className={styles.button}
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
               aria-label="Next page"
             >

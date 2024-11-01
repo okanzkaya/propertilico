@@ -1,5 +1,4 @@
-// BlogPost.js
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import DOMPurify from 'dompurify';
@@ -14,14 +13,12 @@ import {
 import { Alert } from '@mui/material';
 import styles from './BlogPost.module.css';
 
-// Blog API endpoints
-const BLOG_API = {
-  getBlogById: (id) => `/api/blogs/${id}`,
-  getRelatedBlogs: (id) => `/api/blogs/related/${id}`,
-  deleteBlog: (id) => `/api/blogs/${id}`
+const truncateText = (text, maxLength) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength).trim() + '...';
 };
 
-// Utility functions
 const formatDate = (date) => {
   if (!date) return '';
   return new Date(date).toLocaleDateString('en-US', {
@@ -62,15 +59,22 @@ const BlogPost = () => {
   const viewIncrementedRef = useRef(false);
 
   const fetchPost = useCallback(async () => {
-    if (viewIncrementedRef.current) return;
+    const controller = new AbortController();
+    
+    if (viewIncrementedRef.current || !id) return;
     
     try {
       setIsLoading(true);
       setError(null);
 
       const [postResponse, relatedResponse] = await Promise.all([
-        axiosInstance.get(BLOG_API.getBlogById(id)),
-        axiosInstance.get(BLOG_API.getRelatedBlogs(id))
+        axiosInstance.get(`/api/blogs/${id}`, {
+          params: { increment: !viewIncrementedRef.current },
+          signal: controller.signal
+        }),
+        axiosInstance.get(`/api/blogs/related/${id}`, {
+          signal: controller.signal
+        })
       ]);
 
       if (postResponse.data.status === 'success' && relatedResponse.data.status === 'success') {
@@ -79,14 +83,19 @@ const BlogPost = () => {
         
         const bookmarks = new Set(JSON.parse(localStorage.getItem('blogBookmarks') || '[]'));
         setIsBookmarked(bookmarks.has(id));
+        
         viewIncrementedRef.current = true;
       }
     } catch (err) {
-      console.error('Error fetching blog:', err);
-      setError(err?.response?.data?.message || 'Failed to load the blog post');
+      if (!err.name === 'AbortError') {
+        console.error('Error fetching blog:', err);
+        setError(err?.response?.data?.message || 'Failed to load the blog post');
+      }
     } finally {
       setIsLoading(false);
     }
+
+    return () => controller.abort();
   }, [id]);
 
   useEffect(() => {
@@ -95,20 +104,20 @@ const BlogPost = () => {
     viewIncrementedRef.current = false;
   }, [fetchPost]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!contentRef.current) return;
-      
-      const totalHeight = contentRef.current.clientHeight;
-      const windowHeight = window.innerHeight;
-      const scrolled = window.scrollY;
-      const progress = (scrolled / (totalHeight - windowHeight)) * 100;
-      setReadProgress(Math.min(100, Math.max(0, progress)));
-    };
+  const handleScroll = useCallback(() => {
+    if (!contentRef.current) return;
+    
+    const totalHeight = contentRef.current.clientHeight;
+    const windowHeight = window.innerHeight;
+    const scrolled = window.scrollY;
+    const progress = (scrolled / (totalHeight - windowHeight)) * 100;
+    setReadProgress(Math.min(100, Math.max(0, progress)));
+  }, []);
 
+  useEffect(() => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [handleScroll]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -121,11 +130,11 @@ const BlogPost = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const showToast = (message) => {
+  const showToast = useCallback((message) => {
     setToastMessage(message);
     setShowSuccessToast(true);
     setTimeout(() => setShowSuccessToast(false), 3000);
-  };
+  }, []);
 
   const handleShare = async (platform) => {
     if (!post) return;
@@ -151,8 +160,9 @@ const BlogPost = () => {
       showToast('Failed to share. Please try again.');
     }
   };
+
   const handleBackNavigation = () => {
-      navigate('/blog');
+    navigate('/blog');
   };
 
   const toggleBookmark = useCallback(() => {
@@ -174,16 +184,16 @@ const BlogPost = () => {
       console.error('Error toggling bookmark:', err);
       showToast('Failed to update bookmark');
     }
-  }, [id, isBookmarked]);
+  }, [id, isBookmarked, showToast]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this blog post?')) return;
 
     try {
-      const response = await axiosInstance.delete(BLOG_API.deleteBlog(id));
+      const response = await axiosInstance.delete(`/api/blogs/${id}`);
       if (response.data.status === 'success') {
         showToast('Blog post deleted successfully');
-        window.location.href = '/blog';
+        setTimeout(() => navigate('/blog'), 1500);
       }
     } catch (err) {
       console.error('Error deleting blog:', err);
@@ -191,14 +201,14 @@ const BlogPost = () => {
     }
   };
 
-  const getStructuredData = () => {
+  const structuredData = useMemo(() => {
     if (!post) return null;
 
     return {
       "@context": "https://schema.org",
       "@type": "BlogPosting",
-      "headline": post.title,
-      "description": post.excerpt,
+      "headline": truncateText(post.title, 110),
+      "description": truncateText(post.excerpt, 160),
       "image": getImageUrl(post.imageUrl),
       "datePublished": post.publishedAt,
       "dateModified": post.updatedAt || post.publishedAt,
@@ -220,7 +230,17 @@ const BlogPost = () => {
         "@id": window.location.href
       }
     };
-  };
+  }, [post]);
+
+  const pageTitle = useMemo(() => 
+    post ? truncateText(`${post.title} | Property Management Blog`, 60) : 'Loading...',
+    [post]
+  );
+
+  const metaDescription = useMemo(() => 
+    post ? truncateText(post.excerpt, 160) : '',
+    [post]
+  );
 
   if (isLoading) {
     return (
@@ -257,20 +277,20 @@ const BlogPost = () => {
   return (
     <>
       <Helmet>
-        <title>{`${post.title} | Property Management Blog`}</title>
-        <meta name="description" content={post.excerpt} />
+        <title>{pageTitle}</title>
+        <meta name="description" content={metaDescription} />
         <meta name="author" content={post.author?.name} />
         <meta name="keywords" content={post.tags?.join(', ')} />
         
-        <meta property="og:title" content={post.title} />
-        <meta property="og:description" content={post.excerpt} />
+        <meta property="og:title" content={truncateText(post.title, 60)} />
+        <meta property="og:description" content={metaDescription} />
         <meta property="og:image" content={getImageUrl(post.imageUrl)} />
         <meta property="og:type" content="article" />
         <meta property="og:url" content={window.location.href} />
         
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={post.title} />
-        <meta name="twitter:description" content={post.excerpt} />
+        <meta name="twitter:title" content={truncateText(post.title, 60)} />
+        <meta name="twitter:description" content={metaDescription} />
         <meta name="twitter:image" content={getImageUrl(post.imageUrl)} />
 
         <meta property="article:published_time" content={post.publishedAt} />
@@ -279,8 +299,10 @@ const BlogPost = () => {
           <meta key={tag} property="article:tag" content={tag} />
         ))}
 
+        <link rel="canonical" href={window.location.href} />
+        
         <script type="application/ld+json">
-          {JSON.stringify(getStructuredData())}
+          {JSON.stringify(structuredData)}
         </script>
       </Helmet>
 
@@ -293,13 +315,13 @@ const BlogPost = () => {
         </div>
 
         <main className={styles.main}>
-        <button 
-  onClick={handleBackNavigation}
-  className={styles.backButton}
-  aria-label="Go back"
->
-  <ChevronLeft size={24} />
-</button>
+          <button 
+            onClick={handleBackNavigation}
+            className={styles.backButton}
+            aria-label="Go back"
+          >
+            <ChevronLeft size={24} />
+          </button>
 
           <article className={styles.article}>
             <header className={styles.header}>
@@ -393,8 +415,7 @@ const BlogPost = () => {
               }}
             />
 
-            {post.tags?.length > 0 && (
-              <div className={styles.tags}>
+            {post.tags?.length > 0 && (<div className={styles.tags}>
                 {post.tags.map(tag => (
                   <Link key={tag} to={`/blog/tag/${tag}`} className={styles.tag}>
                     #{tag}
@@ -433,13 +454,12 @@ const BlogPost = () => {
                       <img
                         src={getImageUrl(relatedPost.imageUrl)}
                         alt={relatedPost.title}
-                        className={styles.relatedImage}
                         loading="lazy"
                       />
                     </div>
                     <div className={styles.relatedContent}>
-                      <h3>{relatedPost.title}</h3>
-                      <p>{relatedPost.excerpt}</p>
+                      <h3>{truncateText(relatedPost.title, 70)}</h3>
+                      <p>{truncateText(relatedPost.excerpt, 160)}</p>
                       <div className={styles.relatedMeta}>
                         <span>
                           <Calendar className={styles.icon} />
