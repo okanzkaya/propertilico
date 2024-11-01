@@ -739,3 +739,129 @@ html {
     border: 2px solid ButtonText;
   }
 }
+.statisticsSection {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.statisticsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.statisticCard {
+  background: var(--white);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.statisticCard:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.statisticIcon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  color: var(--white);
+  font-size: 1.5rem;
+}
+
+.statisticValue {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.statisticLabel {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.statisticDescription {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .statisticsGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .statisticCard {
+    padding: 1.5rem;
+  }
+
+  .statisticValue {
+    font-size: 2.5rem;
+  }
+
+  .statisticLabel {
+    font-size: 1.1rem;
+  }
+}
+
+/* Add these to existing media queries */
+@media (prefers-reduced-motion: reduce) {
+  .statisticCard {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+@media print {
+  .statisticCard {
+    break-inside: avoid;
+    border: 1px solid #000;
+    box-shadow: none;
+  }
+
+  .statisticIcon {
+    background: none;
+    border: 1px solid #000;
+    color: #000;
+  }
+
+  .statisticValue {
+    color: #000;
+    -webkit-text-fill-color: initial;
+  }
+}
+
+/* High Contrast Mode additions */
+@media screen and (forced-colors: active) {
+  .statisticCard {
+    border: 2px solid CanvasText;
+  }
+
+  .statisticIcon {
+    border: 2px solid ButtonText;
+  }
+}

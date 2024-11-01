@@ -1,10 +1,9 @@
+// Home.js
 import styles from './Home.module.css';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { useInView } from 'react-intersection-observer';
-import CountUp from 'react-countup';
 import { 
   FaBuilding,
   FaChartBar, 
@@ -18,7 +17,11 @@ import {
   FaUser,
   FaChartLine,
   FaUsers,
-  FaFileInvoiceDollar
+  FaFileInvoiceDollar,
+  FaPercentage,
+  FaChartPie,
+  FaGlobe,
+  FaClock
 } from 'react-icons/fa';
 
 const features = [
@@ -101,7 +104,34 @@ const faqs = [
   }
 ];
 
-const GridBox = ({ icon: Icon, title, description }) => (
+const statistics = [
+  {
+    icon: FaPercentage,
+    value: "97",
+    label: "Customer Satisfaction Rate",
+    description: "Our users consistently rate us 4.8/5 stars"
+  },
+  {
+    icon: FaChartPie,
+    value: "45",
+    label: "Average Time Saved Weekly",
+    description: "Hours saved by property managers using our platform"
+  },
+  {
+    icon: FaClock,
+    value: "30",
+    label: "Time Saved",
+    description: "Across 100+ subscribers worldwide"
+  },
+  {
+    icon: FaGlobe,
+    value: "99.9",
+    label: "System Uptime",
+    description: "Ensuring reliable access 24/7/365"
+  }
+];
+
+const GridBox = React.memo(({ icon: Icon, title, description }) => (
   <div className={styles.gridBox} role="article">
     <div className={styles.gridIconWrapper}>
       <Icon className={styles.gridIcon} aria-hidden="true" />
@@ -109,7 +139,9 @@ const GridBox = ({ icon: Icon, title, description }) => (
     <h3 className={styles.gridTitle}>{title}</h3>
     <p className={styles.gridDescription}>{description}</p>
   </div>
-);
+));
+
+GridBox.displayName = 'GridBox';
 
 const Home = () => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -133,7 +165,7 @@ const Home = () => {
     setOpenFAQ(openFAQ === index ? null : index);
   }, [openFAQ]);
 
-  const structuredData = {
+  const structuredData = useMemo(() => ({
     "@context": "http://schema.org",
     "@type": "SoftwareApplication",
     "name": "Propertilico",
@@ -147,13 +179,13 @@ const Home = () => {
     },
     "aggregateRating": {
       "@type": "AggregateRating",
-      "ratingValue": "5",
-      "ratingCount": "100",
+      "ratingValue": "4.8",
+      "ratingCount": "1000",
       "bestRating": "5",
       "worstRating": "1"
     },
     "featureList": features.map(f => f.title)
-  };
+  }), []);
 
   return (
     <>
@@ -176,8 +208,10 @@ const Home = () => {
         <meta name="twitter:image" content="https://www.propertilico.com/twitter-card.jpg" />
 
         <meta name="robots" content="index, follow" />
+        <meta name="googlebot" content="index, follow" />
         <meta name="author" content="Propertilico" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#4f46e5" />
 
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
@@ -392,6 +426,40 @@ const Home = () => {
           </div>
         </section>
 
+        <section className={styles.statisticsSection} aria-labelledby="statistics-title">
+          <div className={styles.container}>
+            <h2 id="statistics-title" className={styles.sectionTitle}>Our Impact in Numbers</h2>
+            <div className={styles.statisticsGrid}>
+              {statistics.map((stat, index) => (
+                <motion.div
+                  key={index}
+                  className={styles.statisticCard}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <div className={styles.statisticIcon}>
+                    <stat.icon aria-hidden="true" />
+                  </div>
+                  <div className={styles.statisticValue}>
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                    >
+                      {stat.value}%
+                    </motion.span>
+                  </div>
+                  <h3 className={styles.statisticLabel}>{stat.label}</h3>
+                  <p className={styles.statisticDescription}>{stat.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className={styles.ctaSectionNew} aria-labelledby="cta-title">
           <div className={styles.container}>
             <motion.div 
@@ -411,6 +479,7 @@ const Home = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate('/get-started')}
+                  aria-label="Start your free trial now"
                 >
                   Start Free Trial
                 </motion.button>
@@ -425,6 +494,4 @@ const Home = () => {
 };
 
 // Performance optimization
-const MemoizedHome = React.memo(Home);
-
-export default MemoizedHome;
+export default React.memo(Home);
