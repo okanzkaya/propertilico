@@ -1,102 +1,90 @@
 import React from 'react';
-import styled from 'styled-components';
 import { FaFacebookF, FaTwitter, FaLinkedinIn, FaInstagram } from 'react-icons/fa';
+import styles from './Footer.module.css';
 
-const FooterContainer = styled.footer`
-  background-color: #f8f8f8;
-  color: black;
-  padding: 40px 20px;
-  text-align: center;
-`;
-
-const FooterContent = styled.div`
-  display: flex;
-  justify-content: space-between;
-  max-width: 1200px;
-  margin: 0 auto 20px;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
+const FOOTER_SECTIONS = [
+  {
+    header: "About Us",
+    links: [
+      { text: "Company Info", href: "/about", ariaLabel: "Learn more about Propertilico" },
+      { text: "Contact Us", href: "/contact", ariaLabel: "Contact Propertilico support" }
+    ]
+  },
+  {
+    header: "Resources",
+    links: [
+      { text: "Blog", href: "/blog", ariaLabel: "Read our property management blog" },
+      { text: "Help Center", href: "/help-center", ariaLabel: "Visit our help center" },
+      { text: "Privacy Policy", href: "/privacy-policy", ariaLabel: "Read our privacy policy" }
+    ]
+  },
+  {
+    header: "Quick Links",
+    links: [
+      { text: "Features", href: "/features", ariaLabel: "Explore our features" },
+      { text: "Pricing", href: "/pricing", ariaLabel: "View our pricing plans" },
+      { text: "Sign In", href: "/signin", ariaLabel: "Sign in to your account" }
+    ]
   }
-`;
+];
 
-const Column = styled.div`
-  flex: 1;
-  padding: 20px;
-  min-width: 200px;
+const SOCIAL_LINKS = [
+  { href: "https://facebook.com/propertilico", icon: <FaFacebookF />, label: "Follow us on Facebook" },
+  { href: "https://twitter.com/propertilico", icon: <FaTwitter />, label: "Follow us on Twitter" },
+  { href: "https://linkedin.com/company/propertilico", icon: <FaLinkedinIn />, label: "Connect with us on LinkedIn" },
+  { href: "https://instagram.com/propertilico", icon: <FaInstagram />, label: "Follow us on Instagram" }
+];
 
-  @media (max-width: 768px) {
-    padding: 10px;
-  }
-`;
+const Footer = () => {
+  const currentYear = new Date().getFullYear();
 
-const FooterHeader = styled.h3`
-  font-size: 1.2em;
-  margin-bottom: 15px;
-`;
+  return (
+    <footer className={styles.footer} role="contentinfo">
+      <div className={styles.footerContent}>
+        {FOOTER_SECTIONS.map(({ header, links }) => (
+          <div key={header} className={styles.column}>
+            <h2 className={styles.footerHeader}>{header}</h2>
+            <nav aria-label={`${header} navigation`}>
+              <ul className={styles.linkList}>
+                {links.map(({ text, href, ariaLabel }) => (
+                  <li key={href}>
+                    <a 
+                      href={href}
+                      className={styles.footerLink}
+                      aria-label={ariaLabel}
+                    >
+                      {text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        ))}
+      </div>
 
-const FooterLink = styled.a`
-  display: block;
-  color: black;
-  text-decoration: none;
-  margin-bottom: 10px;
-  font-size: 1em;
-  transition: color 0.3s;
+      <div className={styles.socialIcons}>
+        {SOCIAL_LINKS.map(({ href, icon, label }) => (
+          <a
+            key={href}
+            href={href}
+            className={styles.socialLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={label}
+          >
+            {icon}
+          </a>
+        ))}
+      </div>
 
-  &:hover {
-    color: #007BFF;
-  }
-`;
-
-const SocialIcons = styled.div`
-  margin: 20px 0;
-
-  a {
-    color: black;
-    margin: 0 15px;
-    font-size: 1.5em;
-    transition: color 0.3s;
-
-    &:hover {
-      color: #007BFF;
-    }
-  }
-`;
-
-const FooterBottom = styled.div`
-  border-top: 1px solid #ccc;
-  padding-top: 10px;
-`;
-
-const Footer = () => (
-  <FooterContainer>
-    <FooterContent>
-      {[
-        { header: "About Us", links: [{ text: "Company Info", href: "/about" }, { text: "Contact Us", href: "/contact" }] },
-        { header: "Resources", links: [{ text: "Blog", href: "/blog" }, { text: "Help Center", href: "/help-center" }, { text: "Privacy Policy", href: "/privacy-policy" }] },
-        { header: "Quick Links", links: [{ text: "Features", href: "/features" }, { text: "Pricing", href: "/pricing" }, { text: "Sign In", href: "/signin" }] }
-      ].map(({ header, links }, idx) => (
-        <Column key={idx}>
-          <FooterHeader>{header}</FooterHeader>
-          {links.map(({ text, href }, i) => (
-            <FooterLink key={i} href={href}>{text}</FooterLink>
-          ))}
-        </Column>
-      ))}
-    </FooterContent>
-    <SocialIcons>
-      {[
-        { href: "https://facebook.com", icon: <FaFacebookF /> },
-        { href: "https://twitter.com", icon: <FaTwitter /> },
-        { href: "https://linkedin.com", icon: <FaLinkedinIn /> },
-        { href: "https://instagram.com", icon: <FaInstagram /> }
-      ].map(({ href, icon }, idx) => (
-        <a key={idx} href={href} target="_blank" rel="noopener noreferrer">{icon}</a>
-      ))}
-    </SocialIcons>
-    <FooterBottom>&copy; 2024 Propertilico. All rights reserved.</FooterBottom>
-  </FooterContainer>
-);
+      <div className={styles.footerBottom}>
+        <p>
+          &copy; {currentYear} Propertilico. All rights reserved.
+        </p>
+      </div>
+    </footer>
+  );
+};
 
 export default Footer;

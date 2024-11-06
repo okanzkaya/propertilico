@@ -1,439 +1,486 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, memo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import styled, { keyframes } from 'styled-components';
-import { FaBars, FaTimes, FaSignOutAlt, FaHome, FaInfoCircle, FaDollarSign, FaBlog, FaQuestionCircle, FaFileAlt, FaShieldAlt, FaChevronDown } from 'react-icons/fa';
+import { 
+  FaBars, 
+  FaTimes, 
+  FaSignOutAlt, 
+  FaHome, 
+  FaInfoCircle, 
+  FaDollarSign, 
+  FaBlog, 
+  FaQuestionCircle, 
+  FaFileAlt, 
+  FaShieldAlt, 
+  FaChevronDown,
+  FaUser,
+  FaUserPlus,
+  FaBuilding,
+  FaDashcube
+} from 'react-icons/fa';
 import LogoImage from '../../assets/public/logo.svg';
 import { useUser } from '../../context/UserContext';
+import styles from './Header.module.css';
 
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
+const NAV_ITEMS = [
+  { 
+    to: "/", 
+    text: "Home", 
+    icon: <FaHome />, 
+    ariaLabel: "Go to Home page",
+    description: "Return to homepage"
+  },
+  { 
+    to: "/features", 
+    text: "Features", 
+    icon: <FaInfoCircle />, 
+    ariaLabel: "View Features",
+    description: "Explore our features"
+  },
+  { 
+    to: "/pricing", 
+    text: "Pricing", 
+    icon: <FaDollarSign />, 
+    ariaLabel: "View Pricing plans",
+    description: "See our pricing plans"
+  },
+];
 
-const HeaderContainer = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 5%;
-  background-color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  height: 70px;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  transition: all 0.3s ease;
+const RESOURCE_ITEMS = [
+  { 
+    to: "/blog", 
+    text: "Blog", 
+    icon: <FaBlog />, 
+    ariaLabel: "Read our Blog",
+    description: "Latest property management insights",
+    badge: "New"
+  },
+  { 
+    to: "/help-center", 
+    text: "Help Center", 
+    icon: <FaQuestionCircle />, 
+    ariaLabel: "Visit Help Center",
+    description: "Get support and guidance"
+  },
+  { 
+    to: "/documentation", 
+    text: "Documentation", 
+    icon: <FaFileAlt />, 
+    ariaLabel: "Read Documentation",
+    description: "Technical guides and API docs"
+  },
+  { 
+    to: "/resources", 
+    text: "Resources", 
+    icon: <FaBuilding />, 
+    ariaLabel: "View Resources",
+    description: "Property management resources"
+  },
+  { 
+    to: "/privacy-policy", 
+    text: "Privacy Policy", 
+    icon: <FaShieldAlt />, 
+    ariaLabel: "Read Privacy Policy",
+    description: "Our data protection commitments"
+  },
+  { 
+    to: "/terms", 
+    text: "Terms of Service", 
+    icon: <FaFileAlt />, 
+    ariaLabel: "View Terms of Service",
+    description: "Service terms and conditions"
+  },
+];
 
-  @media (max-width: 1024px) {
-    padding: 0 3%;
-    height: 60px;
-  }
-`;
-
-const MainContent = styled.main`
-  padding-top: 70px;
-
-  @media (max-width: 1024px) {
-    padding-top: 60px;
-  }
-`;
-
-const Logo = styled(Link)`
-  img {
-    height: 40px;
-    transition: transform 0.3s ease;
-
-    &:hover {
-      transform: scale(1.05) rotate(-2deg);
-    }
-
-    @media (max-width: 1024px) {
-      height: 30px;
-    }
-  }
-`;
-
-const NavLinks = styled.nav`
-  display: flex;
-  align-items: center;
-
-  @media (max-width: 1024px) {
-    display: none;
-  }
-`;
-
-const NavLink = styled(Link)`
-  margin: 0 15px;
-  color: #333;
-  font-size: 1em;
-  font-weight: 500;
-  text-decoration: none;
-  position: relative;
-  transition: all 0.3s ease;
-
-  &:after {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: -5px;
-    left: 0;
-    background-color: #3498db;
-    transition: width 0.3s ease;
-  }
-
-  &:hover, &.active, &:focus {
-    color: #3498db;
-    outline: none;
-
-    &:after {
-      width: 100%;
-    }
-  }
-
-  &.active {
-    font-weight: 700;
-  }
-`;
-
-const Button = styled(Link)`
-  background-color: #3498db;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 25px;
-  margin-left: 15px;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);
-
-  &:hover, &:focus {
-    background-color: #2980b9;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 8px rgba(52, 152, 219, 0.3);
-    outline: none;
-  }
-
-  @media (max-width: 1024px) {
-    margin: 10px 0;
-    width: 100%;
-  }
-`;
-
-const LogoutButton = styled.button`
-  background-color: white;
-  color: #333;
-  padding: 10px 20px;
-  border-radius: 25px;
-  margin-left: 15px;
-  border: 2px solid #333;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 1em;
-  font-weight: 600;
-
-  &:hover, &:focus {
-    background-color: #333;
-    color: white;
-    outline: none;
-  }
-
-  @media (max-width: 1024px) {
-    margin: 10px 0;
-    width: 100%;
-  }
-`;
-
-const MobileMenuIcon = styled.button`
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.5em;
-  color: #333;
-  transition: color 0.3s ease;
-
-  &:hover, &:focus {
-    color: #3498db;
-    outline: none;
-  }
-
-  @media (max-width: 1024px) {
-    display: block;
-  }
-`;
-
-const MobileMenu = styled.div`
-  display: none;
-  flex-direction: column;
-  background-color: white;
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 280px;
-  height: 100%;
-  padding: 20px;
-  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
-  z-index: 1001;
-  transform: ${({ $isOpen }) => ($isOpen ? 'translateX(0)' : 'translateX(100%)')};
-  transition: transform 0.3s ease-in-out;
-  overflow-y: auto;
-
-  @media (max-width: 1024px) {
-    display: flex;
-  }
-`;
-
-const MobileNavLink = styled(NavLink)`
-  margin: 10px 0;
-  font-size: 1.2em;
-  padding: 10px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-
-  &:hover, &:focus, &.active {
-    background-color: #f0f0f0;
-    outline: none;
-  }
-
-  & > svg {
-    margin-right: 10px;
-  }
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 1.5em;
-  color: #333;
-  cursor: pointer;
-  align-self: flex-end;
-  transition: color 0.3s ease;
-
-  &:hover, &:focus {
-    color: #3498db;
-    outline: none;
-  }
-`;
-
-const ResourcesDropdown = styled.div`
-  position: relative;
-  display: inline-block;
-`;
-
-const ResourcesButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 1em;
-  font-weight: 500;
-  color: #333;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: all 0.3s ease;
-
-  &:hover, &:focus {
-    color: #3498db;
-    outline: none;
-  }
-
-  svg {
-    margin-left: 5px;
-    transition: transform 0.3s ease;
-  }
-
-  ${ResourcesDropdown}:hover & svg {
-    transform: rotate(180deg);
-  }
-`;
-
-const DropdownContent = styled.div`
-  display: none;
-  position: absolute;
-  background-color: #f9f9f9;
-  min-width: 160px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1;
-  border-radius: 8px;
-  overflow: hidden;
-  animation: ${fadeIn} 0.3s ease;
-
-  ${ResourcesDropdown}:hover & {
-    display: block;
-  }
-
-  @media (max-width: 1024px) {
-    position: static;
-    box-shadow: none;
-    display: block;
-    animation: none;
-  }
-`;
-
-const DropdownLink = styled(Link)`
-  color: #333;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-  transition: all 0.3s ease;
-
-  &:hover, &:focus {
-    background-color: #ddd;
-    color: #3498db;
-    outline: none;
-  }
-
-  @media (max-width: 1024px) {
-    padding: 10px;
-    font-size: 1.1em;
-  }
-`;
+const MemoizedLink = memo(({ to, className, children, onClick, ariaLabel, ariaCurrent }) => (
+  <Link
+    to={to}
+    className={className}
+    onClick={onClick}
+    aria-label={ariaLabel}
+    aria-current={ariaCurrent}
+  >
+    {children}
+  </Link>
+));
 
 const Header = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileResourcesOpen, setMobileResourcesOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isResourcesOpen, setIsResourcesOpen] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState('up');
+  
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useUser();
+  
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
+  const headerRef = useRef(null);
+  const resourcesTimeoutRef = useRef(null);
 
-  const handleLogout = useCallback(() => {
-    logout();
-    navigate('/');
-  }, [logout, navigate]);
+  const handleScroll = useCallback(() => {
+    if (!ticking.current) {
+      requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        const scrollDelta = currentScrollY - lastScrollY.current;
+        
+        // Determine scroll direction and threshold
+        if (currentScrollY < 100) {
+          setIsHeaderVisible(true);
+          setScrollDirection('up');
+        } else if (Math.abs(scrollDelta) > 10) { // Threshold to prevent tiny movements
+          const newDirection = scrollDelta > 0 ? 'down' : 'up';
+          setScrollDirection(newDirection);
+          setIsHeaderVisible(newDirection === 'up');
+        }
+
+        // Handle scroll state
+        setIsScrolled(currentScrollY > 20);
+        lastScrollY.current = currentScrollY;
+        ticking.current = false;
+      });
+      
+      ticking.current = true;
+    }
+  }, []);
 
   useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (mobileMenuOpen && !event.target.closest('.mobile-menu')) {
-        setMobileMenuOpen(false);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+      navigate('/', { replace: true });
+      setIsMobileMenuOpen(false);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }, [logout, navigate]);
+
+  const closeMobileMenu = useCallback(() => {
+    setIsMobileMenuOpen(false);
+    setIsResourcesOpen(false);
+  }, []);
+
+  const handleResourcesHover = useCallback((isHovering) => {
+    if (resourcesTimeoutRef.current) {
+      clearTimeout(resourcesTimeoutRef.current);
+    }
+
+    if (isHovering) {
+      setIsResourcesOpen(true);
+    } else {
+      resourcesTimeoutRef.current = setTimeout(() => {
+        setIsResourcesOpen(false);
+      }, 150); // Slight delay before closing
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (resourcesTimeoutRef.current) {
+        clearTimeout(resourcesTimeoutRef.current);
       }
     };
+  }, []);
 
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [mobileMenuOpen]);
-
-  const navItems = [
-    { to: "/", text: "Home", icon: <FaHome /> },
-    { to: "/features", text: "Features", icon: <FaInfoCircle /> },
-    { to: "/pricing", text: "Pricing", icon: <FaDollarSign /> },
-  ];
-
-  const resourceItems = [
-    { to: "/blog", text: "Blog", icon: <FaBlog /> },
-    { to: "/help-center", text: "Help Center", icon: <FaQuestionCircle /> },
-    { to: "/privacy-policy", text: "Privacy Policy", icon: <FaShieldAlt /> },
-    { to: "/tos", text: "Terms of Service", icon: <FaFileAlt /> },
-  ];
+  const headerClass = `${styles.header} 
+    ${isScrolled ? styles.scrolled : ''} 
+    ${isHeaderVisible ? styles.visible : styles.hidden}
+    ${scrollDirection === 'up' ? styles.scrollUp : styles.scrollDown}`;
 
   return (
-    <>
-      <HeaderContainer>
-        <Logo to="/">
-          <img src={LogoImage} alt="Propertilico Logo" />
-        </Logo>
-        <NavLinks>
-          {navItems.map(({ to, text }) => (
-            <NavLink key={to} to={to} className={location.pathname === to ? 'active' : ''}>
+    <header 
+      ref={headerRef}
+      className={headerClass}
+      role="banner"
+      aria-label="Main navigation"
+    >
+      <div className={styles.headerContainer}>
+        <div className={styles.leftSection}>
+          <MemoizedLink 
+            to="/" 
+            className={styles.logoLink}
+            ariaLabel="Propertilico Home"
+          >
+            <img 
+              src={LogoImage} 
+              alt="Propertilico Logo" 
+              className={styles.logo}
+              width="180"
+              height="45"
+              loading="eager"
+            />
+          </MemoizedLink>
+        </div>
+
+        <nav className={styles.centerSection} aria-label="Main navigation">
+          {NAV_ITEMS.map(({ to, text, ariaLabel }, index) => (
+            <MemoizedLink
+              key={to}
+              to={to}
+              className={`${styles.navLink} ${location.pathname === to ? styles.active : ''}`}
+              ariaLabel={ariaLabel}
+              ariaCurrent={location.pathname === to ? 'page' : undefined}
+              style={{ '--item-index': index }}
+            >
               {text}
-            </NavLink>
+            </MemoizedLink>
           ))}
-          <ResourcesDropdown>
-            <ResourcesButton>
-              Resources <FaChevronDown />
-            </ResourcesButton>
-            <DropdownContent>
-              {resourceItems.map(({ to, text }) => (
-                <DropdownLink key={to} to={to}>{text}</DropdownLink>
-              ))}
-            </DropdownContent>
-          </ResourcesDropdown>
-          {user ? (
-            <>
-              <NavLink to="/my-plan" className={location.pathname === '/my-plan' ? 'active' : ''}>My Plan</NavLink>
-              {user.hasActiveSubscription ? (
-                <Button to="/app/dashboard">Dashboard</Button>
-              ) : (
-                <Button to="/subscription">Get Subscription</Button>
-              )}
-              <LogoutButton onClick={handleLogout}>
-                <FaSignOutAlt style={{ marginRight: '5px' }} />
-                Logout
-              </LogoutButton>
-            </>
-          ) : (
-            <>
-              <NavLink to="/signin" className={location.pathname === '/signin' ? 'active' : ''}>Sign In</NavLink>
-              <Button to="/get-started">Get Started - Free</Button>
-            </>
-          )}
-        </NavLinks>
-        <MobileMenuIcon onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
-          <FaBars />
-        </MobileMenuIcon>
-        <MobileMenu $isOpen={mobileMenuOpen}>
-          <CloseButton onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
-            <FaTimes />
-          </CloseButton>
-          {navItems.map(({ to, text, icon }) => (
-            <MobileNavLink key={to} to={to} onClick={() => setMobileMenuOpen(false)} className={location.pathname === to ? 'active' : ''}>
-              {icon}
-              {text}
-            </MobileNavLink>
-          ))}
-          <ResourcesButton onClick={() => setMobileResourcesOpen(!mobileResourcesOpen)}>
-            Resources <FaChevronDown style={{ transform: mobileResourcesOpen ? 'rotate(180deg)' : 'none' }} />
-          </ResourcesButton>
-          {mobileResourcesOpen && (
-            <DropdownContent>
-              {resourceItems.map(({ to, text, icon }) => (
-                <MobileNavLink key={to} to={to} onClick={() => setMobileMenuOpen(false)}>
+          
+          <div 
+            className={styles.resourcesWrapper}
+            onMouseEnter={() => handleResourcesHover(true)}
+            onMouseLeave={() => handleResourcesHover(false)}
+          >
+            <div className={styles.resourcesButton}>
+              Resources
+              <FaChevronDown className={isResourcesOpen ? styles.rotate : ''} />
+            </div>
+            <div 
+              className={`${styles.resourcesDropdown} ${isResourcesOpen ? styles.show : ''}`}
+              role="menu"
+              aria-label="Resources menu"
+            >
+              {RESOURCE_ITEMS.map(({ to, text, icon, ariaLabel, description, badge }, index) => (
+                <MemoizedLink
+                  key={to}
+                  to={to}
+                  className={styles.dropdownLink}
+                  ariaLabel={ariaLabel}
+                  onClick={closeMobileMenu}
+                  style={{ '--item-index': index }}
+                >
                   {icon}
-                  {text}
-                </MobileNavLink>
+                  <div className={styles.dropdownContent}>
+                    <div className={styles.dropdownHeader}>
+                      <span className={styles.dropdownTitle}>{text}</span>
+                      {badge && <span className={styles.badge}>{badge}</span>}
+                    </div>
+                    <span className={styles.dropdownDescription}>{description}</span>
+                  </div>
+                </MemoizedLink>
               ))}
-            </DropdownContent>
-          )}
+            </div>
+          </div>
+        </nav>
+
+        <div className={styles.rightSection}>
           {user ? (
             <>
-              <MobileNavLink to="/my-plan" onClick={() => setMobileMenuOpen(false)} className={location.pathname === '/my-plan' ? 'active' : ''}>
-                <FaDollarSign /> My Plan
-              </MobileNavLink>
-              {user.hasActiveSubscription ? (
-                <Button to="/app/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                  <FaHome /> Dashboard
-                </Button>
-              ) : (
-                <Button to="/subscription" onClick={() => setMobileMenuOpen(false)}>
-                  <FaDollarSign /> Get Subscription
-                </Button>
-              )}
-              <LogoutButton onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
-                <FaSignOutAlt style={{ marginRight: '5px' }} />
-                Logout
-              </LogoutButton>
+              <MemoizedLink 
+                to="/my-plan" 
+                className={styles.navLink}
+                ariaLabel="View my plan"
+              >
+                <FaDashcube className={styles.buttonIcon} />
+                <span>My Plan</span>
+              </MemoizedLink>
+              <MemoizedLink
+                to={user.hasActiveSubscription ? "/app/dashboard" : "/subscription"}
+                className={styles.primaryButton}
+                ariaLabel={user.hasActiveSubscription ? "Go to Dashboard" : "Get Subscription"}
+              >
+                {user.hasActiveSubscription ? (
+                  <>
+                    <FaDashcube className={styles.buttonIcon} />
+                    <span>Dashboard</span>
+                  </>
+                ) : (
+                  <>
+                    <FaDollarSign className={styles.buttonIcon} />
+                    <span>Get Subscription</span>
+                  </>
+                )}
+              </MemoizedLink>
+              <button 
+                onClick={handleLogout} 
+                className={styles.logoutButton}
+                aria-label="Log out"
+                type="button"
+              >
+                <FaSignOutAlt className={styles.buttonIcon} />
+                <span>Logout</span>
+              </button>
             </>
           ) : (
             <>
-              <MobileNavLink to="/signin" onClick={() => setMobileMenuOpen(false)} className={location.pathname === '/signin' ? 'active' : ''}>
-                <FaSignOutAlt /> Sign In
-              </MobileNavLink>
-              <Button to="/get-started" onClick={() => setMobileMenuOpen(false)}>
-                <FaDollarSign /> Get Started - Free
-              </Button>
+              <MemoizedLink 
+                to="/signin" 
+                className={styles.loginButton}
+                ariaLabel="Sign in to your account"
+              >
+                <FaUser className={styles.buttonIcon} />
+                <span>Sign In</span>
+              </MemoizedLink>
+              <MemoizedLink 
+                to="/get-started" 
+                className={styles.primaryButton}
+                ariaLabel="Create a new account"
+              >
+                <FaUserPlus className={styles.buttonIcon} />
+                <span>Get Started</span>
+              </MemoizedLink>
             </>
           )}
-        </MobileMenu>
-      </HeaderContainer>
-      <MainContent />
-    </>
+        </div>
+
+        <button 
+          className={styles.mobileMenuButton}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-expanded={isMobileMenuOpen}
+          aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          type="button"
+        >
+          {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
+        </button>
+
+        {/* Mobile Menu */}
+        <div 
+          className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.mobileMenuOpen : ''}`}
+          aria-hidden={!isMobileMenuOpen}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation menu"
+        >
+          <nav className={styles.mobileNav}>
+            {NAV_ITEMS.map(({ to, text, icon, ariaLabel }, index) => (
+              <MemoizedLink
+                key={to}
+                to={to}
+                className={`${styles.mobileLink} ${location.pathname === to ? styles.active : ''}`}
+                onClick={closeMobileMenu}
+                ariaLabel={ariaLabel}
+                style={{ '--item-index': index }}
+              >
+                {icon}
+                <span>{text}</span>
+              </MemoizedLink>
+            ))}
+            
+            <div 
+              className={`${styles.mobileResourcesSection} ${isResourcesOpen ? styles.open : ''}`}
+            >
+              <button 
+                className={styles.mobileResourcesButton}
+                onClick={() => setIsResourcesOpen(!isResourcesOpen)}
+                aria-expanded={isResourcesOpen}
+                type="button"
+              >
+                Resources
+                <FaChevronDown className={isResourcesOpen ? styles.rotate : ''} />
+              </button>
+              
+              <div className={styles.mobileResourcesDropdown}>
+                {RESOURCE_ITEMS.map(({ to, text, icon, ariaLabel, description, badge }, index) => (
+                  <MemoizedLink
+                    key={to}
+                    to={to}
+                    className={styles.mobileDropdownLink}
+                    onClick={closeMobileMenu}
+                    ariaLabel={ariaLabel}
+                    style={{ '--item-index': index }}
+                  >
+                    {icon}
+                    <div className={styles.mobileDropdownContent}>
+                      <div className={styles.mobileDropdownHeader}>
+                        <span>{text}</span>
+                        {badge && <span className={styles.mobileBadge}>{badge}</span>}
+                      </div>
+                      <span className={styles.mobileDropdownDescription}>
+                        {description}
+                      </span>
+                    </div>
+                  </MemoizedLink>
+                ))}
+              </div>
+            </div>
+
+            {user ? (
+              <>
+                <MemoizedLink
+                  to="/my-plan"
+                  className={styles.mobileLink}
+                  onClick={closeMobileMenu}
+                  ariaLabel="View my plan"
+                >
+                  <FaDashcube />
+                  <span>My Plan</span>
+                </MemoizedLink>
+                <MemoizedLink
+                  to={user.hasActiveSubscription ? "/app/dashboard" : "/subscription"}
+                  className={styles.mobilePrimaryButton}
+                  onClick={closeMobileMenu}
+                  ariaLabel={user.hasActiveSubscription ? "Go to Dashboard" : "Get Subscription"}
+                >
+                  {user.hasActiveSubscription ? (
+                    <>
+                      <FaDashcube />
+                      <span>Dashboard</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaDollarSign />
+                      <span>Get Subscription</span>
+                    </>
+                  )}
+                </MemoizedLink>
+                <button 
+                  onClick={() => {
+                    handleLogout();
+                    closeMobileMenu();
+                  }}
+                  className={styles.mobileLogoutButton}
+                  type="button"
+                  aria-label="Log out"
+                >
+                  <FaSignOutAlt />
+                  <span>Logout</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <MemoizedLink
+                  to="/signin"
+                  className={styles.mobileLoginButton}
+                  onClick={closeMobileMenu}
+                  ariaLabel="Sign in to your account"
+                >
+                  <FaUser />
+                  <span>Sign In</span>
+                </MemoizedLink>
+                <MemoizedLink
+                  to="/get-started"
+                  className={styles.mobilePrimaryButton}
+                  onClick={closeMobileMenu}
+                  ariaLabel="Create a new account"
+                >
+                  <FaUserPlus />
+                  <span>Get Started</span>
+                </MemoizedLink>
+              </>
+            )}
+          </nav>
+        </div>
+      </div>
+    </header>
   );
 };
 
-export default Header;
+// Memoize the entire component for performance
+export default memo(Header);

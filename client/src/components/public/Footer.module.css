@@ -1,0 +1,106 @@
+.footer {
+    background-color: var(--footer-bg, #f8f8f8);
+    color: var(--footer-text, #333);
+    padding: clamp(2rem, 5vw, 4rem) clamp(1rem, 3vw, 2rem);
+    width: 100%;
+  }
+  
+  .footerContent {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+  }
+  
+  .column {
+    padding: 0.5rem;
+  }
+  
+  .footerHeader {
+    font-size: clamp(1.1rem, 2vw, 1.3rem);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--footer-header, #222);
+  }
+  
+  .linkList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .footerLink {
+    display: inline-block;
+    color: inherit;
+    text-decoration: none;
+    padding: 0.4rem 0;
+    font-size: 1rem;
+    transition: color 0.2s ease;
+  }
+  
+  .footerLink:hover,
+  .footerLink:focus {
+    color: var(--footer-link-hover, #007BFF);
+    text-decoration: underline;
+    outline: none;
+  }
+  
+  .footerLink:focus-visible {
+    outline: 2px solid var(--footer-link-hover, #007BFF);
+    outline-offset: 2px;
+  }
+  
+  .socialIcons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+  }
+  
+  .socialLink {
+    color: inherit;
+    font-size: 1.5rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+  }
+  
+  .socialLink:hover,
+  .socialLink:focus {
+    color: var(--footer-link-hover, #007BFF);
+    transform: translateY(-2px);
+  }
+  
+  .socialLink:focus-visible {
+    outline: 2px solid var(--footer-link-hover, #007BFF);
+    outline-offset: 2px;
+  }
+  
+  .footerBottom {
+    text-align: center;
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--footer-border, #ddd);
+    font-size: 0.9rem;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .footerLink,
+    .socialLink {
+      transition: none;
+    }
+  }
+  
+  @media print {
+    .footer {
+      background: none;
+      color: #000;
+    }
+    
+    .socialIcons {
+      display: none;
+    }
+  }
