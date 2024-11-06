@@ -131,26 +131,6 @@
   line-height: 1.4;
 }
 
-/* Benefit List */
-.benefitList {
-  list-style: none;
-  padding: 0;
-  margin: 2rem 0;
-}
-
-.benefitItem {
-  display: flex;
-  align-items: center;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  color: var(--white);
-}
-
-.benefitItem svg {
-  margin-right: 0.75rem;
-  color: var(--accent-color);
-}
-
 /* Feature Section */
 .featuresSection {
   padding: 5rem 0;
@@ -177,6 +157,7 @@
   box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
   border: 1px solid var(--gray-200);
+  text-align: center;
 }
 
 .featureCard:hover {
@@ -184,31 +165,92 @@
   box-shadow: var(--shadow-lg);
 }
 
-.sectionTitle {
+.featureIcon {
+  font-size: 2.4rem; /* Increased size for feature icons */
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--primary-color);
+  height: 80px; /* Added fixed height for consistency */
+}
+
+/* Statistics Section */
+.statisticsSection {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.statisticsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.statisticCard {
+  background: var(--white);
+  border-radius: var(--border-radius);
+  padding: 2rem;
   text-align: center;
-  width: 100%;
-  display: block;
-  font-size: 2.5rem;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.statisticCard:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.statisticIcon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  color: var(--white);
+  font-size: 1.5rem;
+}
+
+.statisticValue {
+  font-size: 3.5rem;
   font-weight: 700;
-  margin: 0 auto 3rem;
   background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  position: relative;
-  max-width: 800px;
+  margin: 1rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-.sectionTitle::after {
-  content: '';
-  position: absolute;
-  bottom: -0.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 3px;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  border-radius: 2px;
+
+.statisticValue span {
+  display: inline-block;
 }
+
+.statisticLabel {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.statisticDescription {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 /* Testimonial Section */
 .testimonialSection {
   background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
@@ -286,39 +328,23 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
   color: var(--primary-color);
   font-size: 1.2rem;
-  position: relative;
-  overflow: hidden;
 }
 
 .navButton:hover:not(:disabled) {
   background: var(--primary-color);
   color: var(--white);
   transform: scale(1.1);
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-lg);
 }
 
 .navButton:disabled {
   opacity: 0.3;
   cursor: not-allowed;
-  transform: scale(0.95);
 }
-.navButton::after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.navButton:hover::after {
-  opacity: 1;
-}
+
 /* FAQ Section */
 .faqSection {
   padding: 5rem 0;
@@ -359,6 +385,12 @@
 .faqAnswer {
   overflow: hidden;
   will-change: height, opacity;
+}
+
+.faqAnswerContent {
+  padding: 0 0 1.5rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
 /* CTA Section */
@@ -403,88 +435,50 @@
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   min-width: 200px;
 }
 
 .ctaButtonNew:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .ctaNote {
   font-size: 0.9rem;
   opacity: 0.9;
-  margin-top: 0.5rem;
 }
 
-/* Trust Section */
-.trustSection {
-  padding: 5rem 0;
-  background: var(--gray-50);
-}
-
-.trustMetrics {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  flex-wrap: nowrap;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.metricItem {
-  flex: 1;
+/* Section Title */
+.sectionTitle {
   text-align: center;
-  padding: 2rem;
-  background: var(--white);
-  border-radius: 16px;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
-  min-width: 200px;
-  max-width: 280px;
-}
-
-.metricItem:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-md);
-}
-
-.metricIcon {
-  font-size: 2.5rem;
-  color: var(--primary-color);
-  margin-bottom: 1rem;
-}
-
-.metricNumber {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--primary-color);
-  display: block;
-  margin: 0.5rem 0;
+  margin-bottom: 3rem;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.metricLabel {
+/* Benefit List */
+.benefitList {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0;
+}
+
+.benefitItem {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
   font-size: 1.1rem;
-  color: var(--text-secondary);
+  color: var(--white);
 }
 
-/* Text Utilities */
-.textCenter {
-  text-align: center;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.benefitItem svg {
+  margin-right: 0.75rem;
+  color: var(--accent-color);
 }
 
 /* Responsive Design */
@@ -508,18 +502,12 @@
     max-width: none;
   }
 
-  .trustMetrics {
-    flex-wrap: wrap;
-    gap: 1.5rem;
-  }
-
-  .metricItem {
-    flex: 1 1 calc(50% - 1.5rem);
-    max-width: none;
-  }
-
   .heading {
     font-size: 3rem;
+  }
+
+  .statisticsGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -544,9 +532,8 @@
     flex: 1 1 100%;
   }
 
-  .metricItem {
-    flex: 1 1 100%;
-    min-width: auto;
+  .statisticsGrid {
+    grid-template-columns: 1fr;
   }
 
   .testimonialCard {
@@ -565,6 +552,19 @@
     width: 100%;
     max-width: 300px;
   }
+
+  .statisticValue {
+    font-size: 2.8rem;
+  }
+
+  .statisticLabel {
+    font-size: 1rem;
+  }
+
+  .featureIcon {
+    font-size: 2rem;
+    height: 60px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -582,6 +582,10 @@
 
   .sectionTitle {
     font-size: 1.75rem;
+  }
+
+  .statisticValue {
+    font-size: 2.5rem;
   }
 }
 
@@ -615,14 +619,15 @@
 
   .featureCard,
   .testimonialCard,
-  .metricItem {
+  .statisticCard {
     box-shadow: none;
     border: 1px solid #000;
   }
 
-  .metricIcon,
-  .metricNumber {
+  .statisticIcon,
+  .statisticValue {
     color: #000;
+    -webkit-text-fill-color: initial;
   }
 
   .sectionTitle {
@@ -631,12 +636,7 @@
   }
 
   .featureIcon {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    font-size: 2.5rem;
-    color: var(--primary-color);
+    color: #000;
   }
 
   .testimonialIcon {
@@ -664,6 +664,13 @@
 
   .heroSection {
     background: var(--primary-color);
+  }
+
+  .statisticValue,
+  .featureCard,
+  .statisticCard {
+    transform: none !important;
+    transition: none !important;
   }
 }
 
@@ -720,7 +727,7 @@ html {
 .heroSection,
 .featureCard,
 .testimonialCard,
-.metricItem {
+.statisticCard {
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -731,137 +738,39 @@ html {
 @media screen and (forced-colors: active) {
   .featureCard,
   .testimonialCard,
-  .metricItem {
+  .statisticCard {
     border: 2px solid CanvasText;
   }
 
   .ctaButtonNew {
     border: 2px solid ButtonText;
   }
-}
-.statisticsSection {
-  padding: 5rem 0;
-  background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
-  position: relative;
-  overflow: hidden;
-}
 
-.statisticsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.statisticCard {
-  background: var(--white);
-  border-radius: var(--border-radius);
-  padding: 2rem;
-  text-align: center;
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.statisticCard:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
-}
-
-.statisticIcon {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
-  color: var(--white);
-  font-size: 1.5rem;
-}
-
-.statisticValue {
-  font-size: 3rem;
-  font-weight: 800;
-  color: var(--primary-color);
-  margin-bottom: 0.5rem;
-  line-height: 1;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.statisticLabel {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-}
-
-.statisticDescription {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-@media (max-width: 768px) {
-  .statisticsGrid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  .statisticCard {
-    padding: 1.5rem;
-  }
-
-  .statisticValue {
-    font-size: 2.5rem;
-  }
-
-  .statisticLabel {
-    font-size: 1.1rem;
+  .statisticIcon,
+  .featureIcon {
+    forced-color-adjust: none;
   }
 }
 
-/* Add these to existing media queries */
-@media (prefers-reduced-motion: reduce) {
-  .statisticCard {
-    transform: none !important;
-    transition: none !important;
+/* Animation Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media print {
-  .statisticCard {
-    break-inside: avoid;
-    border: 1px solid #000;
-    box-shadow: none;
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
   }
-
-  .statisticIcon {
-    background: none;
-    border: 1px solid #000;
-    color: #000;
-  }
-
-  .statisticValue {
-    color: #000;
-    -webkit-text-fill-color: initial;
-  }
-}
-
-/* High Contrast Mode additions */
-@media screen and (forced-colors: active) {
-  .statisticCard {
-    border: 2px solid CanvasText;
-  }
-
-  .statisticIcon {
-    border: 2px solid ButtonText;
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
