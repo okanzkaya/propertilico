@@ -95,7 +95,19 @@ const App = () => {
     if (user?.theme) setThemeMode(prev => ({ ...prev, app: user.theme }));
     if (user?.fontSize) setFontSize(user.fontSize);
   }, [user?.theme, user?.fontSize]);
-
+  useEffect(() => {
+  // Set theme attribute on body
+  document.body.setAttribute('data-theme', themeMode.app);
+  
+  // Set theme attribute on html for consistent theming
+  document.documentElement.setAttribute('data-theme', themeMode.app);
+  
+  // Clean up
+  return () => {
+    document.body.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('data-theme');
+  };
+}, [themeMode.app]);
   const toggleTheme = useCallback((key) => {
     setThemeMode(prev => {
       const newTheme = prev[key] === 'light' ? 'dark' : 'light';

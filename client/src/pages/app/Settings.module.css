@@ -418,6 +418,7 @@
 
 /* Theme Variables */
 :root {
+  /* Light theme - matching your theme.js light mode */
   --background-default: #FFFFFF;
   --background-paper: #EDE8F5;
   --text-primary: #222222;
@@ -425,17 +426,18 @@
   --primary-main: #3D52A0;
   --primary-light: #7091E6;
   --primary-dark: #2A3B82;
-  --primary-soft: rgba(61, 82, 160, 0.08);
+  --primary-soft: rgba(112, 145, 230, 0.08);
   --primary-border: rgba(61, 82, 160, 0.24);
   --hover-light: rgba(107, 114, 128, 0.08);
   --border-color: #ADBBDA;
   --border-hover: #8697C4;
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --disabled-gradient: linear-gradient(45deg, #E0E0E0, #F0F0F0);
+  --disabled-gradient: linear-gradient(45deg, rgba(107, 114, 128, 0.12), rgba(107, 114, 128, 0.24));
 }
 
 [data-theme="dark"] {
+  /* Dark theme - matching your theme.js dark mode */
   --background-default: #1C1B29;
   --background-paper: #2A283E;
   --text-primary: #E1E1E6;
@@ -450,7 +452,7 @@
   --border-hover: #4A4A5F;
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --disabled-gradient: linear-gradient(45deg, #2A283E, #3D3D4D);
+  --disabled-gradient: linear-gradient(45deg, rgba(169, 169, 179, 0.12), rgba(169, 169, 179, 0.24));
 }
 
 /* Responsive Styles */

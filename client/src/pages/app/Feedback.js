@@ -312,20 +312,25 @@ const FeedbackPage = () => {
               </div>
 
               <button
-                className={`custom-button ${isSubmitting ? styles.submitting : ''}`}
+                className={`${styles.customButton} ${
+                  isSubmitting ? styles.submitting : ""
+                }`}
                 onClick={handleSubmit}
                 disabled={isSubmitting || !canSubmit}
+                type="button"
               >
                 {isSubmitting ? (
                   <>
-                    <CircularProgress size={24} />
+                    <CircularProgress size={20} thickness={4} />
                     <span>Submitting...</span>
                   </>
                 ) : (
                   <>
-                    <SendIcon />
+                    <SendIcon sx={{ fontSize: "1.25rem" }} />
                     <span>
-                      {canSubmit ? 'Submit Feedback' : `Wait ${timeUntilNextSubmission}s`}
+                      {canSubmit
+                        ? "Submit Feedback"
+                        : `Wait ${timeUntilNextSubmission}s`}
                     </span>
                   </>
                 )}

@@ -1,331 +1,382 @@
+/* Theme Variables */
+:root {
+  --background-default: #FFFFFF;
+  --background-paper: #EDE8F5;
+  --text-primary: #222222;
+  --text-secondary: #333333;
+  --primary-main: #3D52A0;
+  --primary-light: #7091E6;
+  --primary-dark: #2A3B82;
+  --secondary-main: #7091E6;
+  --secondary-light: #9DB3F0;
+  --secondary-dark: #4B70F5;
+  --error-main: #f44336;
+  --warning-main: #ff9800;
+  --success-main: #4caf50;
+  --border-color: #ADBBDA;
+  --card-background: rgba(255, 255, 255, 0.95);
+  --hover-light: rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  --gradient-primary: linear-gradient(45deg, var(--primary-main) 30%, var(--secondary-main) 90%);
+  --gradient-card: linear-gradient(45deg, rgba(61, 82, 160, 0.05), rgba(112, 145, 230, 0.05));
+}
+
+[data-theme="dark"] {
+  --background-default: #1C1B29;
+  --background-paper: #2A283E;
+  --text-primary: #E1E1E6;
+  --text-secondary: #A9A9B3;
+  --primary-main: #2a8df2;
+  --primary-light: #4B70F5;
+  --primary-dark: #1B5AA1;
+  --secondary-main: #3DC2EC;
+  --secondary-light: #64D1F4;
+  --secondary-dark: #2A87A4;
+  --border-color: #3D3D4D;
+  --card-background: rgba(42, 40, 62, 0.95);
+  --hover-light: rgba(255, 255, 255, 0.05);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.45);
+  --gradient-card: linear-gradient(45deg, rgba(42, 141, 242, 0.05), rgba(61, 194, 236, 0.05));
+}
+
+/* Page Layout */
 .pageWrapper {
-    padding: 24px;
-    background-color: var(--background-default);
-    min-height: 100vh;
-  }
-  
-  /* Card Styles */
-  .ticketCard {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    border-radius: 16px;
-    overflow: hidden;
-    background: linear-gradient(45deg, rgba(25, 118, 210, 0.05), rgba(156, 39, 176, 0.05));
-  }
-  
-  .ticketCard:hover {
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    transform: translateY(-5px);
-  }
-  
-  .cardHeader {
+  padding: 24px;
+  background-color: var(--background-default);
+  min-height: 100vh;
+  transition: background-color 0.3s ease;
+}
+
+/* Header Section */
+.headerSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 16px 24px;
+  background: var(--background-paper);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pageTitle {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.addButton {
+  margin-left: auto;
+  border-radius: 8px;
+  padding: 8px 24px;
+  background: var(--gradient-primary);
+  color: white;
+  text-transform: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.addButton:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Filters Section */
+.filtersContainer {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--background-paper);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.filterControls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Tabs Section */
+.customTabs {
+  background: var(--background-paper);
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 24px;
+}
+
+.customTab {
+  min-width: 120px;
+  padding: 12px 24px;
+  margin: 0 8px;
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.customTab:hover {
+  background: var(--hover-light);
+}
+
+.customTab.Mui-selected {
+  background: var(--primary-main);
+  color: white;
+}
+
+/* Card Styles */
+.ticketCard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--gradient-card);
+  border: 1px solid var(--border-color);
+}
+
+.ticketCard:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-5px);
+}
+
+.cardHeader {
+  padding: 16px;
+  background: var(--gradient-primary);
+  color: white;
+}
+
+.cardTitle {
+  font-weight: 600;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardContent {
+  padding: 16px;
+  flex-grow: 1;
+  color: var(--text-primary);
+}
+
+.cardDescription {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cardFooter {
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--background-paper);
+}
+
+/* Status Chips */
+.statusChip {
+  font-weight: 500;
+  border-radius: 16px;
+  padding: 4px 12px;
+}
+
+.statusChipError {
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+}
+
+.statusChipWarning {
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+}
+
+.statusChipSuccess {
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+/* Avatar and Icons */
+.assigneeAvatar {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  background-color: var(--primary-main);
+}
+
+.dueDateIcon {
+  margin-right: 6px;
+  color: var(--text-secondary);
+}
+
+.warningIcon {
+  margin-left: 6px;
+  color: var(--error-main);
+}
+
+.expiredDate {
+  color: var(--error-main);
+}
+
+/* Dialog Styles */
+.dialogTitle {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 16px 24px;
+}
+
+.dialogContent {
+  padding: 24px;
+  background: var(--background-paper);
+}
+
+.dialogActions {
+  padding: 16px 24px;
+  background: var(--background-paper);
+  border-top: 1px solid var(--border-color);
+}
+
+.actionButton {
+  border-radius: 8px;
+  padding: 8px 24px;
+  text-transform: none;
+  font-weight: 500;
+}
+
+/* Notes Section */
+.notesList {
+  margin-top: 16px;
+  background: var(--background-paper);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.noteItem {
+  background: var(--card-background);
+  margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.noteTimestamp {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.noteContent {
+  color: var(--text-primary);
+  margin-top: 8px;
+}
+
+/* Loading and Empty States */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.emptyState {
+  padding: 48px;
+  text-align: center;
+  background: var(--background-paper);
+  border-radius: 16px;
+  color: var(--text-secondary);
+}
+
+/* Responsive Styles */
+@media (max-width: 960px) {
+  .pageWrapper {
     padding: 16px;
-    background: linear-gradient(45deg, #1976d2 30%, #9c27b0 90%);
-    color: white;
   }
-  
-  .cardTitle {
-    font-weight: bold;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+
+  .filterControls {
+    grid-template-columns: 1fr;
   }
-  
-  .cardContent {
-    padding: 16px;
-    flex-grow: 1;
-  }
-  
-  .cardDescription {
-    margin-bottom: 16px;
-    height: 3em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-  
-  .cardFooter {
-    padding: 16px;
-    border-top: 1px solid rgba(0, 0, 0, 0.12);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  /* Status Chips */
-  .statusChip {
-    font-weight: bold;
-    border-radius: 16px;
-  }
-  
-  .statusChipError {
-    box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
-  }
-  
-  .statusChipWarning {
-    box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
-  }
-  
-  .statusChipSuccess {
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
-  }
-  
-  .statusChipDefault {
-    box-shadow: 0 0 8px rgba(158, 158, 158, 0.5);
-  }
-  
-  /* Avatar and Icons */
-  .assigneeAvatar {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    background-color: var(--primary-main);
-  }
-  
-  .dueDateIcon {
-    margin-right: 4px;
-  }
-  
-  .warningIcon {
-    margin-left: 4px;
-  }
-  
-  .expiredDate {
-    color: var(--error-main);
-  }
-  
-  /* Search and Filters */
-  .searchBar {
-    border-radius: 20px;
-  }
-  
-  .searchBar .MuiOutlinedInputRoot {
-    border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.15);
-  }
-  
-  .searchBar .MuiOutlinedInputRoot:hover {
-    background-color: rgba(255, 255, 255, 0.25);
-  }
-  
-  .searchBar .MuiOutlinedInputRoot fieldset {
-    border-color: transparent;
-  }
-  
-  .searchBar .MuiOutlinedInputRoot:hover fieldset {
-    border-color: transparent;
-  }
-  
-  .searchBar .MuiOutlinedInputRoot.MuiFocused fieldset {
-    border-color: var(--primary-main);
-  }
-  
-  /* Tabs */
-  .customTabs {
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 16px;
-    margin-bottom: 32px;
-  }
-  
+
   .customTab {
     min-width: auto;
     padding: 8px 16px;
-    font-weight: 500;
+    margin: 0 4px;
   }
-  
-  .customTab.MuiSelected {
-    background-color: rgba(25, 118, 210, 0.1);
-    border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .headerSection {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
   }
-  
-  /* Dialog Styles */
-  .dialogView {
-    padding: 24px;
-  }
-  
-  .dialogForm {
-    padding: 16px;
-  }
-  
-  .dialogDelete {
-    padding: 24px;
-    text-align: center;
-  }
-  
-  .noteInput {
-    margin-top: 16px;
-  }
-  
-  .dialogTitle {
-    background: linear-gradient(45deg, var(--primary-main) 30%, var(--secondary-main) 90%);
-    color: white;
-    font-weight: bold;
-  }
-  
-  .dialogCloseButton {
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    color: white;
-  }
-  
-  /* List Styles */
-  .notesList {
-    margin-top: 16px;
-  }
-  
-  .noteItem {
-    background-color: rgba(255, 255, 255, 0.5);
-    margin-bottom: 8px;
-    border-radius: 8px;
-    padding: 12px;
-  }
-  
-  .noteTimestamp {
-    font-size: 0.875rem;
-    color: rgba(0, 0, 0, 0.6);
-  }
-  
-  .noteContent {
-    margin-top: 4px;
-  }
-  
-  /* Loading State */
-  .loadingContainer {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 50vh;
-  }
-  
-  /* Empty State */
-  .emptyState {
-    padding: 32px;
-    text-align: center;
-    border-radius: 16px;
-  }
-  
-  /* Snackbar */
-  .customSnackbar {
-    border-radius: 20px;
-  }
-  
-  /* Buttons */
-  .actionButton {
-    border-radius: 20px;
-    text-transform: none;
-  }
-  
+
   .addButton {
-    border-radius: 20px;
-    margin-right: 8px;
-  }
-  
-  /* Responsive Styles */
-  @media (max-width: 600px) {
-    .pageWrapper {
-      padding: 16px;
-    }
-    
-    .headerActions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    
-    .searchFilters {
-      flex-direction: column;
-      gap: 16px;
-    }
-    
-    .filterGroup {
-      width: 100%;
-    }
-    
-    .customTabs {
-      margin-bottom: 24px;
-    }
-    
-    .ticketCard {
-      margin-bottom: 16px;
-    }
-  }
-  
-  /* Animations */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .fadeEnter {
-    animation: fadeIn 0.3s ease-out;
-  }
-  
-  /* Custom Scrollbar */
-  .customScrollbar::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
-  .customScrollbar::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-  
-  .customScrollbar::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-  
-  .customScrollbar::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
-  
-  /* Utility Classes */
-  .flexCenter {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .spaceBetween {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .textEllipsis {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .fullWidth {
     width: 100%;
   }
-  
-  .marginBottom {
-    margin-bottom: 16px;
+
+  .customTabs {
+    padding: 4px;
   }
-  
-  /* CSS Variables */
-  :root {
-    --primary-main: #1976d2;
-    --secondary-main: #9c27b0;
-    --error-main: #f44336;
-    --warning-main: #ff9800;
-    --success-main: #4caf50;
-    --background-default: #f5f5f5;
-    --text-primary: rgba(0, 0, 0, 0.87);
-    --text-secondary: rgba(0, 0, 0, 0.6);
+
+  .customTab {
+    padding: 8px 12px;
+    margin: 0 2px;
+    font-size: 0.875rem;
   }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-paper);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-main);
+}
+
+/* Utility Classes */
+.flexCenter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spaceBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.textEllipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.marginBottom {
+  margin-bottom: 16px;
+}
