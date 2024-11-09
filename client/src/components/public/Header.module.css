@@ -30,15 +30,16 @@
   margin: 0 auto;
   height: 100%;
   padding: 0 2rem;
-  display: flex;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 200px;
   align-items: center;
-  justify-content: space-between;
   gap: 2rem;
 }
 
 /* Logo */
 .logo {
-  height: 72px; /* Increased from 45px */
+  width: 200px;
+  height: 72px;
   display: flex;
   align-items: center;
   padding: 0.5rem 0;
@@ -53,9 +54,15 @@
 
 /* Desktop Navigation */
 .desktopNav {
-  display: flex;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 1.5rem;
+  width: auto;
+  max-width: 100%;
 }
 
 .navItem {
@@ -155,8 +162,10 @@
 
 /* Desktop Auth */
 .desktopAuth {
+  width: 200px;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 1rem;
 }
 
@@ -448,6 +457,14 @@
 
   .wrapper {
     padding: 0 1rem;
+    display: flex;
+    justify-content: space-between;
+    grid-template-columns: initial;
+  }
+
+  .logo {
+    width: auto;
+    height: 60px;
   }
 
   .desktopNav,
@@ -461,10 +478,6 @@
 
   .mobileMenuInner {
     padding: calc(var(--header-height) + 1rem) 1rem 1rem;
-  }
-
-  .logo {
-    height: 60px;
   }
 }
 
