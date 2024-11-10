@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: false,
       validate: {
-        notEmpty: { msg: 'Title cannot be empty' },
+        notEmpty: { msg: 'Title is required' },
         len: { args: [3, 255], msg: 'Title must be between 3 and 255 characters' }
       }
     },
@@ -36,21 +36,25 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: false,
       validate: {
-        notEmpty: { msg: 'Description cannot be empty' }
+        notEmpty: { msg: 'Description is required' }
       }
     },
     status: {
       type: DataTypes.ENUM('Open', 'In Progress', 'Closed'),
       defaultValue: 'Open',
+      allowNull: false,
       validate: {
-        isIn: { args: [['Open', 'In Progress', 'Closed']], msg: 'Invalid status' }
+        notEmpty: { msg: 'Status is required' },
+        isIn: { args: [['Open', 'In Progress', 'Closed']], msg: 'Invalid status value' }
       }
     },
     priority: {
       type: DataTypes.ENUM('Low', 'Medium', 'High'),
       defaultValue: 'Low',
+      allowNull: false,
       validate: {
-        isIn: { args: [['Low', 'Medium', 'High']], msg: 'Invalid priority' }
+        notEmpty: { msg: 'Priority is required' },
+        isIn: { args: [['Low', 'Medium', 'High']], msg: 'Invalid priority value' }
       }
     },
     assigneeId: {
@@ -59,11 +63,36 @@ module.exports = (sequelize, DataTypes) => {
     },
     dueDate: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
+      validate: {
+        isDate: { msg: 'Invalid date format' }
+      }
     },
     notes: {
       type: DataTypes.JSONB,
-      defaultValue: []
+      allowNull: false,
+      defaultValue: [],
+      get() {
+        const value = this.getDataValue('notes');
+        if (!value) return [];
+        return Array.isArray(value) ? value : [];
+      },
+      set(value) {
+        this.setDataValue('notes', Array.isArray(value) ? value : []);
+      }
+    },
+    attachments: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: [],
+      get() {
+        const value = this.getDataValue('attachments');
+        if (!value) return [];
+        return Array.isArray(value) ? value : [];
+      },
+      set(value) {
+        this.setDataValue('attachments', Array.isArray(value) ? value : []);
+      }
     },
     isOverdue: {
       type: DataTypes.VIRTUAL,
@@ -83,17 +112,105 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['assignee_id'] },
       { fields: ['due_date'] },
       { fields: ['created_at'] }
-    ]
+    ],
+    hooks: {
+      beforeValidate: (ticket) => {
+        if (ticket.dueDate === '') {
+          ticket.dueDate = null;
+        }
+      },
+      beforeSave: (ticket) => {
+        // Ensure notes is always an array
+        if (!Array.isArray(ticket.notes)) {
+          ticket.notes = [];
+        }
+        // Ensure attachments is always an array
+        if (!Array.isArray(ticket.attachments)) {
+          ticket.attachments = [];
+        }
+      }
+    }
   });
 
-  Ticket.prototype.addNote = async function (content, userId) {
+  // Add note method
+  Ticket.prototype.addNote = async function(content, userId, userName, attachments = []) {
     const note = {
+      id: require('uuid').v4(),
       content,
       createdBy: userId,
-      createdAt: new Date()
+      userName,
+      createdAt: new Date(),
+      attachments: attachments || []
     };
-    this.notes = [...(this.notes || []), note];
+
+    // Initialize or update notes array
+    this.notes = Array.isArray(this.notes) ? [...this.notes, note] : [note];
     return this.save();
+  };
+
+  // Add attachment method
+  Ticket.prototype.addAttachment = async function(file, userId) {
+    const attachment = {
+      id: require('uuid').v4(),
+      fileName: file.originalname,
+      fileType: file.mimetype,
+      filePath: file.filename,
+      fileSize: file.size,
+      uploadedBy: userId,
+      uploadedAt: new Date()
+    };
+
+    // Initialize or update attachments array
+    this.attachments = Array.isArray(this.attachments) ? [...this.attachments, attachment] : [attachment];
+    return this.save();
+  };
+
+  // Remove attachment method
+  Ticket.prototype.removeAttachment = async function(attachmentId) {
+    this.attachments = this.attachments.filter(att => att.id !== attachmentId);
+    return this.save();
+  };
+
+  // Remove note method
+  Ticket.prototype.removeNote = async function(noteId) {
+    this.notes = this.notes.filter(note => note.id !== noteId);
+    return this.save();
+  };
+
+  // Get formatted notes
+  Ticket.prototype.getFormattedNotes = function() {
+    return (this.notes || []).map(note => ({
+      ...note,
+      createdAt: new Date(note.createdAt),
+      attachments: note.attachments || []
+    })).sort((a, b) => b.createdAt - a.createdAt);
+  };
+
+  // Get formatted attachments
+  Ticket.prototype.getFormattedAttachments = function() {
+    return (this.attachments || []).map(att => ({
+      ...att,
+      uploadedAt: new Date(att.uploadedAt)
+    })).sort((a, b) => b.uploadedAt - a.uploadedAt);
+  };
+
+  // Update note method
+  Ticket.prototype.updateNote = async function(noteId, content) {
+    const noteIndex = this.notes.findIndex(note => note.id === noteId);
+    if (noteIndex !== -1) {
+      this.notes[noteIndex] = {
+        ...this.notes[noteIndex],
+        content,
+        updatedAt: new Date()
+      };
+      return this.save();
+    }
+    throw new Error('Note not found');
+  };
+
+  // Check if user can modify ticket
+  Ticket.prototype.canModify = function(userId) {
+    return this.userId === userId || this.assigneeId === userId;
   };
 
   return Ticket;

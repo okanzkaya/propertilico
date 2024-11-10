@@ -1,227 +1,416 @@
-import React, { useState, useCallback, useEffect, memo, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  FaSignOutAlt, 
-  FaHome, 
-  FaInfoCircle, 
-  FaDollarSign, 
-  FaBlog, 
-  FaQuestionCircle, 
-  FaFileAlt, 
-  FaShieldAlt, 
+import React, { useState, useCallback, useEffect, memo, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  FaSignOutAlt,
+  FaHome,
+  FaInfoCircle,
+  FaDollarSign,
+  FaBlog,
+  FaQuestionCircle,
+  FaFileAlt,
+  FaShieldAlt,
   FaChevronDown,
   FaUser,
   FaUserPlus,
   FaBuilding,
-  FaDashcube
-} from 'react-icons/fa';
-import LogoImage from '../../assets/public/logo.svg';
-import { useUser } from '../../context/UserContext';
-import styles from './Header.module.css';
+  FaDashcube,
+} from "react-icons/fa";
+import LogoImage from "../../assets/public/logo.svg";
+import { useUser } from "../../context/UserContext";
+import styles from "./Header.module.css";
+
+const WEBSITE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Propertilico",
+  url: "https://propertilico.com",
+  description: "Professional property management software solution",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: "https://propertilico.com/search?q={search_term_string}",
+    "query-input": "required name=search_term_string",
+  },
+};
+
+const ORGANIZATION_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Propertilico",
+  logo: "https://propertilico.com/logo.svg",
+  url: "https://propertilico.com",
+};
 
 const NAV_ITEMS = [
-  { 
-    to: "/", 
-    text: "Home", 
-    icon: <FaHome />, 
-    description: "Return to homepage"
+  {
+    to: "/",
+    text: "Home",
+    icon: <FaHome />,
+    description: "Property management solutions homepage",
   },
-  { 
-    to: "/features", 
-    text: "Features", 
-    icon: <FaInfoCircle />, 
-    description: "Explore our platform features"
+  {
+    to: "/features",
+    text: "Features",
+    icon: <FaInfoCircle />,
+    description: "Explore our platform features",
   },
-  { 
-    to: "/pricing", 
-    text: "Pricing", 
-    icon: <FaDollarSign />, 
-    description: "View our pricing plans"
+  {
+    to: "/pricing",
+    text: "Pricing",
+    icon: <FaDollarSign />,
+    description: "View our pricing plans",
   },
 ];
 
 const RESOURCE_ITEMS = [
-  { 
-    to: "/blog", 
-    text: "Blog", 
-    icon: <FaBlog />, 
+  {
+    to: "/blog",
+    text: "Blog",
+    icon: <FaBlog />,
     description: "Latest property management insights",
-    badge: "New"
+    badge: "New",
   },
-  { 
-    to: "/help-center", 
-    text: "Help Center", 
-    icon: <FaQuestionCircle />, 
-    description: "Get support and guidance"
+  {
+    to: "/help-center",
+    text: "Help Center",
+    icon: <FaQuestionCircle />,
+    description: "Get support and guidance",
   },
-  { 
-    to: "/documentation", 
-    text: "Documentation", 
-    icon: <FaFileAlt />, 
-    description: "Technical guides and API docs"
+  {
+    to: "/documentation",
+    text: "Documentation",
+    icon: <FaFileAlt />,
+    description: "Technical guides and API docs",
   },
-  { 
-    to: "/privacy-policy", 
-    text: "Privacy Policy", 
-    icon: <FaShieldAlt />, 
-    description: "Our data protection commitments"
+  {
+    to: "/privacy-policy",
+    text: "Privacy Policy",
+    icon: <FaShieldAlt />,
+    description: "Our data protection commitments",
   },
 ];
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [expandedItem, setExpandedItem] = useState(null);
-  const [isResourcesHovered, setIsResourcesHovered] = useState(false);
   const [isMobileResourcesOpen, setIsMobileResourcesOpen] = useState(false);
+  const [isResourcesOpen, setIsResourcesOpen] = useState(false);
+  const headerRef = useRef(null);
   const resourcesTimeoutRef = useRef(null);
+  const resourcesBtnRef = useRef(null);
+  const resourcesDropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useUser();
-  // Lock body scroll when menu is open
+
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [isOpen]);
 
-  // Handle click outside for desktop dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest(`.${styles.dropdown}`)) {
-        setExpandedItem(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-  // Add this effect to handle clicks outside
-useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (!event.target.closest(`.${styles.mobileDropdown}`)) {
-      setExpandedItem(null);
-    }
-  };
-
-  if (expandedItem) {
-    document.addEventListener('mousedown', handleClickOutside);
-  }
-
-  return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
-  };
-}, [expandedItem]);
-  // Close mobile menu on navigation
   useEffect(() => {
     setIsOpen(false);
-    setExpandedItem(null);
+    setIsMobileResourcesOpen(false);
+    setIsResourcesOpen(false);
   }, [location.pathname]);
 
-  // Handle escape key
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setIsOpen(false);
-        setExpandedItem(null);
-        setIsResourcesHovered(false);
+        setIsMobileResourcesOpen(false);
+        setIsResourcesOpen(false);
       }
     };
 
-    if (isOpen || isResourcesHovered) {
-      window.addEventListener('keydown', handleEscape);
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, isResourcesHovered]);
-
-  // Handle resources hover
-  const handleResourcesMouseEnter = useCallback(() => {
-    if (resourcesTimeoutRef.current) {
-      clearTimeout(resourcesTimeoutRef.current);
-    }
-    setIsResourcesHovered(true);
-  }, []);
-
-  const handleResourcesMouseLeave = useCallback(() => {
-    resourcesTimeoutRef.current = setTimeout(() => {
-      setIsResourcesHovered(false);
-    }, 200);
-  }, []);
-
-  // Cleanup timeout
-  useEffect(() => {
-    return () => {
-      if (resourcesTimeoutRef.current) {
-        clearTimeout(resourcesTimeoutRef.current);
+    const handleClickOutside = (event) => {
+      if (
+        isResourcesOpen &&
+        !resourcesBtnRef.current?.contains(event.target) &&
+        !resourcesDropdownRef.current?.contains(event.target)
+      ) {
+        setIsResourcesOpen(false);
       }
     };
-  }, []);
+
+    window.addEventListener("keydown", handleEscape);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isResourcesOpen]);
 
   const handleLogout = useCallback(async () => {
     try {
       await logout();
       setIsOpen(false);
-      navigate('/', { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
     }
   }, [logout, navigate]);
 
-  const toggleMobileResources = useCallback((e) => {
-    e.stopPropagation();
-    setIsMobileResourcesOpen(prev => !prev);
+  const handleResourcesEnter = useCallback(() => {
+    if (resourcesTimeoutRef.current) {
+      clearTimeout(resourcesTimeoutRef.current);
+    }
+    setIsResourcesOpen(true);
   }, []);
-  return (
-    <>
-      <header className={`${styles.header} ${isOpen ? styles.menuOpen : ''}`}>
-        <div className={styles.wrapper}>
-          {/* Logo */}
-          <Link to="/" className={styles.logo}>
-            <img src={LogoImage} alt="Propertilico" />
-          </Link>
 
-          {/* Desktop Navigation */}
-          <nav className={styles.desktopNav}>
-            {NAV_ITEMS.map(item => (
+  const handleResourcesLeave = useCallback(() => {
+    resourcesTimeoutRef.current = setTimeout(() => {
+      setIsResourcesOpen(false);
+    }, 300);
+  }, []);
+
+  return (
+    <header
+      ref={headerRef}
+      className={`${styles.header} ${isOpen ? styles.menuOpen : ""}`}
+      role="banner"
+      itemScope
+      itemType="https://schema.org/WPHeader"
+    >
+      <script type="application/ld+json">
+        {JSON.stringify(WEBSITE_SCHEMA)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(ORGANIZATION_SCHEMA)}
+      </script>
+
+      <div className={styles.wrapper}>
+        <Link
+          to="/"
+          className={styles.logo}
+          aria-label="Propertilico home"
+          title="Go to Propertilico homepage"
+        >
+          <img
+            src={LogoImage}
+            alt="Propertilico"
+            width="200"
+            height="72"
+            loading="eager"
+          />
+        </Link>
+
+        <nav
+          className={styles.desktopNav}
+          role="navigation"
+          aria-label="Main navigation"
+          itemScope
+          itemType="https://schema.org/SiteNavigationElement"
+        >
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`${styles.navItem} ${
+                location.pathname === item.to ? styles.active : ""
+              }`}
+              aria-label={item.description}
+              aria-current={location.pathname === item.to ? "page" : undefined}
+              itemProp="url"
+              title={item.description}
+            >
+              <span itemProp="name">{item.text}</span>
+            </Link>
+          ))}
+
+          <div
+            className={`${styles.dropdown} ${isResourcesOpen ? styles.open : ""}`}
+            onMouseEnter={handleResourcesEnter}
+            onMouseLeave={handleResourcesLeave}
+          >
+            <button
+              ref={resourcesBtnRef}
+              className={`${styles.navItem} ${isResourcesOpen ? styles.active : ""}`}
+              aria-haspopup="true"
+              aria-expanded={isResourcesOpen}
+              onClick={() => setIsResourcesOpen(!isResourcesOpen)}
+              title="Access resources"
+            >
+              <span>Resources</span>
+              <FaChevronDown className={isResourcesOpen ? styles.rotate : ""} />
+            </button>
+
+            <div
+              ref={resourcesDropdownRef}
+              className={`${styles.dropdownContent} ${
+                isResourcesOpen ? styles.show : ""
+              }`}
+              role="menu"
+              aria-label="Resource menu items"
+            >
+              {RESOURCE_ITEMS.map((item, index) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={styles.dropdownItem}
+                  style={{ "--item-index": index }}
+                  role="menuitem"
+                  onClick={() => setIsResourcesOpen(false)}
+                  title={item.description}
+                >
+                  {item.icon}
+                  <div>
+                    <div className={styles.dropdownItemTitle}>
+                      {item.text}
+                      {item.badge && (
+                        <span className={styles.badge} aria-label="New feature">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                    <span className={styles.dropdownItemDesc}>
+                      {item.description}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </nav>
+
+        <div className={styles.desktopAuth}>
+          {user ? (
+            <>
+              <Link
+                to="/app/dashboard"
+                className={styles.primaryBtn}
+                title="Access your dashboard"
+              >
+                <FaDashcube aria-hidden="true" />
+                <span>Dashboard</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className={styles.secondaryBtn}
+                title="Sign out of your account"
+              >
+                <FaSignOutAlt aria-hidden="true" />
+                <span>Logout</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/signin"
+                className={styles.secondaryBtn}
+                title="Sign in to your account"
+              >
+                <FaUser aria-hidden="true" />
+                <span>Sign In</span>
+              </Link>
+              <Link
+                to="/get-started"
+                className={styles.primaryBtn}
+                title="Create a new account"
+              >
+                <FaUserPlus aria-hidden="true" />
+                <span>Get Started</span>
+              </Link>
+            </>
+          )}
+        </div>
+
+        <button
+          className={`${styles.menuBtn} ${isOpen ? styles.active : ""}`}
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isOpen}
+          aria-controls="mobile-menu"
+        >
+          <span className={styles.menuIcon} aria-hidden="true">
+            <span className={styles.line} />
+            <span className={styles.line} />
+            <span className={styles.line} />
+          </span>
+        </button>
+      </div>
+
+      <div
+        id="mobile-menu"
+        className={`${styles.mobileMenu} ${isOpen ? styles.open : ""}`}
+        aria-hidden={!isOpen}
+      >
+        <div className={styles.mobileMenuInner}>
+          <nav className={styles.mobileNav} role="navigation" aria-label="Mobile navigation">
+            {NAV_ITEMS.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                className={`${styles.navItem} ${location.pathname === item.to ? styles.active : ''}`}
+                className={`${styles.mobileNavItem} ${
+                  location.pathname === item.to ? styles.active : ""
+                }`}
+                aria-label={item.description}
+                aria-current={location.pathname === item.to ? "page" : undefined}
+                title={item.description}
               >
+                {item.icon}
                 <span>{item.text}</span>
               </Link>
             ))}
-            <div 
-              className={styles.dropdown}
-              onMouseEnter={handleResourcesMouseEnter}
-              onMouseLeave={handleResourcesMouseLeave}
-            >
-              <button className={`${styles.navItem} ${isResourcesHovered ? styles.active : ''}`}>
+
+            <div className={styles.mobileDropdown}>
+              <button
+                className={`${styles.mobileNavItem} ${
+                  isMobileResourcesOpen ? styles.active : ""
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMobileResourcesOpen(!isMobileResourcesOpen);
+                }}
+                aria-expanded={isMobileResourcesOpen}
+                title="Toggle resources menu"
+              >
+                <FaBuilding aria-hidden="true" />
                 <span>Resources</span>
-                <FaChevronDown className={isResourcesHovered ? styles.rotate : ''} />
+                <FaChevronDown
+                  className={`${styles.chevron} ${
+                    isMobileResourcesOpen ? styles.rotate : ""
+                  }`}
+                  aria-hidden="true"
+                />
               </button>
-              {isResourcesHovered && (
-                <div className={styles.dropdownContent}>
-                  {RESOURCE_ITEMS.map(item => (
+
+              {isMobileResourcesOpen && (
+                <div
+                  className={styles.mobileDropdownContent}
+                  role="menu"
+                  aria-label="Mobile resources menu items"
+                >
+                  {RESOURCE_ITEMS.map((item) => (
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={styles.dropdownItem}
+                      className={styles.mobileDropdownItem}
+                      role="menuitem"
+                      onClick={() => {
+                        setIsMobileResourcesOpen(false);
+                        setIsOpen(false);
+                      }}
+                      title={item.description}
                     >
                       {item.icon}
                       <div>
-                        <div className={styles.dropdownItemTitle}>
+                        <div className={styles.mobileDropdownTitle}>
                           {item.text}
-                          {item.badge && <span className={styles.badge}>{item.badge}</span>}
+                          {item.badge && (
+                            <span className={styles.badge} aria-label="New feature">
+                              {item.badge}
+                            </span>
+                          )}
                         </div>
-                        <span className={styles.dropdownItemDesc}>{item.description}</span>
+                        <span className={styles.mobileDropdownDesc}>
+                          {item.description}
+                        </span>
                       </div>
                     </Link>
                   ))}
@@ -230,136 +419,42 @@ useEffect(() => {
             </div>
           </nav>
 
-          {/* Desktop Auth */}
-          <div className={styles.desktopAuth}>
-            {user ? (
-              <>
-                <Link to="/app/dashboard" className={styles.primaryBtn}>
-                  <FaDashcube />
-                  <span>Dashboard</span>
-                </Link>
-                <button onClick={handleLogout} className={styles.secondaryBtn}>
-                  <FaSignOutAlt />
-                  <span>Logout</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/signin" className={styles.secondaryBtn}>
-                  <FaUser />
-                  <span>Sign In</span>
-                </Link>
-                <Link to="/get-started" className={styles.primaryBtn}>
-                  <FaUserPlus />
-                  <span>Get Started</span>
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className={`${styles.menuBtn} ${isOpen ? styles.active : ''}`}
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label={isOpen ? 'Close menu' : 'Open menu'}
-          >
-            <span className={styles.menuIcon}>
-              <span className={styles.line} />
-              <span className={styles.line} />
-              <span className={styles.line} />
-            </span>
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Menu */}
-      <div className={`${styles.mobileMenu} ${isOpen ? styles.open : ''}`}>
-        <div className={styles.mobileMenuInner}>
-          {/* Mobile Navigation */}
-          <nav className={styles.mobileNav}>
-            {NAV_ITEMS.map(item => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`${styles.mobileNavItem} ${location.pathname === item.to ? styles.active : ''}`}
-              >
-                {item.icon}
-                <span>{item.text}</span>
-              </Link>
-            ))}
-
-            {/* Mobile Resources Section */}
-            <div className={styles.mobileDropdown}>
-  <button
-    className={`${styles.mobileNavItem} ${isMobileResourcesOpen ? styles.active : ''}`}
-    onClick={toggleMobileResources}
-    aria-expanded={isMobileResourcesOpen}
-  >
-    <FaBuilding />
-    <span>Resources</span>
-    <FaChevronDown className={`${styles.chevron} ${isMobileResourcesOpen ? styles.rotate : ''}`} />
-  </button>
-
-  {isMobileResourcesOpen && (
-    <div className={styles.mobileDropdownContent}>
-      {RESOURCE_ITEMS.map(item => (
-        <Link
-          key={item.to}
-          to={item.to}
-          className={styles.mobileDropdownItem}
-          onClick={() => {
-            setIsMobileResourcesOpen(false);
-            setIsOpen(false);
-          }}
-        >
-          {item.icon}
-          <div>
-            <div className={styles.mobileDropdownTitle}>
-              {item.text}
-              {item.badge && <span className={styles.badge}>{item.badge}</span>}
-            </div>
-            <span className={styles.mobileDropdownDesc}>{item.description}</span>
-          </div>
-        </Link>
-      ))}
-    </div>
-  )}
-</div>
-          </nav>
-
-          {/* Mobile Auth */}
           <div className={styles.mobileAuth}>
             {user ? (
               <>
-                <Link 
-                  to="/app/dashboard" 
+                <Link
+                  to="/app/dashboard"
                   className={styles.mobilePrimaryBtn}
+                  title="Access your dashboard"
                 >
-                  <FaDashcube />
+                  <FaDashcube aria-hidden="true" />
                   <span>Dashboard</span>
                 </Link>
-                <button 
+                <button
                   onClick={handleLogout}
                   className={styles.mobileSecondaryBtn}
+                  title="Sign out of your account"
                 >
-                  <FaSignOutAlt />
+                  <FaSignOutAlt aria-hidden="true" />
                   <span>Logout</span>
                 </button>
               </>
             ) : (
               <>
-                <Link 
-                  to="/signin" 
+                <Link
+                  to="/signin"
                   className={styles.mobileSecondaryBtn}
+                  title="Sign in to your account"
                 >
-                  <FaUser />
+                  <FaUser aria-hidden="true" />
                   <span>Sign In</span>
                 </Link>
-                <Link 
-                  to="/get-started" 
+                <Link
+                  to="/get-started"
                   className={styles.mobilePrimaryBtn}
+                  title="Create a new account"
                 >
-                  <FaUserPlus />
+                  <FaUserPlus aria-hidden="true" />
                   <span>Get Started</span>
                 </Link>
               </>
@@ -367,7 +462,7 @@ useEffect(() => {
           </div>
         </div>
       </div>
-    </>
+    </header>
   );
 };
 

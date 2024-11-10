@@ -6,6 +6,8 @@
   --footer-border: #ddd;
   --footer-link-hover: #007BFF;
   --container-padding: clamp(1rem, 3vw, 2rem);
+  --transition-speed: 0.2s;
+  --transition-timing: ease;
 }
 
 .footer {
@@ -13,6 +15,8 @@
   color: var(--footer-text);
   padding: clamp(2rem, 5vw, 4rem) var(--container-padding);
   width: 100%;
+  contain: content;
+  will-change: transform;
 }
 
 .footerContent {
@@ -22,12 +26,14 @@
   max-width: 1200px;
   margin: 0 auto 2rem;
   padding: 0 var(--container-padding);
+  contain: layout style;
 }
 
 .column {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  contain: content;
 }
 
 .footerHeader {
@@ -36,6 +42,7 @@
   margin-bottom: 1.5rem;
   color: var(--footer-header);
   position: relative;
+  contain: content;
 }
 
 .footerHeader::after {
@@ -46,6 +53,12 @@
   width: 2rem;
   height: 2px;
   background-color: var(--footer-link-hover);
+  transform: scaleX(0.8);
+  transition: transform var(--transition-speed) var(--transition-timing);
+}
+
+.column:hover .footerHeader::after {
+  transform: scaleX(1);
 }
 
 .linkList {
@@ -53,6 +66,7 @@
   padding: 0;
   margin: 0;
   width: 100%;
+  contain: content;
 }
 
 .footerLink {
@@ -61,9 +75,11 @@
   text-decoration: none;
   padding: 0.5rem 0;
   font-size: clamp(0.9rem, 1.5vw, 1rem);
-  transition: color 0.2s ease, transform 0.2s ease;
+  transition: color var(--transition-speed) var(--transition-timing),
+              transform var(--transition-speed) var(--transition-timing);
   position: relative;
   width: 100%;
+  contain: layout style;
 }
 
 .footerLink::before {
@@ -71,7 +87,8 @@
   margin-right: 0.5rem;
   opacity: 0;
   transform: translateX(-10px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--transition-speed) var(--transition-timing),
+              transform var(--transition-speed) var(--transition-timing);
 }
 
 .footerLink:hover::before,
@@ -93,12 +110,15 @@
   gap: clamp(1rem, 3vw, 1.5rem);
   margin: 2.5rem 0;
   padding: 0 var(--container-padding);
+  contain: content;
 }
 
 .socialLink {
   color: inherit;
   font-size: clamp(1.25rem, 2vw, 1.5rem);
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition: transform var(--transition-speed) var(--transition-timing),
+              color var(--transition-speed) var(--transition-timing),
+              background-color var(--transition-speed) var(--transition-timing);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,6 +127,7 @@
   border-radius: 50%;
   background-color: transparent;
   border: 1px solid var(--footer-border);
+  contain: strict;
 }
 
 .socialLink:hover,
@@ -123,9 +144,10 @@
   margin-top: 1.5rem;
   border-top: 1px solid var(--footer-border);
   font-size: clamp(0.8rem, 1.5vw, 0.9rem);
+  contain: content;
 }
 
-/* Responsive Design */
+/* Responsive Design with performance optimizations */
 @media (max-width: 1024px) {
   .footerContent {
     grid-template-columns: repeat(3, 1fr);
@@ -192,32 +214,13 @@
   }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --footer-bg: #1a1a1a;
-    --footer-text: #e0e0e0;
-    --footer-header: #ffffff;
-    --footer-border: #333;
-    --footer-link-hover: #60a5fa;
-  }
-
-  .socialLink {
-    border-color: #333;
-  }
-
-  .socialLink:hover,
-  .socialLink:focus {
-    background-color: rgba(96, 165, 250, 0.1);
-  }
-}
-
-/* Accessibility */
+/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .footerLink,
   .socialLink,
   .footerLink::before {
-    transition: none;
+    transition: none !important;
+    transform: none !important;
   }
 }
 
@@ -243,4 +246,12 @@
 .socialLink:focus-visible {
   outline: 2px solid var(--footer-link-hover);
   outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media screen and (-ms-high-contrast: active) {
+  .footerLink:focus,
+  .socialLink:focus {
+    outline: 2px solid currentColor;
+  }
 }
