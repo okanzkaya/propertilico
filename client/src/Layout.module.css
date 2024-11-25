@@ -1,74 +1,230 @@
-/* Layout.module.css */
-
+/* Root layout */
 .layoutRoot {
-    display: flex;
-    min-height: 100vh;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    background-color: var(--background-default);
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 
+    "header"
+    "main";
+  background-color: var(--bg-default);
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+
+.layoutRoot.ready {
+  opacity: 1;
+}
+
+/* TopBar container */
+.topBarContainer {
+  grid-area: header;
+  height: 64px;
+  position: relative;
+  z-index: 1200;
+  background-color: var(--bg-paper);
+  border-bottom: 1px solid var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Main content wrapper */
+.mainWrapper {
+  grid-area: main;
+  display: flex;
+  height: calc(100vh - 64px);
+}
+
+/* Sidebar area */
+.sidebarContainer {
+  width: 68px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--bg-paper);
+  border-right: 1px solid var(--border-default);
+  height: 100%;
+  flex-shrink: 0;
+}
+
+/* Main content area */
+.mainContent {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background-color: var(--bg-default);
+}
+
+/* Public layout */
+.publicLayout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background-color: var(--bg-default);
+}
+
+.publicLayout.ready {
+  opacity: 1;
+}
+
+.publicMain {
+  flex: 1;
+  width: 100%;
+  margin-top: 3em;
+  padding: 24px;
+}
+
+/* Loading and error states */
+.loadingFallback {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--bg-default);
+}
+
+.errorFallback {
+  padding: 24px;
+  text-align: center;
+  background-color: var(--bg-default);
+}
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1150;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Scrollbar */
+.mainContent::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mainContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mainContent::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb, rgba(0, 0, 0, 0.2));
+  border-radius: 4px;
+}
+
+.mainContent::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scroll-thumb, rgba(0, 0, 0, 0.3));
+}
+
+/* Firefox scrollbar */
+.mainContent {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb, rgba(0, 0, 0, 0.2)) transparent;
+}
+
+/* Retry button */
+.retryButton {
+  background-color: var(--primary-main);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.retryButton:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Mobile styles */
+@media (max-width: 960px) {
+  .topBarContainer {
+    height: 56px;
   }
-  
-  .layoutRoot.ready {
-    opacity: 1;
+
+  .mainWrapper {
+    height: calc(100vh - 56px);
   }
-  
+
+  .sidebarContainer {
+    width: 0;
+  }
+
   .mainContent {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    margin-left: 0;
-    margin-top: 60px;
-    padding: 24px;
-    position: relative;
-    transition: all 0.3s ease;
-    overflow: visible;
-    width: calc(100% - 250px);
-    max-width: 100%;
+    padding: 16px;
   }
-  
-  .publicLayout {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-  
-  .publicLayout.ready {
-    opacity: 1;
-  }
-  
+
   .publicMain {
-    flex: 1;
-    width: 100%;
-    margin-top: 3em;
+    padding: 16px;
   }
-  
-  .loadingFallback {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+}
+
+@media (max-width: 600px) {
+  .mainContent {
+    padding: 12px;
   }
-  
-  .errorFallback {
-    padding: 24px;
-    text-align: center;
+
+  .publicMain {
+    padding: 12px;
   }
-  
-  @media (max-width: 960px) {
-    .mainContent {
-      margin-left: 0;
-      width: 100%;
-      padding: 16px;
-      margin-top: 65px;
-    }
+}
+
+/* Print styles */
+@media print {
+  .layoutRoot {
+    display: block;
   }
-  
-  @media (max-width: 600px) {
-    .mainContent {
-      margin-top: 60px;
-      padding: 8px;
-    }
+
+  .topBarContainer,
+  .sidebarContainer {
+    display: none;
   }
+
+  .mainContent {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .mainWrapper {
+    height: auto;
+    display: block;
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  .sidebarContainer {
+    border-right: none;
+    border-left: 1px solid var(--border-default);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .layoutRoot,
+  .mainContent,
+  .sidebarContainer,
+  .publicLayout,
+  .retryButton {
+    transition: none !important;
+  }
+}
+
+/* High contrast mode */
+@media (forced-colors: active) {
+  .topBarContainer {
+    border-bottom: 2px solid CanvasText;
+  }
+
+  .sidebarContainer {
+    border-right: 2px solid CanvasText;
+  }
+
+  [dir="rtl"] .sidebarContainer {
+    border-left: 2px solid CanvasText;
+    border-right: none;
+  }
+}

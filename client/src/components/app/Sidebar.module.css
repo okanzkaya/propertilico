@@ -1,0 +1,212 @@
+.sidebar {
+  width: 70px;
+  height: calc(100vh - 64px);
+  background-color: #fff;
+  position: fixed;
+  top: 64px;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s ease;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .sidebar {
+    background-color: #1a1a1a;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.expanded {
+  width: 240px;
+}
+
+.menuContainer {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.bottomActions {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.sidebarItem {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #666;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  border: none;
+  width: 100%;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sidebarItem:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: #333;
+}
+
+.active {
+  background-color: #1976d2 !important;
+  color: white !important;
+}
+
+.active .icon {
+  color: white;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.label {
+  margin-left: 16px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.hidden {
+  opacity: 0;
+}
+
+.logoutButton {
+  color: #d32f2f;
+}
+
+.logoutButton:hover {
+  background-color: rgba(211, 47, 47, 0.1);
+}
+
+.homeButton {
+  color: #1976d2;
+}
+
+.homeButton:hover {
+  background-color: rgba(25, 118, 210, 0.1);
+}
+
+/* Mobile styles */
+.drawer {
+  width: 240px !important;
+  background-color: #fff;
+}
+
+.drawer .sidebar {
+  position: static;
+  width: 240px;
+  height: 100%;
+  box-shadow: none;
+}
+
+.drawer .label {
+  opacity: 1;
+}
+
+/* Dark mode support for drawer */
+@media (prefers-color-scheme: dark) {
+  .drawer {
+    background-color: #1a1a1a;
+  }
+
+  .sidebarItem {
+    color: #bbb;
+  }
+
+  .sidebarItem:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .bottomActions {
+    border-top-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] .sidebar {
+  left: auto;
+  right: 0;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+[dir="rtl"] .label {
+  margin-left: 0;
+  margin-right: 16px;
+}
+
+/* Animation classes */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* Scrollbar styles */
+.menuContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menuContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menuContainer::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.menuContainer::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox scrollbar */
+.menuContainer {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+/* Accessibility */
+.sidebarItem:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: -2px;
+}
+
+/* Dialog custom styles */
+.dialog {
+  min-width: 300px;
+}

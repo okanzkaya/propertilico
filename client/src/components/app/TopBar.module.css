@@ -1,0 +1,73 @@
+.appBar {
+  z-index: 1200 !important; /* Ensure TopBar stays above Sidebar */
+  transition: width 0.3s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+  min-height: 64px;
+}
+
+.menuButton {
+  margin-right: 20px;
+}
+
+.title {
+  flex-grow: 1;
+  color: var(--text-primary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+  
+  .avatar {
+    width: 32px;
+    height: 32px;
+    transition: transform 0.2s ease;
+  }
+  
+  .avatar:hover {
+    transform: scale(1.1);
+  }
+  
+  .notificationsContainer {
+    width: 350px;
+    max-height: 500px;
+    overflow: auto;
+  }
+  
+  .notificationsHeader {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-default);
+  }
+  
+  .noNotifications {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+  
+  .userInfo {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .largeAvatar {
+    width: 64px;
+    height: 64px;
+  }

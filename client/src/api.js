@@ -159,9 +159,18 @@ export const downloadTicketAttachment = async (ticketId, attachmentId) => {
     const response = await axiosInstance.get(
       `/api/tickets/${ticketId}/attachments/${attachmentId}/download`,
       {
-        responseType: 'blob'
+        responseType: 'blob',
+        timeout: 30000, // Increased timeout for larger files
+        headers: {
+          'Accept': '*/*' // Accept any content type
+        }
       }
     );
+    
+    if (response.status !== 200) {
+      throw new Error('Download failed');
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Error downloading attachment:', error);
@@ -176,20 +185,30 @@ export const deleteTicket = (id) => {
 };
 export const addNoteToTicket = async (ticketId, formData) => {
   try {
-    const response = await apiCall(
-      "post",
+    console.log('Adding note to ticket:', ticketId);
+    
+    // Log FormData contents for debugging
+    for (const pair of formData.entries()) {
+      console.log('FormData content:', pair[0], pair[1]);
+    }
+
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 30000 // 30 second timeout
+    };
+
+    const response = await axiosInstance.post(
       `/api/tickets/${ticketId}/notes`,
       formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      config
     );
-    console.log("Note API Response:", response);
-    return response;
+
+    console.log('Note API Response:', response.data);
+    return response.data;
   } catch (error) {
-    console.error("Error in addNoteToTicket:", error);
+    console.error('Error in addNoteToTicket:', error);
     throw error;
   }
 };

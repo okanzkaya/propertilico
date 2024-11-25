@@ -401,7 +401,7 @@ const Tickets = () => {
   const handleAddNote = useCallback(
     async (e) => {
       e.preventDefault();
-
+  
       if (!noteContent.trim()) {
         setFormErrors((prev) => ({
           ...prev,
@@ -409,40 +409,39 @@ const Tickets = () => {
         }));
         return;
       }
-
+  
       try {
         const formData = new FormData();
-        formData.append("content", noteContent);
-
-        // Add note files
-        noteFiles.forEach((file) => {
-          formData.append("attachments", file);
-        });
-
-        // Log the formData to verify content
-        for (let pair of formData.entries()) {
-          console.log("FormData:", pair[0], pair[1]);
+        formData.append("content", noteContent.trim());
+  
+        // Add note files if they exist
+        if (noteFiles && noteFiles.length > 0) {
+          console.log('Adding files to form data:', noteFiles.length, 'files');
+          noteFiles.forEach((file) => {
+            console.log('Appending file:', file.name);
+            formData.append("attachments", file);
+          });
         }
-
+  
+        console.log('Sending note with content:', noteContent.trim());
         const response = await addNoteToTicket(selectedTicket.id, formData);
-        console.log("Note Response:", response);
-
+        
         if (response.ticket) {
-          // Update the ticket in the local state
           setTickets((prevTickets) =>
             prevTickets.map((t) =>
               t.id === selectedTicket.id ? response.ticket : t
             )
           );
+  
+          setSnackbar({
+            open: true,
+            message: "Note added successfully",
+            severity: "success",
+          });
+          
+          handleCloseDialog();
+          await fetchTickets();
         }
-
-        setSnackbar({
-          open: true,
-          message: "Note added successfully",
-          severity: "success",
-        });
-        handleCloseDialog();
-        await fetchTickets(); // Refresh tickets after adding note
       } catch (error) {
         console.error("Error adding note:", error);
         setSnackbar({
@@ -555,29 +554,32 @@ const Tickets = () => {
   );
   const handleDownloadAttachment = useCallback(async (attachment, ticketId) => {
     try {
-      const blob = await downloadTicketAttachment(ticketId, attachment.id);
-
+      const response = await downloadTicketAttachment(ticketId, attachment.id);
+      
+      // Create a blob with the correct type
+      const blob = new Blob([response], { type: attachment.fileType });
+      
       // Create a URL for the blob
       const url = window.URL.createObjectURL(blob);
-
+  
       // Create a temporary link element
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", attachment.fileName);
-
-      // Append to body, click, and remove
+      link.setAttribute('download', attachment.fileName);
       document.body.appendChild(link);
+      
+      // Trigger download
       link.click();
-
+      
       // Clean up
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error downloading attachment:", error);
+      console.error('Error downloading attachment:', error);
       setSnackbar({
         open: true,
-        message: "Failed to download attachment",
-        severity: "error",
+        message: 'Failed to download attachment',
+        severity: 'error'
       });
     }
   }, []);

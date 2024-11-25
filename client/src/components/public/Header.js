@@ -14,6 +14,7 @@ import {
   FaUserPlus,
   FaBuilding,
   FaDashcube,
+  FaCrown,
 } from "react-icons/fa";
 import LogoImage from "../../assets/public/logo.svg";
 import { useUser } from "../../context/UserContext";
@@ -282,6 +283,14 @@ const Header = () => {
           {user ? (
             <>
               <Link
+                to="/my-plan"
+                className={styles.secondaryBtn}
+                title="View your plan"
+              >
+                <FaCrown aria-hidden="true" />
+                <span>My Plan</span>
+              </Link>
+              <Link
                 to="/app/dashboard"
                 className={styles.primaryBtn}
                 title="Access your dashboard"
@@ -422,6 +431,14 @@ const Header = () => {
           <div className={styles.mobileAuth}>
             {user ? (
               <>
+                <Link
+                  to="/my-plan"
+                  className={styles.mobileSecondaryBtn}
+                  title="View your plan"
+                >
+                  <FaCrown aria-hidden="true" />
+                  <span>My Plan</span>
+                </Link>
                 <Link
                   to="/app/dashboard"
                   className={styles.mobilePrimaryBtn}

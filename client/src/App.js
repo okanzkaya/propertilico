@@ -1,296 +1,173 @@
-import React, { useState, useMemo, lazy, Suspense, useEffect, useCallback } from 'react';
+import React, { useState, lazy, Suspense, useEffect, useCallback, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { CssBaseline, Box, CircularProgress } from '@mui/material';
-import { ThemeProvider } from '@mui/material/styles';
+import { Box, CircularProgress, useMediaQuery } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import PropTypes from 'prop-types';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import { ErrorBoundary } from 'react-error-boundary';
 import PublicHeader from './components/public/Header';
 import PublicFooter from './components/public/Footer';
 import Sidebar from './components/app/Sidebar';
+import TopBar from './components/app/TopBar';
 import ProtectedRoute from './components/public/ProtectedRoute';
 import AuthenticatedRoute from './components/public/AuthenticatedRoute';
-import { createAppTheme } from './theme';
+import { useTheme } from './theme';
 import { useUser } from './context/UserContext';
 import FontSizeWrapper from './components/app/FontSizeWrapper';
 import styles from './Layout.module.css';
 
+// Optimized QueryClient configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: false,
+      retry: (failureCount, error) => {
+        if (error?.response?.status === 404) return false;
+        return failureCount < 2;
+      },
       staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
+      refetchOnMount: true,
+      suspense: false,
+    },
+    mutations: {
+      retry: 1,
+      useErrorBoundary: true,
     },
   },
 });
 
-const lazyLoad = (path) => lazy(() => import(`./pages/${path}`));
+// Optimized lazy loading with prefetch
+const lazyLoad = (path, prefetch = false) => {
+  const Component = lazy(() => {
+    const promise = import(`./pages/${path}`).catch(error => {
+      console.error(`Error loading component: ${path}`, error);
+      return { default: () => <div>Error loading component</div> };
+    });
+    
+    if (prefetch) {
+      // Prefetch related chunks in the background
+      Promise.resolve().then(() => {
+        import(`./pages/${path}`).catch(() => {});
+      });
+    }
+    
+    return promise;
+  });
+  
+  return Component;
+};
 
-// Route configurations
+// Memoized route configurations
 const publicRoutes = [
-  { path: "/", element: lazyLoad('public/Home') },
+  { path: "/", element: lazyLoad('public/Home', true), prefetch: true },
   { path: "/features", element: lazyLoad('public/Features') },
   { path: "/faq", element: lazyLoad('public/FAQ') },
   { path: "/tos", element: lazyLoad('public/ToS') },
   { path: "/privacy-policy", element: lazyLoad('public/PrivacyPolicy') },
-  { path: "/pricing", element: lazyLoad('public/Pricing') },
+  { path: "/pricing", element: lazyLoad('public/Pricing', true), prefetch: true },
   { path: "/blog", element: lazyLoad('public/BlogList') },
   { path: "/blog/:id", element: lazyLoad('public/BlogPost') },
 ];
 
 const appRoutes = [
-  { path: "dashboard", element: lazyLoad('app/Overview') },
-  { path: "finances", element: lazyLoad('app/Finances') },
-  { path: "properties", element: lazyLoad('app/Properties') },
-  { path: "tickets", element: lazyLoad('app/Tickets') },
-  { path: "contacts", element: lazyLoad('app/Contacts') },
-  { path: "taxes", element: lazyLoad('app/Taxes') },
-  { path: "documents", element: lazyLoad('app/Documents') },
-  { path: "reports", element: lazyLoad('app/Reports') },
-  { path: "settings", element: lazyLoad('app/Settings') },
-  { path: "feedback", element: lazyLoad('app/Feedback') },
+  { 
+    path: "dashboard", 
+    element: lazyLoad('app/Overview', true),
+    prefetch: true,
+    requiresSubscription: true 
+  },
+  { 
+    path: "finances", 
+    element: lazyLoad('app/Finances'),
+    requiresSubscription: true 
+  },
+  { 
+    path: "properties", 
+    element: lazyLoad('app/Properties'),
+    requiresSubscription: true 
+  },
+  { 
+    path: "tickets", 
+    element: lazyLoad('app/Tickets'),
+    requiresSubscription: true 
+  },
+  { 
+    path: "contacts", 
+    element: lazyLoad('app/Contacts'),
+    requiresSubscription: true 
+  },
+  { 
+    path: "taxes", 
+    element: lazyLoad('app/Taxes'),
+    requiresSubscription: true 
+  },
+  { 
+    path: "documents", 
+    element: lazyLoad('app/Documents'),
+    requiresSubscription: true 
+  },
+  { 
+    path: "reports", 
+    element: lazyLoad('app/Reports'),
+    requiresSubscription: true 
+  },
+  { 
+    path: "settings", 
+    element: lazyLoad('app/Settings') 
+  },
+  { 
+    path: "feedback", 
+    element: lazyLoad('app/Feedback') 
+  },
 ];
 
-const SignIn = lazyLoad('public/SignIn');
-const SignUp = lazyLoad('public/SignUp');
+// Pre-loaded authentication routes
+const SignIn = lazyLoad('public/SignIn', true);
+const SignUp = lazyLoad('public/SignUp', true);
 const MyPlan = lazyLoad('public/MyPlan');
 const AdminFeedbackDashboard = lazyLoad('app/AdminFeedbackDashboard');
 const BlogEditor = lazyLoad('public/BlogEditor');
 
-const LoadingFallback = () => (
+// Optimized loading component
+const LoadingFallback = React.memo(() => (
   <Box className={styles.loadingFallback}>
-    <CircularProgress />
+    <CircularProgress size={40} thickness={4} />
   </Box>
-);
+));
 
-const ErrorFallback = ({ error }) => (
+// Optimized error component
+const ErrorFallback = React.memo(({ error, resetErrorBoundary }) => (
   <Box className={styles.errorFallback}>
-    <h1>Oops! Something went wrong.</h1>
+    <h1>Something went wrong</h1>
     <pre>{error.message}</pre>
+    <button
+      onClick={resetErrorBoundary}
+      className={styles.retryButton}
+      style={{
+        marginTop: '1rem',
+        padding: '0.5rem 1rem',
+        backgroundColor: 'var(--primary-main)',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer'
+      }}
+    >
+      Try again
+    </button>
   </Box>
-);
+));
 
-const App = () => {
-  const { user, loading: userLoading, updateUserSettings, fetchUser, setShowReCaptcha } = useUser();
-  const [layoutReady, setLayoutReady] = useState(false);
-  const [themeMode, setThemeMode] = useState(() => ({
-    app: user?.theme || localStorage.getItem('appTheme') || 'light',
-    public: localStorage.getItem('publicTheme') || 'light'
-  }));
-  const [fontSize, setFontSize] = useState(() => user?.fontSize || localStorage.getItem('fontSize') || 'medium');
-
-  useEffect(() => {
-    const jssStyles = document.querySelector('#jss-server-side');
-    if (jssStyles?.parentElement) {
-      jssStyles.parentElement.removeChild(jssStyles);
-    }
-
-    fetchUser();
-    const timer = setTimeout(() => setLayoutReady(true), 50);
-    return () => clearTimeout(timer);
-  }, [fetchUser]);
-
-  useEffect(() => {
-    if (user?.theme) setThemeMode(prev => ({ ...prev, app: user.theme }));
-    if (user?.fontSize) setFontSize(user.fontSize);
-  }, [user?.theme, user?.fontSize]);
-  useEffect(() => {
-  // Set theme attribute on body
-  document.body.setAttribute('data-theme', themeMode.app);
-  
-  // Set theme attribute on html for consistent theming
-  document.documentElement.setAttribute('data-theme', themeMode.app);
-  
-  // Clean up
-  return () => {
-    document.body.removeAttribute('data-theme');
-    document.documentElement.removeAttribute('data-theme');
-  };
-}, [themeMode.app]);
-  const toggleTheme = useCallback((key) => {
-    setThemeMode(prev => {
-      const newTheme = prev[key] === 'light' ? 'dark' : 'light';
-      localStorage.setItem(`${key}Theme`, newTheme);
-      if (key === 'app') updateUserSettings({ theme: newTheme });
-      return { ...prev, [key]: newTheme };
-    });
-  }, [updateUserSettings]);
-
-  const changeFontSize = useCallback((newSize) => {
-    setFontSize(newSize);
-    localStorage.setItem('fontSize', newSize);
-    updateUserSettings({ fontSize: newSize });
-  }, [updateUserSettings]);
-
-  const appTheme = useMemo(() =>
-    createAppTheme(themeMode.app, fontSize),
-    [themeMode.app, fontSize]
-  );
-  
-  const publicTheme = useMemo(() =>
-    createAppTheme(themeMode.public, 'medium'),
-    [themeMode.public]
-  );
-
-  if (userLoading || !layoutReady) return <LoadingFallback />;
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <GoogleReCaptchaProvider
-          reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
-          useEnterprise={false}
-          scriptProps={{
-            async: true,
-            defer: true,
-            appendTo: 'head',
-          }}
-        >
-          <BrowserRouter>
-            <AppContent
-              appTheme={appTheme}
-              publicTheme={publicTheme}
-              toggleTheme={toggleTheme}
-              themeMode={themeMode}
-              fontSize={fontSize}
-              changeFontSize={changeFontSize}
-              user={user}
-              setShowReCaptcha={setShowReCaptcha}
-            />
-          </BrowserRouter>
-        </GoogleReCaptchaProvider>
-      </ErrorBoundary>
-    </QueryClientProvider>
-  );
+ErrorFallback.propTypes = {
+  error: PropTypes.object.isRequired,
+  resetErrorBoundary: PropTypes.func.isRequired,
 };
 
-const AppContent = React.memo(({ appTheme, publicTheme, toggleTheme, themeMode, fontSize, changeFontSize, user, setShowReCaptcha }) => {
-  const hasActiveSubscription = useMemo(() => user?.hasActiveSubscription || false, [user]);
-  const [contentReady, setContentReady] = useState(false);
-
-  useEffect(() => {
-    const timer = requestAnimationFrame(() => setContentReady(true));
-    return () => cancelAnimationFrame(timer);
-  }, []);
-
-  if (!contentReady) return null;
-
-  return (
-    <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        {publicRoutes.map(({ path, element: Element }) => (
-          <Route
-            key={path}
-            path={path}
-            element={
-              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-                <Element />
-              </PublicLayout>
-            }
-          />
-        ))}
-        <Route
-          path="/signin"
-          element={
-            <AuthenticatedRoute>
-              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
-                <SignIn />
-              </PublicLayout>
-            </AuthenticatedRoute>
-          }
-        />
-        <Route
-          path="/get-started"
-          element={
-            <AuthenticatedRoute>
-              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={true}>
-                <SignUp />
-              </PublicLayout>
-            </AuthenticatedRoute>
-          }
-        />
-        <Route
-          path="/my-plan"
-          element={
-            <ProtectedRoute>
-              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-                <MyPlan />
-              </PublicLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/create-blog"
-          element={
-            <ProtectedRoute>
-              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-                <BlogEditor />
-              </PublicLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/edit-blog/:id"
-          element={
-            <ProtectedRoute>
-              <PublicLayout theme={publicTheme} toggleTheme={() => toggleTheme('public')} showReCaptcha={false}>
-                <BlogEditor />
-              </PublicLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/app/*"
-          element={
-            <ProtectedRoute>
-              <FontSizeWrapper fontSize={fontSize}>
-                <AppLayout
-                  theme={appTheme}
-                  toggleTheme={() => toggleTheme('app')}
-                  themeMode={themeMode.app}
-                  fontSize={fontSize}
-                  changeFontSize={changeFontSize}
-                  showReCaptcha={false}
-                >
-                  <Routes>
-                    <Route index element={<Navigate to="/app/dashboard" replace />} />
-                    {appRoutes.map(({ path, element: Element }) => (
-                      <Route
-                        key={path}
-                        path={path}
-                        element={
-                          hasActiveSubscription ? (
-                            <Element
-                              toggleTheme={() => toggleTheme('app')}
-                              fontSize={fontSize}
-                              changeFontSize={changeFontSize}
-                              themeMode={themeMode.app}
-                            />
-                          ) : (
-                            <Navigate to="/my-plan" replace />
-                          )
-                        }
-                      />
-                    ))}
-                    <Route
-                      path="admin-feedback"
-                      element={user?.isAdmin ? <AdminFeedbackDashboard /> : <Navigate to="/" replace />}
-                    />
-                  </Routes>
-                </AppLayout>
-              </FontSizeWrapper>
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
-  );
-});
-
-const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }) => {
-  const { setShowReCaptcha } = useUser();
+// Optimized PublicLayout component
+const PublicLayout = React.memo(({ children, theme, showReCaptcha }) => {
   const [layoutReady, setLayoutReady] = useState(false);
 
   useEffect(() => {
@@ -298,15 +175,11 @@ const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }
     return () => cancelAnimationFrame(timer);
   }, []);
 
-  useEffect(() => {
-    setShowReCaptcha(showReCaptcha);
-  }, [showReCaptcha, setShowReCaptcha]);
-
   return (
-    <ThemeProvider theme={theme}>
+    <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <Box className={`${styles.publicLayout} ${layoutReady ? styles.ready : ''}`}>
-        <PublicHeader toggleTheme={toggleTheme} />
+        <PublicHeader />
         <Box component="main" className={styles.publicMain}>
           {children}
         </Box>
@@ -317,13 +190,27 @@ const PublicLayout = React.memo(({ children, toggleTheme, theme, showReCaptcha }
           .grecaptcha-badge { visibility: hidden !important; }
         `}</style>
       )}
-    </ThemeProvider>
+    </MuiThemeProvider>
   );
 });
 
-const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSize, showReCaptcha }) => {
-  const { setShowReCaptcha } = useUser();
+PublicLayout.propTypes = {
+  children: PropTypes.node.isRequired,
+  theme: PropTypes.object.isRequired,
+  showReCaptcha: PropTypes.bool,
+};
+
+// Optimized AppLayout component
+const AppLayout = React.memo(({ children, toggleTheme, theme, muiTheme, fontSize, isMobile }) => {
   const [layoutReady, setLayoutReady] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const notifications = useMemo(() => [
+    { id: 1, type: 'success', message: 'Payment received for Property A', date: new Date() },
+    { id: 2, type: 'warning', message: 'Maintenance request for Property B', date: new Date(Date.now() - 86400000) },
+    { id: 3, type: 'error', message: 'Failed to process rent for Tenant C', date: new Date(Date.now() - 172800000) },
+  ], []);
 
   useEffect(() => {
     const timer = requestAnimationFrame(() => setLayoutReady(true));
@@ -331,27 +218,283 @@ const AppLayout = React.memo(({ children, toggleTheme, theme, themeMode, fontSiz
   }, []);
 
   useEffect(() => {
-    setShowReCaptcha(showReCaptcha);
-  }, [showReCaptcha, setShowReCaptcha]);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, []);
+
+  const handleDropdownChange = useCallback((isOpen) => {
+    setDropdownOpen(isOpen);
+  }, []);
+
+  const handleOverlayClick = useCallback(() => {
+    setDropdownOpen(false);
+  }, []);
+
+  const handleSidebarClose = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   return (
-    <ThemeProvider theme={theme}>
+    <MuiThemeProvider theme={muiTheme}>
       <CssBaseline />
       <div className={`${styles.layoutRoot} ${layoutReady ? styles.ready : ''}`}>
-        <Sidebar themeMode={themeMode} toggleTheme={toggleTheme} />
-        <main className={styles.mainContent}>
-          <FontSizeWrapper fontSize={fontSize}>
-            {children}
-          </FontSizeWrapper>
-        </main>
+        <div className={styles.topBarContainer}>
+          <TopBar
+            themeMode={theme}
+            toggleTheme={toggleTheme}
+            toggleDrawer={toggleSidebar}
+            isMobile={isMobile}
+            notifications={notifications}
+            onDropdownChange={handleDropdownChange}
+          />
+        </div>
+        
+        <div className={styles.mainWrapper}>
+          <div className={styles.sidebarContainer}>
+            <Sidebar 
+              isOpen={sidebarOpen}
+              isMobile={isMobile}
+              onClose={handleSidebarClose}
+            />
+          </div>
+          
+          <main className={styles.mainContent}>
+            <FontSizeWrapper fontSize={fontSize}>
+              {children}
+            </FontSizeWrapper>
+          </main>
+        </div>
+
+        {dropdownOpen && (
+          <div 
+            className={styles.overlay}
+            onClick={handleOverlayClick}
+          />
+        )}
       </div>
-      {!showReCaptcha && (
-        <style>{`
-          .grecaptcha-badge { visibility: hidden !important; }
-        `}</style>
-      )}
-    </ThemeProvider>
+    </MuiThemeProvider>
   );
 });
+
+AppLayout.propTypes = {
+  children: PropTypes.node.isRequired,
+  toggleTheme: PropTypes.func.isRequired,
+  theme: PropTypes.string.isRequired,
+  muiTheme: PropTypes.object.isRequired,
+  fontSize: PropTypes.string.isRequired,
+  isMobile: PropTypes.bool.isRequired,
+};
+
+// Main App component
+const App = () => {
+  const { publicTheme, muiTheme, theme, toggleTheme } = useTheme();
+  const { user, loading: userLoading, isInitialized, fetchUser } = useUser();
+  const [layoutReady, setLayoutReady] = useState(false);
+  const isMobile = useMediaQuery('(max-width:960px)');
+  
+  const [fontSize, setFontSize] = useState(() => 
+    user?.fontSize || localStorage.getItem('fontSize') || 'medium'
+  );
+
+  // Cleanup and initialization
+  useEffect(() => {
+    const cleanupStyles = () => {
+      const jssStyles = document.querySelector('#jss-server-side');
+      if (jssStyles?.parentElement) {
+        jssStyles.parentElement.removeChild(jssStyles);
+      }
+    };
+
+    cleanupStyles();
+    if (!isInitialized) {
+      fetchUser();
+    }
+    
+    const timer = setTimeout(() => setLayoutReady(true), 50);
+    return () => clearTimeout(timer);
+  }, [fetchUser, isInitialized]);
+
+  // Font size synchronization
+  useEffect(() => {
+    if (user?.fontSize) {
+      setFontSize(user.fontSize);
+      localStorage.setItem('fontSize', user.fontSize);
+    }
+  }, [user?.fontSize]);
+
+  const changeFontSize = useCallback((newSize) => {
+    setFontSize(newSize);
+    localStorage.setItem('fontSize', newSize);
+  }, []);
+
+  if (userLoading || !layoutReady) {
+    return <LoadingFallback />;
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary
+        FallbackComponent={ErrorFallback}
+        onReset={() => window.location.reload()}
+        resetKeys={[user]}
+      >
+        <GoogleReCaptchaProvider
+          reCaptchaKey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
+          useEnterprise={false}
+          scriptProps={{
+            async: true,
+            defer: true,
+            appendTo: 'head',
+            nonce: process.env.REACT_APP_CSP_NONCE,
+          }}
+        >
+          <BrowserRouter>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Public Routes */}
+                {publicRoutes.map(({ path, element: Element }) => (
+                  <Route
+                    key={path}
+                    path={path}
+                    element={
+                      <PublicLayout theme={publicTheme}>
+                        <Element />
+                      </PublicLayout>
+                    }
+                  />
+                ))}
+
+                {/* Auth Routes */}
+                <Route
+                  path="/signin"
+                  element={
+                    <AuthenticatedRoute>
+                      <PublicLayout theme={publicTheme} showReCaptcha>
+                        <SignIn />
+                      </PublicLayout>
+                    </AuthenticatedRoute>
+                  }
+                />
+                <Route
+                  path="/get-started"
+                  element={
+                    <AuthenticatedRoute>
+                      <PublicLayout theme={publicTheme} showReCaptcha>
+                        <SignUp />
+                      </PublicLayout>
+                    </AuthenticatedRoute>
+                  }
+                />
+
+                {/* Protected Routes */}
+                <Route
+                  path="/my-plan"
+                  element={
+                    <ProtectedRoute>
+                      <PublicLayout theme={publicTheme}>
+                        <MyPlan />
+                      </PublicLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Blog Management Routes */}
+                <Route
+                  path="/create-blog"
+                  element={
+                    <ProtectedRoute adminOnly>
+                      <PublicLayout theme={publicTheme}>
+                        <BlogEditor />
+                      </PublicLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/edit-blog/:id"
+                  element={
+                    <ProtectedRoute adminOnly>
+                      <PublicLayout theme={publicTheme}>
+                        <BlogEditor />
+                      </PublicLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* App Routes */}
+                <Route
+                  path="/app/*"
+                  element={
+                    <ProtectedRoute>
+                      <FontSizeWrapper fontSize={fontSize}>
+                        <AppLayout
+                          theme={theme}
+                          muiTheme={muiTheme}
+                          toggleTheme={toggleTheme}
+                          fontSize={fontSize}
+                          changeFontSize={changeFontSize}
+                          isMobile={isMobile}
+                        >
+                          <Routes>
+                            <Route 
+                              index 
+                              element={<Navigate to="/app/dashboard" replace />} 
+                            />
+                            {appRoutes.map(({ path, element: Element, requiresSubscription }) => (
+                              <Route
+                                key={path}
+                                path={path}
+                                element={
+                                  requiresSubscription && !user?.hasActiveSubscription ? (
+                                    <Navigate to="/my-plan" replace />
+                                  ) : (
+                                    <Element
+                                      toggleTheme={toggleTheme}
+                                      fontSize={fontSize}
+                                      changeFontSize={changeFontSize}
+                                      theme={theme}
+                                    />
+                                  )
+                                }
+                              />
+                            ))}
+                            <Route
+                              path="admin-feedback"
+                              element={
+                                user?.isAdmin ? (
+                                  <AdminFeedbackDashboard />
+                                ) : (
+                                  <Navigate to="/" replace />
+                                )
+                              }
+                            />
+                          </Routes>
+                        </AppLayout>
+                      </FontSizeWrapper>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Fallback Route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </GoogleReCaptchaProvider>
+      </ErrorBoundary>
+    </QueryClientProvider>
+  );
+};
+
+// Performance optimization for production
+if (process.env.NODE_ENV === 'production') {
+  React.memo(App);
+}
 
 export default App;
