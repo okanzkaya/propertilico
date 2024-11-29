@@ -1,10 +1,22 @@
 import React, { useCallback, useMemo } from 'react';
-import PropTypes from 'prop-types'; // Added PropTypes import
+import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
-import {
-  AppBar, Toolbar, Typography, IconButton, Badge, Box,
-  Menu, MenuItem, Avatar, ListItemIcon, Button, List,
-  ListItem, ListItemAvatar, ListItemText
+import { 
+  AppBar, 
+  Toolbar, 
+  Typography, 
+  IconButton, 
+  Badge, 
+  Box, 
+  Menu, 
+  MenuItem, 
+  Avatar, 
+  ListItemIcon, 
+  Button, 
+  List, 
+  ListItem, 
+  ListItemAvatar, 
+  ListItemText 
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -36,9 +48,9 @@ const NotificationItem = React.memo(({ type, message, date }) => {
       <ListItemAvatar>
         <Avatar>{getIcon()}</Avatar>
       </ListItemAvatar>
-      <ListItemText
-        primary={message}
-        secondary={new Date(date).toLocaleString()}
+      <ListItemText 
+        primary={message} 
+        secondary={new Date(date).toLocaleString()} 
       />
     </ListItem>
   );
@@ -54,8 +66,8 @@ const TopBar = ({
   themeMode, 
   toggleTheme, 
   toggleDrawer, 
-  isMobile,
-  notifications = [],
+  isMobile, 
+  notifications = [], 
   onDropdownChange 
 }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
@@ -109,7 +121,7 @@ const TopBar = ({
         <Typography variant="h6">Notifications</Typography>
         <Button 
           color="primary" 
-          disabled={notifications.length === 0}
+          disabled={notifications.length === 0} 
           onClick={handleNotificationsClose}
         >
           Dismiss All
@@ -127,12 +139,12 @@ const TopBar = ({
           ))
         ) : (
           <ListItem>
-            <ListItemText 
+            <ListItemText
               primary={
                 <Typography align="center" color="textSecondary">
                   No new notifications
                 </Typography>
-              } 
+              }
             />
           </ListItem>
         )}
@@ -155,25 +167,20 @@ const TopBar = ({
           </IconButton>
         )}
         
-        <Typography variant="h6" className={styles.title}>
-          Dashboard
-        </Typography>
-
         <Box className={styles.actions}>
           <IconButton
             color="inherit"
             onClick={handleUserMenuClick}
             aria-label="user menu"
           >
-            <Avatar
-              src={user?.avatar}
-              alt={user?.name || ''}
+            <Avatar 
+              src={user?.avatar} 
+              alt={user?.name || ''} 
               className={styles.avatar}
             >
               {!user?.avatar && user?.name ? user.name.charAt(0).toUpperCase() : null}
             </Avatar>
           </IconButton>
-
           <IconButton
             color="inherit"
             onClick={handleNotificationsClick}
@@ -181,13 +188,12 @@ const TopBar = ({
           >
             <Badge 
               badgeContent={notifications.length} 
-              color="error"
+              color="error" 
               max={9}
             >
               <NotificationsIcon />
             </Badge>
           </IconButton>
-
           <IconButton
             color="inherit"
             onClick={toggleTheme}
@@ -195,7 +201,6 @@ const TopBar = ({
           >
             {themeMode === 'light' ? <Brightness4Icon /> : <Brightness7Icon />}
           </IconButton>
-
           <IconButton
             color="inherit"
             onClick={handleLogoutClick}
@@ -223,15 +228,17 @@ const TopBar = ({
           className={styles.userMenu}
         >
           <Box className={styles.userInfo}>
-            <Avatar
-              src={user?.avatar}
-              alt={user?.name || ''}
+            <Avatar 
+              src={user?.avatar} 
+              alt={user?.name || ''} 
               className={styles.largeAvatar}
             >
               {!user?.avatar && user?.name ? user.name.charAt(0).toUpperCase() : null}
             </Avatar>
             <Typography variant="subtitle1">{user?.name}</Typography>
-            <Typography variant="body2" color="textSecondary">{user?.role}</Typography>
+            <Typography variant="body2" color="textSecondary">
+              {user?.role}
+            </Typography>
             <Typography variant="body2">{user?.email}</Typography>
           </Box>
         </Menu>

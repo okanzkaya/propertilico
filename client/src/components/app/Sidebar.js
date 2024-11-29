@@ -1,27 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Drawer
-} from '@mui/material';
-import {
-  Dashboard,
-  AccountBalance,
-  Home,
-  ConfirmationNumber,
-  Contacts,
-  Receipt,
-  Description,
-  BarChart,
-  Settings,
-  Feedback,
-  ExitToApp,
-  HomeOutlined
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Drawer, Typography } from '@mui/material';
+import { 
+  Dashboard, AccountBalance, Home, ConfirmationNumber, 
+  Contacts, Receipt, Description, BarChart, Settings, 
+  Feedback, ExitToApp, HomeOutlined 
 } from '@mui/icons-material';
 import { useUser } from '../../context/UserContext';
 import styles from './Sidebar.module.css';
@@ -36,47 +19,44 @@ const MENU_ITEMS = [
   { id: 'documents', icon: Description, label: 'Documents', path: '/app/documents' },
   { id: 'reports', icon: BarChart, label: 'Reports', path: '/app/reports' },
   { id: 'settings', icon: Settings, label: 'Settings', path: '/app/settings' },
-  { id: 'feedback', icon: Feedback, label: 'Feedback', path: '/app/feedback' },
+  { id: 'feedback', icon: Feedback, label: 'Feedback', path: '/app/feedback' }
 ];
 
-const SidebarItem = React.memo(({ icon: Icon, label, path, onClick, collapsed }) => {
-  return (
-    <NavLink
-      to={path}
-      className={({ isActive }) => `${styles.sidebarItem} ${isActive ? styles.active : ''}`}
-      onClick={onClick}
-    >
-      <Icon className={styles.icon} />
-      <span className={`${styles.label} ${collapsed ? styles.hidden : ''}`}>
-        {label}
-      </span>
-    </NavLink>
-  );
-});
+const SidebarItem = React.memo(({ icon: Icon, label, path, onClick, collapsed }) => (
+  <NavLink 
+    to={path} 
+    className={({ isActive }) => `${styles.sidebarItem} ${isActive ? styles.active : ''}`}
+    onClick={onClick}
+  >
+    <Icon className={styles.icon} />
+    {!collapsed && <span className={styles.label}>{label}</span>}
+  </NavLink>
+));
 
-const NewSidebar = ({ isMobile, isOpen, onClose }) => {
-  const [collapsed, setCollapsed] = useState(true);
-  const [dialogState, setDialogState] = useState({
-    logout: false,
-    homepage: false
-  });
+const Sidebar = ({ isMobile, isOpen, onClose }) => {
+  const [collapsed, setCollapsed] = useState(!isMobile);
+  const [dialogConfig, setDialogConfig] = useState({ open: false, type: null });
   const navigate = useNavigate();
   const { logout } = useUser();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
-      setDialogState({ ...dialogState, logout: false });
+      setDialogConfig({ open: false, type: null });
       navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
     }
-  };
+  }, [logout, navigate]);
 
-  const handleHomepage = () => {
-    setDialogState({ ...dialogState, homepage: false });
+  const handleHomepage = useCallback(() => {
+    setDialogConfig({ open: false, type: null });
     navigate('/');
-  };
+  }, [navigate]);
+
+  const closeDialog = useCallback(() => {
+    setDialogConfig({ open: false, type: null });
+  }, []);
 
   const sidebarContent = (
     <div 
@@ -84,38 +64,32 @@ const NewSidebar = ({ isMobile, isOpen, onClose }) => {
       onMouseEnter={() => !isMobile && setCollapsed(false)}
       onMouseLeave={() => !isMobile && setCollapsed(true)}
     >
-      <div className={styles.menuContainer}>
-        {MENU_ITEMS.map(({ id, icon, label, path }) => (
-          <SidebarItem
-            key={id}
-            icon={icon}
-            label={label}
-            path={path}
+      <nav className={styles.menuContainer}>
+        {MENU_ITEMS.map(item => (
+          <SidebarItem 
+            key={item.id} 
+            {...item} 
             onClick={isMobile ? onClose : undefined}
             collapsed={collapsed}
           />
         ))}
-      </div>
-
+      </nav>
       <div className={styles.bottomActions}>
-        <button
-          className={`${styles.sidebarItem} ${styles.homeButton}`}
-          onClick={() => setDialogState({ ...dialogState, homepage: true })}
+        <button 
+          type="button"
+          className={styles.sidebarItem} 
+          onClick={() => setDialogConfig({ open: true, type: 'homepage' })}
         >
           <HomeOutlined className={styles.icon} />
-          <span className={`${styles.label} ${collapsed ? styles.hidden : ''}`}>
-            Homepage
-          </span>
+          {!collapsed && <span className={styles.label}>Homepage</span>}
         </button>
-        
-        <button
-          className={`${styles.sidebarItem} ${styles.logoutButton}`}
-          onClick={() => setDialogState({ ...dialogState, logout: true })}
+        <button 
+          type="button"
+          className={styles.sidebarItem} 
+          onClick={() => setDialogConfig({ open: true, type: 'logout' })}
         >
           <ExitToApp className={styles.icon} />
-          <span className={`${styles.label} ${collapsed ? styles.hidden : ''}`}>
-            Logout
-          </span>
+          {!collapsed && <span className={styles.label}>Logout</span>}
         </button>
       </div>
     </div>
@@ -135,43 +109,26 @@ const NewSidebar = ({ isMobile, isOpen, onClose }) => {
       ) : (
         sidebarContent
       )}
-
-      {/* Logout Dialog */}
-      <Dialog
-        open={dialogState.logout}
-        onClose={() => setDialogState({ ...dialogState, logout: false })}
-        className={styles.dialog}
-      >
-        <DialogTitle>Confirm Logout</DialogTitle>
+      
+      <Dialog open={dialogConfig.open} onClose={closeDialog}>
+        <DialogTitle>
+          {dialogConfig.type === 'logout' ? 'Confirm Logout' : 'Return to Homepage'}
+        </DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to logout?</Typography>
+          <Typography>
+            {dialogConfig.type === 'logout' 
+              ? 'Are you sure you want to logout?' 
+              : 'Are you sure you want to return to the homepage?'}
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogState({ ...dialogState, logout: false })}>
-            Cancel
-          </Button>
-          <Button onClick={handleLogout} color="error" variant="contained">
-            Logout
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Homepage Dialog */}
-      <Dialog
-        open={dialogState.homepage}
-        onClose={() => setDialogState({ ...dialogState, homepage: false })}
-        className={styles.dialog}
-      >
-        <DialogTitle>Return to Homepage</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to return to the homepage?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogState({ ...dialogState, homepage: false })}>
-            Cancel
-          </Button>
-          <Button onClick={handleHomepage} color="primary" variant="contained">
-            Continue
+          <Button onClick={closeDialog}>Cancel</Button>
+          <Button 
+            onClick={dialogConfig.type === 'logout' ? handleLogout : handleHomepage}
+            color={dialogConfig.type === 'logout' ? 'error' : 'primary'}
+            variant="contained"
+          >
+            {dialogConfig.type === 'logout' ? 'Logout' : 'Continue'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -179,4 +136,4 @@ const NewSidebar = ({ isMobile, isOpen, onClose }) => {
   );
 };
 
-export default React.memo(NewSidebar);
+export default React.memo(Sidebar);
