@@ -9,9 +9,10 @@ Propertilico is a full-stack Property Management SAAS application designed for p
 - **Finance Tracking**: Handle transactions and reports.
 - **Tickets System**: Track and resolve issues.
 - **Tax Calculations**: Simplify tax-related tasks.
-- **Blogs System**: Built-in blogging capabilities.
+- **Blogs System**: Built-in blogging capabilities with great SEO features.
 - **Great Design**: Clean, responsive, and functional UI.
 - **Migrated to PostgreSQL**: Originally MongoDB, now optimized for relational data.
+- and much more..
 
 ## Tech Stack
 - **Frontend**: React, CSS modules
@@ -24,7 +25,7 @@ Propertilico is a full-stack Property Management SAAS application designed for p
 - **controllers**: Request handlers for routes
 - **middleware**: Authentication, recaptcha, etc.
 - **models**: Database models
-- **public**: Public assets like images and CSS
+- **public**: Public assets like images
 - **routes**: API endpoints
 - **uploads**: Document/file uploads
 - **utils**: Utility functions
