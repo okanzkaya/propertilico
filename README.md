@@ -33,7 +33,7 @@ Propertilico is a full-stack Property Management SAAS application designed for p
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/username/propertilico.git
+   git clone https://github.com/okanzkaya/propertilico.git
    ```
 2. Navigate to the project directory and install dependencies:
    - For the client:
