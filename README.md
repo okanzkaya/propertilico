@@ -2,7 +2,7 @@
 
 Propertilico is a full-stack Property Management SAAS application designed for property managers. This project aims to simplify property management tasks by providing functionalities like finances, tickets, properties, reports, and taxes, with a user-friendly design.
 
-**Note**: This project is not yet complete but includes a solid foundation and key features for further development. It is open-source, and I hope someone can make good use of it!
+**Note**: This project is not yet complete but includes a solid foundation and key features for further development. It is open-source, and I hope someone can make good use of it! It took me more than 6 months to develop this project.
 
 ## Features
 - **Property Management**: Manage properties efficiently.
